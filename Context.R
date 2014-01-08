@@ -6,8 +6,8 @@ Context <- setRefClass(
   ),
   methods = list(
     initialize = function(processedDataDirectory, scratchDirectory) {
-      .self$processedDataDirectory = processedDataDirectory
-      .self$scratchDirectory = scracthDirectory
+      processedDataDirectory <<- processedDataDirectory
+      scratchDirectory <<- scracthDirectory
     }
   )
 )
