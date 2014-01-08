@@ -1,12 +1,12 @@
 Context <- setRefClass(
   "Context",
   fields = list(
-    processedDataDirectory = "character",
-    scratchDirectory = "character"
+    processedDataDirectory = "ANY",
+    scratchDirectory = "ANY"
   ),
   methods = list(
-    initialize = function(...) {
-      callSuper(...)
+    initialize = function(processedDataDirectory=NA, scratchDirectory=NA) {
+      callSuper(processedDataDirectory=processedDataDirectory, scratchDirectory=scratchDirectory)
     }
   )
 )
