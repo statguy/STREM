@@ -46,8 +46,8 @@ StudyArea <- setRefClass(
       status <- system(cmd)
       if (status == 127) stop("GDAL tools not found.")
 
-      #unlink(tmptif)
-      #unlink(tmpshp)
+      unlink(tmptif)
+      unlink(tmpshp)
     },
     
     saveHabitatRasterFile = function(rawRasterFile) {
@@ -66,7 +66,7 @@ StudyArea <- setRefClass(
       saveHabitatFrequencies(habitat)
       
       message("Cleaning up...")
-      #unlink(tmpRasterFile)      
+      unlink(tmpRasterFile)      
     },
     
     getHabitatRasterFile = function() {
