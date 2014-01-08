@@ -5,9 +5,8 @@ Context <- setRefClass(
     scratchDirectory = "character"
   ),
   methods = list(
-    initialize = function(processedDataDirectory, scratchDirectory) {
-      processedDataDirectory <<- processedDataDirectory
-      scratchDirectory <<- scracthDirectory
+    initialize = function(...) {
+      callSuper(...)
     }
   )
 )
