@@ -170,7 +170,7 @@ TestStudyArea <- setRefClass(
       callSuper(region="test", proj4string=CRS("+init=epsg:2393"), ...)
             
       x <- -5
-      SpatialPolygons(list(Polygons(list(Polygon(matrix(c(325+x,700, 325+x,712, 338+x,712, 338+x,700, 325+x,700)*10000, ncol=2, byrow=T))), ID=1)), proj4string=proj4string)
+      habitat <<- SpatialPolygons(list(Polygons(list(Polygon(matrix(c(325+x,700, 325+x,712, 338+x,712, 338+x,700, 325+x,700)*10000, ncol=2, byrow=T))), ID=1)), proj4string=proj4string)
       
       loadHabitatRaster()
       habitat <<- crop(habitat, boundary)
