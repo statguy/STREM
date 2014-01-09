@@ -13,7 +13,23 @@ StudyArea <- setRefClass(
   ),
   methods = list(
     initialize = function(context=NA, region=NA, proj4string=NA) {
-      callSuper(context=context, region=region, proj4string=proj4string)      
+      callSuper(context=context, region=region, proj4string=proj4string)
+      return(.self)
+    },
+    
+    newInstance = function(prepareHabitatRaster=FALSE, rawRasterFile)
+    {
+      loadBoundary()
+      if (prepareHabitatRaster) {
+        if (missing(rawRasterFile)) stop("rawRasterFile parameter missing.")
+        prepareHabitatRaster(rawRasterFile=rawRasterFile)
+      }
+      loadHabitatRaster()
+      return(.self)
+    },
+    
+    loadBoundary = function() {
+      stop("Override loadBoundary().")
     },
     
     prepareHabitatRaster = function(rawRasterFile) {
@@ -46,8 +62,8 @@ StudyArea <- setRefClass(
       status <- system(cmd)
       if (status == 127) stop("GDAL tools not found.")
 
-      unlink(tmptif)
-      unlink(tmpshp)
+      #unlink(tmptif)
+      #unlink(tmpshp)
     },
     
     saveHabitatRasterFile = function(rawRasterFile) {
@@ -66,7 +82,7 @@ StudyArea <- setRefClass(
       saveHabitatFrequencies(habitat)
       
       message("Cleaning up...")
-      unlink(tmpRasterFile)      
+      #unlink(tmpRasterFile)      
     },
     
     getHabitatRasterFile = function() {
@@ -96,7 +112,7 @@ StudyArea <- setRefClass(
       return(thinnedSpatialPoly(p, tolerance=tolerance))
     },    
     
-    loadBoundary = function(country, level=0, subregion, mainland=FALSE, thin=FALSE, coordinateScale=as.integer(1), tolerance=5000) {  
+    loadBoundaryGADM = function(country, level=0, subregion, mainland=FALSE, thin=FALSE, coordinateScale=as.integer(1), tolerance=5000) {  
       coordinateScale <<- coordinateScale
       
       require(rgdal)
@@ -168,18 +184,23 @@ TestStudyArea <- setRefClass(
   methods = list(
     initialize = function(...) {
       callSuper(region="test", proj4string=CRS("+init=epsg:2393"), ...)
-            
+      return(.self)
+    },
+    
+    loadBoundary = function() {
       x <- -5
-      habitat <<- SpatialPolygons(list(Polygons(list(Polygon(matrix(c(325+x,700, 325+x,712, 338+x,712, 338+x,700, 325+x,700)*10000, ncol=2, byrow=T))), ID=1)), proj4string=proj4string)
-      
-      loadHabitatRaster()
+      boundary <<- SpatialPolygons(list(Polygons(list(Polygon(matrix(c(325+x,700, 325+x,712, 338+x,712, 338+x,700, 325+x,700)*10000, ncol=2, byrow=T))), ID=1)), proj4string=proj4string)      
+    },
+    
+    loadHabitatRaster = function() {
+      callSuper()
       habitat <<- crop(habitat, boundary)
       habitat <<- readAll(habitat)
-      habitat[is.na(habitat[])] <<- 44
+      habitat[is.na(habitat[])] <<- 44      
     },
     
     getHabitatRasterFile = function() {
-      return(file.path(context$scratchDirectory, paste("HabitatRaster-Finland.tif")))
+      return(context$getFileName(context$scratchDirectory, name="HabitatRaster", region="Finland", ext=".tif"))
     }
   )
 )
@@ -189,11 +210,12 @@ FinlandStudyArea <- setRefClass(
   contains = "StudyArea",
   methods = list(
     initialize = function(...) {
-      callSuper(region="Finland", proj4string=CRS("+init=epsg:2393"), ...);
+      callSuper(region="Finland", proj4string=CRS("+init=epsg:2393"), ...)
+      return(.self)
     },
     
-    loadBoundary = function(country="FIN", thin=TRUE, tolerance=0.1) {
-      callSuper(country=country, thin=thin, tolerance=tolerance)
+    loadBoundary = function() {
+      loadBoundaryGADM(country="FIN", thin=TRUE, tolerance=0.1)
     },
     
     getHabitatRasterFile = function() {
