@@ -5,11 +5,12 @@ Context <- setRefClass(
     resultDataDirectory = "ANY",
     processedDataDirectory = "ANY",
     rawDataDirectory = "ANY",
-    scratchDirectory = "ANY"
+    scratchDirectory = "ANY",
+    figuresDirectory = "ANY"
   ),
   methods = list(
-    initialize = function(sourceUrl="https://raw.github.com/statguy/R-Winter-Track-Counts/master/", resultDataDirectory=NA, processedDataDirectory=NA, rawDataDirectory=NA, scratchDirectory=NA) {
-      callSuper(sourceUrl=sourceUrl, resultDataDirectory=resultDataDirectory, processedDataDirectory=processedDataDirectory, rawDataDirectory=rawDataDirectory, scratchDirectory=scratchDirectory)
+    initialize = function(sourceUrl="https://raw.github.com/statguy/R-Winter-Track-Counts/master/", resultDataDirectory=NA, processedDataDirectory=NA, rawDataDirectory=NA, scratchDirectory=NA, figuresDirectory=NA) {
+      callSuper(sourceUrl=sourceUrl, resultDataDirectory=resultDataDirectory, processedDataDirectory=processedDataDirectory, rawDataDirectory=rawDataDirectory, scratchDirectory=scratchDirectory, figuresDirectory=figuresDirectory)
     },
     
     loadSource = function(sourceFile) {
