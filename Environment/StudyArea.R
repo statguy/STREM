@@ -225,7 +225,7 @@ FinlandStudyArea <- setRefClass(
     },
     
     getHabitatRasterFile = function() {
-      return(file.path(context$scratchDirectory, paste("HabitatRaster-Finland.tif")))
+      return(context$getFileName(context$scratchDirectory, name="HabitatRaster", region="Finland", ext=".tif"))
     }
   )
 )
