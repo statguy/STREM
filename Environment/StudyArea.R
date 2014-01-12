@@ -9,11 +9,12 @@ StudyArea <- setRefClass(
     proj4string = "ANY",
     boundary = "SpatialPolygons",
     habitat = "RasterLayer",
-    coordinateScale = "integer"
+    coordinateScale = "integer",
+    plotScale = "numeric"
   ),
   methods = list(
-    initialize = function(context=NA, region=NA, proj4string=NA) {
-      callSuper(context=context, region=region, proj4string=proj4string)
+    initialize = function(context=NA, region=NA, proj4string=NA, ...) {
+      callSuper(context=context, region=region, proj4string=proj4string, ...)
       return(.self)
     },
     
@@ -25,6 +26,7 @@ StudyArea <- setRefClass(
         prepareHabitatRaster(rawRasterFile=rawRasterFile)
       }
       loadHabitatRaster()
+      if (length(plotScale) == 0) plotScale <<- getPlotScale()
       return(.self)
     },
     
@@ -169,6 +171,10 @@ StudyArea <- setRefClass(
         stop("Habitat frequencies file ", getHabitatFrequenciesFileName(), " not found.")
       load(getHabitatFrequenciesFileName())
       return(habitatFrequencies)
+    },
+    
+    getPlotScale = function() {
+      return(10 ^ (nchar(as.character(max(dim(habitat)))) - 3))
     },
     
     plotHabitatRaster = function() {
