@@ -7,11 +7,11 @@ HabitatWeights <- setRefClass(
     },
     
     classify = function(habitatValues) {
-      stop("classify() undefined.")
+      return(rep(1, times=length(habitatValues)))
     },
     
     getWeights = function(habitatValues) {
-      stop("getWeights() undefined.")
+      return(rep(1, times=length(habitatValues)))
     }
   )
 )
