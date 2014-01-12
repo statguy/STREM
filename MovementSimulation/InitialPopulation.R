@@ -53,36 +53,32 @@ ClusteredInitialPopulation <- setRefClass(
     mesh = "inla.mesh",
     spde = "inla.spde2",
     Q = "Matrix",
-    sample = "numeric",
-    probabilities = "numeric"
+    samples = "numeric"
   ),
   
   methods = list(
-    initialize = function(studyArea, habitatWeights, max.edge=5000, range=100*1e3, sigma=1, seed=0L, ...) {
+    initialize = function(studyArea, habitatWeights=HabitatWeights(), max.edge=5000, mu=-22, sigma=1, range=100*1e3, fun=exp, seed=1L, ...) {
       callSuper(...)
       studyArea <<- studyArea
       habitatWeights <<- habitatWeights
       
-      randomizeMaternField(max.edge=max.edge, range=range, sigma=sigma, seed=seed)
-      setHabitatWeightsForField()      
+      sampleMaternRandomField(range=range, mu=mu, sigma=sigma, seed=seed, max.edge=max.edge, fun=fun)
+      if (class(habitatWeights) == "HabitatWeights") weights <<- 1
+      else setHabitatWeightsForField()      
     },
     
-    randomizeMaternField = function(max.edge=5000, range=100*1e3, sigma=1, seed=0L) {
+    sampleMaternRandomField = function(range=100e3, mu=-22, sigma=1, seed=1L, max.edge=5000, fun=exp) {
+      message("Sampling from MRF with range = ", range, ", sigma = ", sigma, ", mu = ", mu, ", seed = ", seed, "...")
+      fun <- match.fun(fun)
       mesh <<- inla.mesh.create(boundary=inla.sp2segment(studyArea$boundary), refine=list(max.edge=max.edge))
       message("Nodes for randomizing individual locations = ", mesh$n)
-      message("Sampling...")
-      sigma0 <- sigma
-      range0 <- range
-      kappa0 <- sqrt(8)/range0
-      tau0 <- 1/(sqrt(4*pi)*kappa0*sigma0)
-      spde <<- inla.spde2.matern(mesh,
-                                 B.tau=cbind(log(tau0),1,0),
-                                 B.kappa=cbind(log(kappa0),0,1),
-                                 theta.prior.mean=c(0,0),
-                                 theta.prior.prec=1)
-      Q <<- inla.spde2.precision(spde, theta=c(0,0))
-      sample <<- exp(as.vector(inla.qsample(n=1, Q=Q, seed=seed)))
-      probabilities <<- (sample-min(sample))/sum(sample-min(sample))
+      kappa <- sqrt(8) / range
+      spde <<- inla.spde2.matern(mesh, alpha=2)
+      theta <- c(-0.5 * log(4 * pi * sigma^2 * kappa^2), log(kappa))
+      #message("theta1 = ", theta[1], ", theta2 = ", theta[2])
+      Q <<- inla.spde2.precision(spde, theta)
+      samples <<- fun(as.vector(inla.qsample(mu=rep(mu, times=nrow(Q)), Q=Q, seed=seed)))
+      #message("sample mean = ", mean(samples), " sd = ", sd(samples))
     },
     
     setHabitatWeightsForField = function() {
@@ -94,7 +90,7 @@ ClusteredInitialPopulation <- setRefClass(
     
     randomize = function(n) {
       require(sp)
-      index <- sample(1:mesh$n, size=n, replace=T, prob=probabilities * weights)
+      index <- sample(1:mesh$n, size=n, replace=T, prob=samples * weights)
       locations <- mesh$loc[index,]
       return(SpatialPoints(locations[,1:2,drop=F], proj4string=studyArea$proj4string))      
     },
@@ -105,22 +101,21 @@ ClusteredInitialPopulation <- setRefClass(
     
     plotLocations = function(locations) {
       require(lattice)
-
-      proj <- inla.mesh.projector(mesh, dims=dim(studyArea$habitat)[1:2]/100)
-      z <- inla.mesh.project(proj, field=probabilities * weights)
+      require(grid)
       
-      p <- if (missing(locations)) {
-        levelplot(row.values=proj$x, column.values=proj$y, x=z)
-      }
+      proj <- inla.mesh.projector(mesh, dims=dim(studyArea$habitat)[1:2] / studyArea$plotScale)
+      z <- inla.mesh.project(proj, field=samples * weights)
+      
+      panel <- if (missing(locations)) panel.levelplot
       else {
-        require(sp)
-        require(grid)
         xy <- coordinates(locations)
-        levelplot(row.values=proj$x, column.values=proj$y, x=z)
-        trellis.focus("panel", 1, 1, highlight=FALSE)
-        lpoints(xy[,1], xy[,2], pch='.')
-        trellis.unfocus()
+        function(...) {
+          panel.levelplot(...)
+          grid.points(xy[,1], xy[,2], pch='.')
+        }
       }
+      
+      p <- levelplot(row.values=proj$x, column.values=proj$y, x=z, panel=panel)
       print(p)
     }
   )
