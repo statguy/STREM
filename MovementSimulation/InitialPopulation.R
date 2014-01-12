@@ -48,7 +48,7 @@ ClusteredInitialPopulation <- setRefClass(
   contains = "InitialPopulation",
   fields = list(
     studyArea = "StudyArea",
-    habitatWeigts = "HabitatWeights",
+    habitatWeights = "HabitatWeights",
     weights = "numeric",
     mesh = "inla.mesh",
     spde = "inla.spde2",
