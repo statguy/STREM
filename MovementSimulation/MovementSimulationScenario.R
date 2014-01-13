@@ -57,7 +57,7 @@ MovementSimulationScenario <- setRefClass(
       outsideBoundary <- is.na(over(point, studyArea$boundary))
       if (class(outsideBoundary) == "matrix") outsideBoundary <- outsideBoundary[,1]
 
-      if (length(habitatWeights) == 0) {
+      if (class(habitatWeights) == "uninitializedField") {
         if (all(outsideBoundary == TRUE)) return(NULL)
         return(list(index=1, coords=locations[1,,drop=F]))
       }
