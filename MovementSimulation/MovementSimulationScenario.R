@@ -86,13 +86,14 @@ MovementSimulationScenario <- setRefClass(
       require(CircStats)
       require(sp)
       
-      maxTry <- 1000
+      maxTry <- 100
       
       coords <- matrix(NA, nrow=nSteps, ncol=2)
       coords[1,] <- initialLocation
       prevAngle <- runif(1, 0, 2*pi)    
-                
-      for (step in 2:nSteps) {
+      
+      step <- 2
+      while (TRUE) {
         for (j in 1:maxTry) {
           # Correlated random walk
           newAngles <- rwrpnorm(nProposal, prevAngle, CRWCorrelation)
@@ -116,8 +117,10 @@ MovementSimulationScenario <- setRefClass(
             break
           }
           else {
-            # Randomize angle at the boundary, so we don't get stuck
-            prevAngle <- runif(1, 0, 2*pi)
+            # Vector is pointing outside the boundary or there is only unknown habitat.
+            # Go back one step and try again, so we don't get stuck.
+            step <- step - 1
+            if (step < 2) step <- 2
             next
           }
         }
@@ -130,26 +133,29 @@ MovementSimulationScenario <- setRefClass(
           points(acceptedVectors$coords, col="green", pch="+")
           stop("Boundary reflection failed.")
         }
+
+        if (step == nSteps) break
+        step <- step + 1
       }
       
       return(data.frame(x=coords[,1], y=coords[,2]))
     },
     
-    randomizeBirths = function() {
-      n <- length(agents)
-      if (n > 2000) stop("Too many agents to simulate.")
-      
+    randomizeBirths = function() {      
       for (agent in agents) {  
         nBorn <- rpois(1, birthRate)
         agents <<- c(agents, newAgentId:(newAgentId + nBorn))
         newAgentId <<- newAgentId + nBorn + 1
       }
+      
+      nAgents <<- length(agents)
+      if (nAgents > 2000) stop("Too many agents to simulate.")
     },
     
     randomizeDeaths = function(agents) {
-      n <- length(agents)      
-      deathIndex <- runif(n) <= 1 - exp(-deathRate * n)
+      deathIndex <- runif(nAgents) <= 1 - exp(-deathRate * nAgents)
       agents <<- agents[agents != deathIndex]
+      nAgents <<- length(agents)
     },
     
     randomizeBCRWTracks = function() {
@@ -159,47 +165,46 @@ MovementSimulationScenario <- setRefClass(
       habitatTypes <- extract(studyArea$habitat, initialLocations)
       if (any(is.na(habitatTypes))) stop("Invalid initial coordinates.")
       
-      nProposal <- if (length(habitatWeights) == 0) 1 else 10
+      nProposal <- if (class(habitatWeights) == "uninitializedField") 1 else 10
       message("Number of proposals = ", nProposal)
       
       agents <<- 1:nAgents
       newAgentId <<- as.integer(nAgents + 1)
       
+      tracks <- data.frame()
       initialLocations <- coordinates(initialLocations)
-      tracks <- ldply(1:nAgents,
-        function(i, initialLocations, nProposal) {
-          require(sp)
-          #message("Agent = ", i, " / ", nrow(initialLocations), "...")
-          
-          ## TODO: UNTESTED CODE
-          if (length(habitatWeights) != 0 & loadHabitatRasterInMemory) {
-            require(raster)
-            require(rgdal)
-            if (!inMemory(studyArea$habitat)) {
-              message("Reading habitat raster to memory...")
-              studyArea$habitat <<- readAll(studyArea$habitat)
-            }
-          }
-          
-          #track <- randomizeBCRWTrack(initialLocation=initialLocations[i,,drop=F], nProposal=nProposal)
-          #track$individual <- i
-          
-          track <- data.frame()      
-          location <- initialLocations[i,,drop=F]
-          
-          for (year in 1:years) {
-            message("Agent = ", i, " / ", nAgents, ", Year = ", year,  " / ", years, "...")
-            x <- randomizeBCRWTrack(initialLocation=location, nProposal=nProposal)
-            x$agent <- i
-            x$year <- year
-            location <- as.matrix(x[nrow(x),c("x","y"),drop=F])
-            track <- rbind(track, x)
-          }
-          
-          return(track)
-        },
-        initialLocations=initialLocations, nProposal=nProposal, .parallel=runParallel)
       
+      for (year in 1:years) {
+      
+        x <- ldply(1:nAgents,
+          function(i, initialLocations, nProposal) {
+            require(sp)
+
+            ## TODO: UNTESTED CODE
+            if (length(habitatWeights) != 0 & loadHabitatRasterInMemory) {
+              require(raster)
+              require(rgdal)
+              if (!inMemory(studyArea$habitat)) {
+                message("Reading habitat raster to memory...")
+                studyArea$habitat <<- readAll(studyArea$habitat)
+              }
+            }
+            
+            message("Agent = ", i, " / ", nAgents, ", Year = ", year,  " / ", years, "...")
+            track <- randomizeBCRWTrack(initialLocation=initialLocations[i,,drop=F], nProposal=nProposal)
+            track$agent <- i
+            return(track)
+          },
+          initialLocations=initialLocations, nProposal=nProposal, .parallel=runParallel)
+
+        x$year <- year
+        initialLocations <- as.matrix(x[seq(nSteps,nAgents*nSteps,by=nSteps),c("x","y"),drop=F])
+        tracks <- rbind(tracks, x)
+        
+        #randomizeBirths()
+        #randomizeDeaths()        
+      }    
+  
       return(tracks)
     },
 
@@ -219,7 +224,7 @@ MovementSimulationScenario <- setRefClass(
       require(plyr)
       plot(tracks$x, tracks$y, type="n")
       ddply(tracks, .(agent, year, iteration), function(tracks) {
-        lines(tracks$x, tracks$y, col=tracks$agent, lty=tracks$year)
+        lines(tracks$x, tracks$y, col=tracks$year, lty=tracks$agent)
       })
       plot(studyArea$boundary, add=T)
     },
