@@ -18,7 +18,13 @@ MovementSimulationScenario <- setRefClass(
     homeRangeRadius = "numeric",
     distanceScale = "numeric",
     loadHabitatRasterInMemory = "logical",
-    runParallel = "logical"
+    runParallel = "logical",
+    
+    nSteps = "integer",
+    birthRate = "numeric",
+    deathRate = "numeric",
+    agents = "integer",
+    newAgentId = "integer"
   ),
   methods = list(
     initialize = function(isTest=FALSE, ...) {
@@ -26,13 +32,18 @@ MovementSimulationScenario <- setRefClass(
       loadHabitatRasterInMemory <<- FALSE
       callSuper(...)
       isTest <<- isTest
-
+    
       # TODO: start cluster
       
       return(.self)
     },
     
     newInstance = function() {
+      nSteps.tmp <- 24 * days / stepIntervalHours
+      message("Number of steps = ", nSteps.tmp, ", steps per day = ", 24 / stepIntervalHours)
+      if (nSteps.tmp %% 1 != 0) stop("Number of steps must be integer.")
+      nSteps <<- as.integer(nSteps.tmp)
+      
       studyArea <<- if (isTest) TestStudyArea(context=context)$newInstance()
       else FinlandStudyArea(context=context)$newInstance()
       return(.self)
@@ -48,8 +59,7 @@ MovementSimulationScenario <- setRefClass(
       return(cbind(coords[,1] + distance * cos(angle), coords[,2] + distance * sin(angle)))
     },
     
-    randomizeVector = function(locations)
-    {
+    randomizeVector = function(locations) {
       require(sp)
       require(raster)
       
@@ -71,13 +81,12 @@ MovementSimulationScenario <- setRefClass(
         return(list(index=k, coords=locations[k,,drop=F]))
       }
     },
-
+        
     randomizeBCRWTrack = function(initialLocation, nProposal) {
       require(CircStats)
       require(sp)
       
-      maxTry <- 100
-      nSteps <- 24 * days / stepIntervalHours
+      maxTry <- 1000
       
       coords <- matrix(NA, nrow=nSteps, ncol=2)
       coords[1,] <- initialLocation
@@ -98,12 +107,12 @@ MovementSimulationScenario <- setRefClass(
             }
           }
           
-          v <- newVector(coords[step-1,,drop=F], newDistances, newAngles)
-          indexVector <- randomizeVector(v)
+          proposedVectors <- newVector(coords[step-1,,drop=F], newDistances, newAngles)
+          acceptedVectors <- randomizeVector(proposedVectors)
           
-          if (!is.null(indexVector)) {
-            prevAngle <- newAngles[indexVector$index]
-            coords[step,] <- indexVector$coords
+          if (!is.null(acceptedVectors)) {
+            prevAngle <- newAngles[acceptedVectors$index]
+            coords[step,] <- acceptedVectors$coords
             break
           }
           else {
@@ -114,16 +123,33 @@ MovementSimulationScenario <- setRefClass(
         }
         
         if (j == maxTry) {
-          track <- SpatialLines(list(Lines(list(Line(coords[1:step-1,])))), proj4string=studyArea$proj4string)
+          track <- SpatialLines(list(Lines(list(Line(coords[1:step-1,])), ID=1)), proj4string=studyArea$proj4string)
           plot(track, col="blue")
-          plot(boundary, add=T)
-          points(v, col="red", pch="+")
-          points(k, col="green", pch="+")
-          stop("Boundary reflection failed. This should not happen.")
+          plot(studyArea$boundary, add=T)
+          points(proposedVectors, col="red", pch="+")
+          points(acceptedVectors$coords, col="green", pch="+")
+          stop("Boundary reflection failed.")
         }
       }
       
-      return(data.frame(x=coords[,1], y=coords[,2], year = rep(1:years, each=nSteps)))
+      return(data.frame(x=coords[,1], y=coords[,2]))
+    },
+    
+    randomizeBirths = function() {
+      n <- length(agents)
+      if (n > 2000) stop("Too many agents to simulate.")
+      
+      for (agent in agents) {  
+        nBorn <- rpois(1, birthRate)
+        agents <<- c(agents, newAgentId:(newAgentId + nBorn))
+        newAgentId <<- newAgentId + nBorn + 1
+      }
+    },
+    
+    randomizeDeaths = function(agents) {
+      n <- length(agents)      
+      deathIndex <- runif(n) <= 1 - exp(-deathRate * n)
+      agents <<- agents[agents != deathIndex]
     },
     
     randomizeBCRWTracks = function() {
@@ -136,15 +162,14 @@ MovementSimulationScenario <- setRefClass(
       nProposal <- if (length(habitatWeights) == 0) 1 else 10
       message("Number of proposals = ", nProposal)
       
-      nSteps <- 24 * days / stepIntervalHours
-      message("Number of steps = ", nSteps, ", steps per day = ", 24 / stepIntervalHours)
-      if (nSteps %% 1 != 0) stop("Number of steps must be integer.")
-
+      agents <<- 1:nAgents
+      newAgentId <<- as.integer(nAgents + 1)
+      
       initialLocations <- coordinates(initialLocations)
       tracks <- ldply(1:nAgents,
         function(i, initialLocations, nProposal) {
           require(sp)
-          message("Agent = ", i, " / ", nrow(initialLocations), "...")
+          #message("Agent = ", i, " / ", nrow(initialLocations), "...")
           
           ## TODO: UNTESTED CODE
           if (length(habitatWeights) != 0 & loadHabitatRasterInMemory) {
@@ -156,9 +181,21 @@ MovementSimulationScenario <- setRefClass(
             }
           }
           
-          track <- randomizeBCRWTrack(initialLocation=initialLocations[i,,drop=F], nProposal=nProposal)
-          track$individual <- i
-                    
+          #track <- randomizeBCRWTrack(initialLocation=initialLocations[i,,drop=F], nProposal=nProposal)
+          #track$individual <- i
+          
+          track <- data.frame()      
+          location <- initialLocations[i,,drop=F]
+          
+          for (year in 1:years) {
+            message("Agent = ", i, " / ", nAgents, ", Year = ", year,  " / ", years, "...")
+            x <- randomizeBCRWTrack(initialLocation=location, nProposal=nProposal)
+            x$agent <- i
+            x$year <- year
+            location <- as.matrix(x[nrow(x),c("x","y"),drop=F])
+            track <- rbind(track, x)
+          }
+          
           return(track)
         },
         initialLocations=initialLocations, nProposal=nProposal, .parallel=runParallel)
@@ -180,11 +217,11 @@ MovementSimulationScenario <- setRefClass(
     plotTracks = function(tracks) {
       require(sp)
       require(plyr)
-      plot(studyArea$boundary)
-      ddply(tracks, .(individual, year, iteration), function(tracks) {
-        lines(tracks$x, tracks$y, col=tracks$individual)        
+      plot(tracks$x, tracks$y, type="n")
+      ddply(tracks, .(agent, year, iteration), function(tracks) {
+        lines(tracks$x, tracks$y, col=tracks$agent, lty=tracks$year)
       })
-      invisible()
+      plot(studyArea$boundary, add=T)
     },
     
     getTracksFile = function() {
