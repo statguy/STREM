@@ -158,7 +158,7 @@ StudyArea <- setRefClass(
     },
     
     getHabitatFrequenciesFileName = function() {
-      return(file.path(context$processedDataDirectory, paste("HabitatFrequencies-", region, ".RData", sep="")))
+      return(context$getFileName(context$processedDataDirectory, name="HabitatFrequencies", region=studyArea$region))
     },
     
     saveHabitatFrequencies = function(habitatRaster) {
