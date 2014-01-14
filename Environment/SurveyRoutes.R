@@ -31,8 +31,6 @@ SurveyRoutes <- setRefClass(
       require(sp)
       require(parallel)
       
-      if (is.null(surveyRoutes)) return(NULL)
-      
       nSurveyRoutes <- length(surveyRoutes)
       nTracks <- length(tracks)
       intersections <- matrix(0, nrow=nSurveyRoutes, ncol=nTracks)
