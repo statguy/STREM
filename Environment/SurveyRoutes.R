@@ -24,10 +24,80 @@ getTriangles <- function(centroids, angles, sideLength) {
 SurveyRoutes <- setRefClass(
   Class = "SurveyRoutes",
   fields = list(
-    surveyRoutes = "SpatialLines"  
+    surveyRoutes = "SpatialLines"
   ),
   methods = list(
-
+    findIntersections = function(tracks, runParallel=TRUE, cluster, dimension) {
+      require(sp)
+      require(parallel)
+      
+      if (is.null(surveyRoutes)) return(NULL)
+      
+      nSurveyRoutes <- length(surveyRoutes)
+      nTracks <- length(tracks)
+      intersections <- matrix(0, nrow=nSurveyRoutes, ncol=nTracks)
+      rownames(intersections) <- names(surveyRoutes)
+      colnames(intersections) <- names(tracks@lines)
+      
+      if (missing(cluster) | missing(dimension)) {
+        require(rgeos)
+        require(plyr)
+        for (j in 1:nTracks) {
+          message("Finding intersections for track ", j, " / ", nTracks, "...")
+          intersections[,j] <- laply(1:nSurveyRoutes,
+            function(i, surveyRoutes, tracks, j) {
+              return(length(gIntersection(surveyRoutes[i], tracks[j,], byid=TRUE)))
+            }, surveyRoutes=surveyRoutes, tracks=tracks, j=j, .parallel=runParallel)
+        }
+      }
+      else if (dimension == 1) {
+        intersections <- parSapply(cluster$remoteCluster, 1:nTracks, function(j, surveyRoutes, tracks, cluster) {
+          nSurveyRoutes <- length(surveyRoutes)
+          nTracks <- length(tracks)
+          message("Finding intersections for track ", j," / ", nTracks, "...")
+          
+          require(plyr)
+          require(parallel)
+          require(doMC)
+          registerDoMC(cores=detectCores())
+          require(rgeos)
+          
+          x <- laply(1:nSurveyRoutes,
+            function(i, surveyRoutes, tracks, j) {
+              return(length(gIntersection(surveyRoutes[i], tracks[j,], byid=TRUE)))
+            }, surveyRoutes=surveyRoutes, tracks=tracks, j=j, .parallel=TRUE)
+          
+          return(x)
+        }, surveyRoutes=surveyRoutes, tracks=tracks)
+      }
+      else if (dimension == 2) {
+        intersections <- parSapply(cluster$remoteCluster, 1:nSurveyRoutes, function(i, surveyRoutes, tracks) {
+          nSurveyRoutes <- length(surveyRoutes)
+          nTracks <- length(tracks)
+          message("Finding intersections for survey route ", i, " / ", nSurveyRoutes, "...")
+          
+          require(plyr)
+          require(parallel)
+          require(doMC)
+          registerDoMC(cores=detectCores())
+          require(rgeos)
+          
+          x <- laply(1:nTracks,
+            function(j, surveyRoutes, tracks, i) {
+              return(length(gIntersection(surveyRoutes[i], tracks[j,], byid=TRUE)))
+            }, surveyRoutes=surveyRoutes, tracks=tracks, i=i, .parallel=TRUE)
+          
+          return(x)
+        }, surveyRoutes=surveyRoutes, tracks=tracks)
+        
+        intersections <- t(intersections)
+      }
+      
+      message("Found ", sum(intersections) / nTracks, " intersections per animal track.")
+      message("Found ", sum(intersections) / nSurveyRoutes, " intersections per survey route.")
+      
+      return(intersections)
+    }
   )
 )
 
