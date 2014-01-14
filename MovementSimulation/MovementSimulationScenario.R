@@ -170,6 +170,7 @@ MovementSimulationScenario <- setRefClass(
     
     randomizeBCRWTracks = function() {
       require(plyr)
+      require(maptools)
       
       initialLocations <- initialPopulation$randomize(nAgents)
       habitatTypes <- extract(studyArea$habitat, initialLocations)
@@ -185,8 +186,8 @@ MovementSimulationScenario <- setRefClass(
       initialLocations <- coordinates(initialLocations)
       
       for (year in 1:years) {
-        x <- ldply(agents,
-          function(i, initialLocations, nProposal) {
+        track <- ldply(agents,
+          function(agentId, initialLocations, nProposal) {
             require(sp)
 
             ## TODO: UNTESTED CODE
@@ -199,23 +200,23 @@ MovementSimulationScenario <- setRefClass(
               }
             }
             
-            message("Agent = ", i, " / ", nAgents, ", Year = ", year,  " / ", years, "...")
-            track <- randomizeBCRWTrack(initialLocation=initialLocations[i,,drop=F], nProposal=nProposal)
-            track$agent <- i
+            message("Agent = ", agentId, " / ", nAgents, ", Year = ", year,  " / ", years, "...")
+            track <- randomizeBCRWTrack(initialLocation=initialLocations[agentId,,drop=F], nProposal=nProposal)
+            track$agent <- agentId
             return(track)
           },
           initialLocations=initialLocations, nProposal=nProposal, .parallel=runParallel)
 
-        x$year <- year
-        initialLocations <- as.matrix(x[seq(nSteps, nAgents*nSteps, by=nSteps), c("x","y"), drop=F])
-        tracks <- rbind(tracks, x)
+        track$year <- year
+        tracks <- rbind(tracks, track)
+        initialLocations <- as.matrix(track[seq(nSteps, nAgents*nSteps, by=nSteps), c("x","y"), drop=F])
         
         if (year < years) {
           #randomizeBirths()
           #randomizeDeaths()
         }
-      }    
-  
+      }
+
       return(tracks)
     },
 
@@ -227,17 +228,24 @@ MovementSimulationScenario <- setRefClass(
         tracks$iteration <- i
         trackReplicates <- rbind(trackReplicates, tracks)
       }
-      return(trackReplicates)
+      
+      spTracks <- dlply(trackReplicates, .(agent, year, iteration), function(x) {
+        id <- paste(x[1, c("agent","year","iteration")], collapse=".")
+        return(Lines(list(Line(x[,c("x","y")])), ID=id))
+      }, .parallel=runParallel)
+      spData <- ddply(trackReplicates, .(agent, year, iteration), function(x) {
+        return(x[1, c("agent","year","iteration"), drop=F])
+      }, .parallel=runParallel)
+      spdfTracks <- SpatialLinesDataFrame(SpatialLines(spTracks, proj4string=studyArea$proj4string),
+                                          spData,
+                                          match.ID=FALSE)      
+      return(spdfTracks)
     },
     
     plotTracks = function(tracks) {
       require(sp)
-      require(plyr)
-      plot(tracks$x, tracks$y, type="n")
-      ddply(tracks, .(agent, year, iteration), function(tracks) {
-        lines(tracks$x, tracks$y, col=tracks$year, lty=tracks$agent)
-      })
-      plot(studyArea$boundary, add=T)
+      plot(tracks, col=tracks@data$agent)
+      plot(studyArea$boundary, add=T, border="lightgray")
     },
     
     getTracksFile = function() {
