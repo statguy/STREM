@@ -141,21 +141,31 @@ MovementSimulationScenario <- setRefClass(
       return(data.frame(x=coords[,1], y=coords[,2]))
     },
     
-    randomizeBirths = function() {      
+    randomizeBirths = function() {
+      nParents <- 0
       for (agent in agents) {  
         nBorn <- rpois(1, birthRate)
-        agents <<- c(agents, newAgentId:(newAgentId + nBorn))
-        newAgentId <<- newAgentId + nBorn + 1
+        if (nBorn>0) {
+          nParents <- nParents + 1
+          agents <<- c(agents, newAgentId:(newAgentId + nBorn - 1))
+          newAgentId <<- as.integer(newAgentId + nBorn)
+        }
       }
+
+      message("Born = ", length(agents) - nAgents, " for = ", nParents, " out of ", nAgents)
       
       nAgents <<- length(agents)
       if (nAgents > 2000) stop("Too many agents to simulate.")
     },
     
-    randomizeDeaths = function(agents) {
+    randomizeDeaths = function() {
       deathIndex <- runif(nAgents) <= 1 - exp(-deathRate * nAgents)
-      agents <<- agents[agents != deathIndex]
+      agents <<- agents[!deathIndex]
+
+      message("Died = ", nAgents - length(agents), " out of ", nAgents)
+      
       nAgents <<- length(agents)
+      if (nAgents == 0) stop("Agents extint.")
     },
     
     randomizeBCRWTracks = function() {
@@ -175,8 +185,7 @@ MovementSimulationScenario <- setRefClass(
       initialLocations <- coordinates(initialLocations)
       
       for (year in 1:years) {
-      
-        x <- ldply(1:nAgents,
+        x <- ldply(agents,
           function(i, initialLocations, nProposal) {
             require(sp)
 
@@ -198,11 +207,13 @@ MovementSimulationScenario <- setRefClass(
           initialLocations=initialLocations, nProposal=nProposal, .parallel=runParallel)
 
         x$year <- year
-        initialLocations <- as.matrix(x[seq(nSteps,nAgents*nSteps,by=nSteps),c("x","y"),drop=F])
+        initialLocations <- as.matrix(x[seq(nSteps, nAgents*nSteps, by=nSteps), c("x","y"), drop=F])
         tracks <- rbind(tracks, x)
         
-        #randomizeBirths()
-        #randomizeDeaths()        
+        if (year < years) {
+          #randomizeBirths()
+          #randomizeDeaths()
+        }
       }    
   
       return(tracks)
@@ -241,6 +252,24 @@ MovementSimulationScenario <- setRefClass(
       load(getTracksFile())
       return(tracks)
     }    
+  )
+)
+
+# 6 minutes step length for distance fix
+MovementSimulationScenarioIntensive <- setRefClass(
+  Class = "MovementSimulationScenarioIntensive",
+  contains = "MovementSimulationScenario",
+  methods = list(
+    initialize = function(response="Intensive", nAgents=as.integer(100), nIterations=as.integer(1), runParallel=T, ...) {
+      callSuper(response=response, isTest=F, years=as.integer(1), nAgents=nAgents, nIterations=nIterations, days=as.integer(60), stepIntervalHours=0.1, stepSpeedScale=0.5, CRWCorrelation=0.8, runParallel=runParallel, ...)
+      return(.self)
+    },
+    
+    newInstance = function() {
+      callSuper()
+      initialPopulation <<- RandomInitialPopulation(boundary=studyArea$boundary)
+      return(.self)
+    }
   )
 )
 
@@ -314,4 +343,3 @@ MovementSimulationScenarioE <- setRefClass(
     }
   )
 )
-
