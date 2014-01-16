@@ -1,14 +1,12 @@
 MovementSimulationScenario <- setRefClass(
   Class = "MovementSimulationScenario",
+  contains = "Study",
   fields = list(
-    context = "ANY",
-    response = "character",
     years = "integer",
     days = "integer",
     stepIntervalHours = "numeric",
     stepSpeedScale = "numeric",
     isTest = "logical",
-    studyArea = "StudyArea",
     initialPopulation = "InitialPopulation",
     habitatWeights="ANY",
     nAgents = "integer",
@@ -82,21 +80,22 @@ MovementSimulationScenario <- setRefClass(
       }
     },
         
-    randomizeBCRWTrack = function(initialLocation, nProposal) {
+    randomizeBCRWTrack = function(initialLocation, initialAngle, isFirst, nProposal) {
       require(CircStats)
       require(sp)
       
       maxTry <- 100
-      
-      coords <- matrix(NA, nrow=nSteps, ncol=2)
+            
+      coords <- matrix(NA, nrow=nSteps + 1, ncol=2)
       coords[1,] <- initialLocation
-      prevAngle <- runif(1, 0, 2*pi)    
-      
+      angles <- numeric(nSteps + 1)
+      angles[1] <- initialAngle
+
       step <- 2
       while (TRUE) {
         for (j in 1:maxTry) {
           # Correlated random walk
-          newAngles <- rwrpnorm(nProposal, prevAngle, CRWCorrelation)
+          newAngles <- rwrpnorm(nProposal, angles[step-1], CRWCorrelation)
           newDistances <- rweibull(nProposal, shape=2, scale=stepSpeedScale * stepIntervalHours * distanceScale)
           
           if (length(homeRangeRadius) != 0) {
@@ -112,8 +111,8 @@ MovementSimulationScenario <- setRefClass(
           acceptedVectors <- randomizeVector(proposedVectors)
           
           if (!is.null(acceptedVectors)) {
-            prevAngle <- newAngles[acceptedVectors$index]
             coords[step,] <- acceptedVectors$coords
+            angles[step] <- newAngles[acceptedVectors$index]
             break
           }
           else {
@@ -133,39 +132,42 @@ MovementSimulationScenario <- setRefClass(
           points(acceptedVectors$coords, col="green", pch="+")
           stop("Boundary reflection failed.")
         }
-
-        if (step == nSteps) break
+        
+        if (step == nSteps + 1) break
         step <- step + 1
       }
       
-      return(data.frame(x=coords[,1], y=coords[,2]))
+      index <- if (isFirst) 1:nSteps else 1:nSteps+1
+      stepDays <- rep(1:days, each=24 / stepIntervalHours)
+      return(data.frame(x=coords[index,1], y=coords[index,2], angle=angles[index], day=stepDays))
     },
     
-    randomizeBirths = function() {
-      nParents <- 0
-      for (agent in agents) {  
-        nBorn <- rpois(1, birthRate)
-        if (nBorn>0) {
-          nParents <- nParents + 1
-          agents <<- c(agents, newAgentId:(newAgentId + nBorn - 1))
-          newAgentId <<- as.integer(newAgentId + nBorn)
-        }
-      }
-
-      message("Born = ", length(agents) - nAgents, " for = ", nParents, " out of ", nAgents)
+    # Combined birth-death process:
+    # 0 born = individual dies
+    # 1 born = individual survives to the next year
+    # 2 born = 1 parent survives + 1 offspring
+    # etc.
+    randomizeBirthDeath = function(param=list(mean=1, sd=1.1)) {
+      bdRate <- rlnorm(n=1, meanlog=log(param$mean), sdlog=log(param$sd))
+      nTransform <- rpois(nAgents, bdRate)
       
-      nAgents <<- length(agents)
-      if (nAgents > 2000) stop("Too many agents to simulate.")
-    },
-    
-    randomizeDeaths = function() {
-      deathIndex <- runif(nAgents) <= 1 - exp(-deathRate * nAgents)
-      agents <<- agents[!deathIndex]
-
-      message("Died = ", nAgents - length(agents), " out of ", nAgents)
+      nBorn <- sum(nTransform[nTransform > 1] - 1)
+      nSurvive <- sum(nTransform[nTransform == 1]) + length(nTransform[nTransform > 1])
+      nDie <- length(nTransform[nTransform == 0])
       
+      message("agents before = ", nAgents, " born = ", nBorn, ", survive = ", nSurvive, ", die = ", nDie, ", agents after = ", nSurvive + nBorn)
+            
+      survivedIndex <- nTransform > 0
+      agents <<- agents[survivedIndex]
+      agents <<- c(agents, newAgentId:(newAgentId + nBorn - 1))
+      newAgentId <<- as.integer(newAgentId + nBorn)
       nAgents <<- length(agents)
-      if (nAgents == 0) stop("Agents extint.")
+      
+      bornIndex <- nTransform > 1
+      x <- rep(which(bornIndex), nTransform[bornIndex]-1)
+      
+      survivedBornIndex <- c(which(survivedIndex), x)
+      return(survivedBornIndex)
     },
     
     randomizeBCRWTracks = function() {
@@ -184,10 +186,12 @@ MovementSimulationScenario <- setRefClass(
       
       tracks <- data.frame()
       initialLocations <- coordinates(initialLocations)
+      initialAngles <- runif(nAgents, 0, 2*pi)
+      isFirst <- TRUE
       
       for (year in 1:years) {
-        track <- ldply(agents,
-          function(agentId, initialLocations, nProposal) {
+        track <- ldply(1:nAgents,
+          function(agentIndex, initialLocations, initialAngles, isFirst, nProposal) {
             require(sp)
 
             ## TODO: UNTESTED CODE
@@ -200,26 +204,31 @@ MovementSimulationScenario <- setRefClass(
               }
             }
             
-            message("Agent = ", agentId, " / ", nAgents, ", Year = ", year,  " / ", years, "...")
-            track <- randomizeBCRWTrack(initialLocation=initialLocations[agentId,,drop=F], nProposal=nProposal)
-            track$agent <- agentId
+            message("Agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgents, ", Year = ", year,  " / ", years, "...")
+            track <- randomizeBCRWTrack(initialLocation=initialLocations[agentIndex,,drop=F], initialAngle=initialAngles[agentIndex], isFirst=isFirst, nProposal=nProposal)
+            track$agent <- agents[agentIndex]
             return(track)
           },
-          initialLocations=initialLocations, nProposal=nProposal, .parallel=runParallel)
-
+          initialLocations=initialLocations, initialAngles=initialAngles, isFirst=isFirst, nProposal=nProposal, .parallel=runParallel)
+        
         track$year <- year
         tracks <- rbind(tracks, track)
-        initialLocations <- as.matrix(track[seq(nSteps, nAgents*nSteps, by=nSteps), c("x","y"), drop=F])
         
         if (year < years) {
-          #randomizeBirths()
-          #randomizeDeaths()
+          survivedBornLastStepIndex <- randomizeBirthDeath() * nSteps
+          initialLocations <- as.matrix(track[survivedBornLastStepIndex, c("x","y"), drop=F])
+          initialAngles <- track[survivedBornLastStepIndex, c("angle")]
+          isFirst <- FALSE
         }
       }
 
       return(tracks)
     },
 
+    randomizeIntersectionDays = function() {
+      return(round(runif(nAgents, 1, days)))
+    },
+    
     simulate = function() {
       trackReplicates <- data.frame()
       for (i in 1:nIterations) {
@@ -229,23 +238,32 @@ MovementSimulationScenario <- setRefClass(
         trackReplicates <- rbind(trackReplicates, tracks)
       }
       
-      spTracks <- dlply(trackReplicates, .(agent, year, iteration), function(x) {
-        id <- paste(x[1, c("agent","year","iteration")], collapse=".")
-        return(Lines(list(Line(x[,c("x","y")])), ID=id))
-      }, .parallel=runParallel)
-      spData <- ddply(trackReplicates, .(agent, year, iteration), function(x) {
-        return(x[1, c("agent","year","iteration"), drop=F])
-      }, .parallel=runParallel)
-      spdfTracks <- SpatialLinesDataFrame(SpatialLines(spTracks, proj4string=studyArea$proj4string),
-                                          spData,
-                                          match.ID=FALSE)      
-      return(spdfTracks)
+      return(trackReplicates)
+      
+      #spTracks <- dlply(trackReplicates, .(agent, year, iteration), function(x) {
+      #  id <- paste(x[1, c("agent","year","iteration")], collapse=".")
+      #  return(Lines(list(Line(x[,c("x","y")])), ID=id))
+      #}, .parallel=runParallel)
+      #spData <- ddply(trackReplicates, .(agent, year, iteration), function(x) {
+      #  return(x[1, c("agent","year","iteration"), drop=F])
+      #}, .parallel=runParallel)
+      #spdfTracks <- SpatialLinesDataFrame(SpatialLines(spTracks, proj4string=studyArea$proj4string),
+      #                                    spData,
+      #                                    match.ID=FALSE)      
+      #return(spdfTracks)
     },
     
     plotTracks = function(tracks) {
       require(sp)
-      plot(tracks, col=tracks@data$agent)
-      plot(studyArea$boundary, add=T, border="lightgray")
+      require(plyr)
+      plot(tracks$x, tracks$y, type="n")
+      ddply(tracks, .(agent, year, iteration), function(tracks) {
+        lines(tracks$x, tracks$y, col=tracks$agent)
+      })
+      plot(studyArea$boundary, add=T)
+
+      #plot(tracks, col=tracks@data$agent)
+      #plot(studyArea$boundary, add=T, border="lightgray")
     },
     
     getTracksFile = function() {
@@ -259,7 +277,11 @@ MovementSimulationScenario <- setRefClass(
     loadTracks = function() {
       load(getTracksFile())
       return(tracks)
-    }    
+    },
+    
+    estimate = function(intersections) {
+      # TODO
+    }
   )
 )
 
