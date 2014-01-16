@@ -1,20 +1,20 @@
-GPSData <- setRefClass(
-  Class = "GPSData",
+Tracks <- setRefClass(
+  Class = "Tracks",
   contains = "Data",
   fields = list(
   ),
   methods = list(
     initialize = function(preprocessData=FALSE, ...) {
-      callSuper(dataName="GPS", ...)
+      callSuper(dataName="Tracks", ...)
       if (preprocessData) saveData()
       return(.self)
     }
   )
 )
 
-FinlandWTCGPSData <- setRefClass(
-  Class = "FinlandWTCGPSData",
-  contains = "GPSData",
+FinlandWTCTracks <- setRefClass(
+  Class = "FinlandWTCTracks",
+  contains = "Tracks",
   fields = list(
   ),
   methods = list(
