@@ -139,7 +139,8 @@ MovementSimulationScenario <- setRefClass(
       
       index <- if (isFirst) 1:nSteps else 1:nSteps+1
       stepDays <- rep(1:days, each=24 / stepIntervalHours)
-      return(data.frame(x=coords[index,1], y=coords[index,2], angle=angles[index], day=stepDays))
+      stepHours <- rep(seq(0, 24-stepIntervalHours, by=stepIntervalHours), days)
+      return(data.frame(x=coords[index,1], y=coords[index,2], angle=angles[index], day=stepDays, hour=stepHours))
     },
     
     # Combined birth-death process:
@@ -157,16 +158,16 @@ MovementSimulationScenario <- setRefClass(
       
       message("agents before = ", nAgents, " born = ", nBorn, ", survive = ", nSurvive, ", die = ", nDie, ", agents after = ", nSurvive + nBorn)
             
-      survivedIndex <- nTransform > 0
+      survivedIndex <- nTransform > 0      
+      bornIndex <- nTransform > 1
+      x <- rep(which(bornIndex), nTransform[bornIndex]-1)
+      survivedBornIndex <- c(which(survivedIndex), x)
+      
       agents <<- agents[survivedIndex]
-      agents <<- c(agents, newAgentId:(newAgentId + nBorn - 1))
+      if (nBorn > 0) agents <<- c(agents, newAgentId:(newAgentId + nBorn - 1))
       newAgentId <<- as.integer(newAgentId + nBorn)
       nAgents <<- length(agents)
       
-      bornIndex <- nTransform > 1
-      x <- rep(which(bornIndex), nTransform[bornIndex]-1)
-      
-      survivedBornIndex <- c(which(survivedIndex), x)
       return(survivedBornIndex)
     },
     
@@ -190,29 +191,31 @@ MovementSimulationScenario <- setRefClass(
       isFirst <- TRUE
       
       for (year in 1:years) {
-        track <- ldply(1:nAgents,
-          function(agentIndex, initialLocations, initialAngles, isFirst, nProposal) {
-            require(sp)
-
-            ## TODO: UNTESTED CODE
-            if (length(habitatWeights) != 0 & loadHabitatRasterInMemory) {
-              require(raster)
-              require(rgdal)
-              if (!inMemory(studyArea$habitat)) {
-                message("Reading habitat raster to memory...")
-                studyArea$habitat <<- readAll(studyArea$habitat)
+        if (nAgents > 0) {
+          track <- ldply(1:nAgents,
+            function(agentIndex, initialLocations, initialAngles, isFirst, nProposal) {
+              require(sp)
+  
+              ## TODO: UNTESTED CODE
+              if (length(habitatWeights) != 0 & loadHabitatRasterInMemory) {
+                require(raster)
+                require(rgdal)
+                if (!inMemory(studyArea$habitat)) {
+                  message("Reading habitat raster to memory...")
+                  studyArea$habitat <<- readAll(studyArea$habitat)
+                }
               }
-            }
-            
-            message("Agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgents, ", Year = ", year,  " / ", years, "...")
-            track <- randomizeBCRWTrack(initialLocation=initialLocations[agentIndex,,drop=F], initialAngle=initialAngles[agentIndex], isFirst=isFirst, nProposal=nProposal)
-            track$agent <- agents[agentIndex]
-            return(track)
-          },
-          initialLocations=initialLocations, initialAngles=initialAngles, isFirst=isFirst, nProposal=nProposal, .parallel=runParallel)
-        
-        track$year <- year
-        tracks <- rbind(tracks, track)
+              
+              message("Agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgents, ", Year = ", year,  " / ", years, "...")
+              track <- randomizeBCRWTrack(initialLocation=initialLocations[agentIndex,,drop=F], initialAngle=initialAngles[agentIndex], isFirst=isFirst, nProposal=nProposal)
+              track$agent <- agents[agentIndex]
+              return(track)
+            },
+            initialLocations=initialLocations, initialAngles=initialAngles, isFirst=isFirst, nProposal=nProposal, .parallel=runParallel)
+          
+          track$year <- year
+          tracks <- rbind(tracks, track)
+        }
         
         if (year < years) {
           survivedBornLastStepIndex <- randomizeBirthDeath() * nSteps
@@ -229,16 +232,18 @@ MovementSimulationScenario <- setRefClass(
       return(round(runif(nAgents, 1, days)))
     },
     
-    simulate = function() {
-      trackReplicates <- data.frame()
+    simulate = function(saveData=FALSE) {
+      simulatedTracks <- list()
+      
       for (i in 1:nIterations) {
         message("Iteration ", i, " of ", nIterations, "...")
         tracks <- randomizeBCRWTracks()
         tracks$iteration <- i
-        trackReplicates <- rbind(trackReplicates, tracks)
+        simulatedTracks[[i]] <- SimulatedTracks(context=context, study=.self, tracks=tracks, preprocessData=saveData)
       }
       
-      return(trackReplicates)
+      return(simulatedTracks)
+      #return(trackReplicates)
       
       #spTracks <- dlply(trackReplicates, .(agent, year, iteration), function(x) {
       #  id <- paste(x[1, c("agent","year","iteration")], collapse=".")
@@ -264,24 +269,24 @@ MovementSimulationScenario <- setRefClass(
 
       #plot(tracks, col=tracks@data$agent)
       #plot(studyArea$boundary, add=T, border="lightgray")
-    },
-    
-    getTracksFile = function() {
-      return(context$getFileName(context$resultDataDirectory, name="SimulatedTracks", response=response, region=studyArea$region))
-    },
-    
-    saveTracks = function(tracks) {
-      save(tracks, file=getTracksFile())
-    },
-    
-    loadTracks = function() {
-      load(getTracksFile())
-      return(tracks)
-    },
-    
-    estimate = function(intersections) {
-      # TODO
     }
+    
+    #getTracksFile = function() {
+    #  return(context$getFileName(context$resultDataDirectory, name="SimulatedTracks", response=response, region=studyArea$region))
+    #},
+    #
+    #saveTracks = function(tracks) {
+    #  save(tracks, file=getTracksFile())
+    #},
+    #
+    #loadTracks = function() {
+    #  load(getTracksFile())
+    #  return(tracks)
+    #},
+    #
+    #estimate = function(intersections) {
+    #  # TODO
+    #}
   )
 )
 
@@ -297,7 +302,7 @@ MovementSimulationScenarioIntensive <- setRefClass(
     
     newInstance = function() {
       callSuper()
-      initialPopulation <<- RandomInitialPopulation(boundary=studyArea$boundary)
+      initialPopulation <<- RandomInitialPopulation(studyArea=studyArea)
       return(.self)
     }
   )
@@ -315,7 +320,7 @@ MovementSimulationScenarioA <- setRefClass(
 
     newInstance = function() {
       callSuper()
-      initialPopulation <<- RandomInitialPopulation(boundary=studyArea$boundary)
+      initialPopulation <<- RandomInitialPopulation(studyArea=studyArea)
       return(.self)
     }
   )
@@ -351,7 +356,7 @@ MovementSimulationScenarioD <- setRefClass(
   methods = list(
     initialize = function(isTest=FALSE, response="D", ...) {
       callSuper(response=response, isTest=isTest, ...)
-      initialPopulation <<- ClusteredInitialPopulation(boundary=studyArea$boundary, habitatWeights=CORINEHabitatWeights())
+      initialPopulation <<- ClusteredInitialPopulation(studyArea=studyArea, habitatWeights=CORINEHabitatWeights())
     }
   )
 )

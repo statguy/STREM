@@ -1,18 +1,23 @@
 library(INLA)
 setOldClass("inla.mesh")
 setOldClass("inla.spde2")
+library(sp)
 
 InitialPopulation <- setRefClass(
   Class = "InitialPopulation",
   fields = list(
+    studyArea = "StudyArea",
+    locations = "SpatialPoints"
   ),
   methods = list(
     randomize = function(n) {
       stop("randomize() undefined.")
     },
     
-    plotLocations = function(locations) {
-      stop("plotLocations() undefined.")
+    plotLocations = function() {
+      require(sp)
+      plot(locations, col="blue")
+      plot(studyArea$boundary, add=T)
     }
   )
 )
@@ -21,24 +26,11 @@ RandomInitialPopulation <- setRefClass(
   Class = "RandomInitialPopulation",
   contains = "InitialPopulation",
   fields = list(
-    boundary = "SpatialPolygons"
   ),
   methods = list(
-    initialize = function(boundary) {
-      boundary <<- boundary
-    },
-    
     randomize = function(n) {
-      require(sp)
-      spcoord <- spsample(boundary, n, type="random", iter=10)
-      if (is.null(spcoord)) return(NULL)
-      return(spcoord)
-    },
-    
-    plotLocations = function(locations) {
-      require(sp)
-      plot(boundary)
-      plot(locations, add=T, col="blue")
+      locations <<- spsample(studyArea$boundary, n, type="random", iter=10)
+      invisible(locations)
     }
   )
 )
@@ -47,7 +39,6 @@ ClusteredInitialPopulation <- setRefClass(
   Class = "ClusteredInitialPopulation",
   contains = "InitialPopulation",
   fields = list(
-    studyArea = "StudyArea",
     habitatWeights = "HabitatWeights",
     weights = "numeric",
     mesh = "inla.mesh",
@@ -83,30 +74,30 @@ ClusteredInitialPopulation <- setRefClass(
     
     setHabitatWeightsForField = function() {
       message("Extracting habitat types...")
-      locations <- mesh$loc[,1:2,drop=F]
-      habitatTypes <- extract(studyArea$habitat, locations)
+      meshLocations <- mesh$loc[,1:2,drop=F]
+      habitatTypes <- extract(studyArea$habitat, mehsLocations)
       weights <<- habitatWeights$getWeights(habitatTypes)
     },
     
     randomize = function(n) {
-      require(sp)
       index <- sample(1:mesh$n, size=n, replace=T, prob=samples * weights)
-      locations <- mesh$loc[index,]
-      return(SpatialPoints(locations[,1:2,drop=F], proj4string=studyArea$proj4string))      
+      xy <- mesh$loc[index,]
+      locations <<- SpatialPoints(xy[,1:2,drop=F], proj4string=studyArea$proj4string)
+      invisible(locations)
     },
     
     plotMesh = function() {
       plot(mesh)
     },
     
-    plotLocations = function(locations) {
+    plotLocations = function() {
       require(lattice)
       require(grid)
       
       proj <- inla.mesh.projector(mesh, dims=dim(studyArea$habitat)[1:2] / studyArea$plotScale)
       z <- inla.mesh.project(proj, field=samples * weights)
       
-      panel <- if (missing(locations)) panel.levelplot
+      panel <- if (class(locations) == "uninitializedField") panel.levelplot
       else {
         xy <- coordinates(locations)
         function(...) {

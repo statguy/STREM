@@ -1,13 +1,80 @@
+library(adehabitatLT)
+setOldClass("ltraj")
+
 Tracks <- setRefClass(
   Class = "Tracks",
-  contains = "Data",
   fields = list(
+    context = "Context",
+    study = "Study",
+    tracks = "ltraj"
   ),
   methods = list(
     initialize = function(preprocessData=FALSE, ...) {
-      callSuper(dataName="Tracks", ...)
-      if (preprocessData) saveData()
+      callSuper(...)
+      if (preprocessData) saveTracks()
       return(.self)
+    },
+    
+    getDataFileName = function() {
+      return(context$getFileName(context$processedDataDirectory, name="Tracks", response=study$response, region=study$studyArea$region))
+    },
+    
+    saveTracks = function() {
+      stop("Override saveData() method.")
+    },
+    
+    loadTracks = function() {
+      load(getDataFileName())
+      return(tracks)
+    },
+    
+    plotTracks = function() {
+      require(sp)
+      require(adehabitatLT)
+      require(plyr)
+      
+      tracksDF <- ld(tracks)
+      plot(tracksDF$x, tracksDF$y, type="n")
+      ddply(tracksDF, .(id), function(tracksDF) {
+        lines(tracksDF$x, tracksDF$y, col=tracksDF$id)
+      })
+      plot(study$studyArea$boundary, add=T)
+    }
+  )
+)
+
+SimulatedTracks <- setRefClass(
+  Class = "SimulationTracks",
+  contains = "Tracks",
+  fields = list(
+    iteration = "integer"
+  ),
+  methods = list(
+    initialize = function(tracksDF, preprocessData=FALSE, ...) {
+      if (!missing(tracksDF)) setTracks(tracksDF)
+      callSuper(preprocessData=preprocessData, ...)
+    },
+
+    setTracks = function(tracksDF) {
+      if (class(tracksDF) == "uninitializedField")
+        stop("Provide tracksDF argument.")
+      
+      xy <- tracksDF[,c("x","y")]
+      date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, "0", "0"), format="%Y %j %H %M %S"))
+      id <- tracksDF$agent
+      tracks <<- as.ltraj(xy=xy, date=date, id=id, infolocs=NULL)
+      iteration <<- tracksDF$iteration[1]      
+    },
+    
+    saveTracks = function() {      
+      save(tracks, file=getDataFileName())
+    },
+    
+    getDataFileName = function() {
+      if (class(study) == "undefinedField" | length(iteration) == 0)
+        stop("Provide study and iteration parameters.")
+      response <- paste(study$response, iteration, sep="-")
+      return(context$getFileName(dir=context$processedDataDirectory, name="Tracks", response=response, region=study$studyArea$region))
     }
   )
 )
@@ -18,7 +85,7 @@ FinlandWTCTracks <- setRefClass(
   fields = list(
   ),
   methods = list(
-    saveData = function() {
+    saveTracks = function() {
       maxSpeed <- 40 # km/h
       
       require(sp)
@@ -48,8 +115,8 @@ FinlandWTCTracks <- setRefClass(
       rm(".b", envir=.GlobalEnv)
       
       message("Saving processed data...")
-      data <<- gpsLT
-      save(data, file=getDataFileName())
+      tracks <<- gpsLT
+      save(tracks, file=getDataFileName())
     },
     
     preprocessWolfData = function() {

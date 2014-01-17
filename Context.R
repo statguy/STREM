@@ -28,10 +28,12 @@ Context <- setRefClass(
     },
     
     getFileName = function(dir, name, response, region, ext=".RData") {
-      if (missing(response))
-        return(file.path(dir, paste(name, "-", region, ext, sep="")))
+      fileName <- if (missing(response))
+        file.path(dir, paste(name, "-", region, ext, sep=""))
       else
-        return(file.path(dir, paste(name, "-", response, "-", region, ext, sep="")))
+        file.path(dir, paste(name, "-", response, "-", region, ext, sep=""))
+      message("File = ", fileName)
+      return(fileName)
     }
   )
 )
