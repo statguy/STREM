@@ -15,7 +15,7 @@ InitialPopulation <- setRefClass(
     },
     
     plotLocations = function() {
-      require(sp)
+      library(sp)
       plot(locations, col="blue")
       plot(studyArea$boundary, add=T)
     }
@@ -54,7 +54,7 @@ ClusteredInitialPopulation <- setRefClass(
       habitatWeights <<- habitatWeights
       
       sampleMaternRandomField(range=range, mu=mu, sigma=sigma, seed=seed, max.edge=max.edge, fun=fun)
-      if (class(habitatWeights) == "HabitatWeights") weights <<- 1
+      if (inherits(habitatWeights, "HabitatWeights")) weights <<- 1
       else setHabitatWeightsForField()      
     },
     
@@ -91,13 +91,13 @@ ClusteredInitialPopulation <- setRefClass(
     },
     
     plotLocations = function() {
-      require(lattice)
-      require(grid)
+      library(lattice)
+      library(grid)
       
       proj <- inla.mesh.projector(mesh, dims=dim(studyArea$habitat)[1:2] / studyArea$plotScale)
       z <- inla.mesh.project(proj, field=samples * weights)
       
-      panel <- if (class(locations) == "uninitializedField") panel.levelplot
+      panel <- if (inherits(locations, "uninitializedField")) panel.levelplot
       else {
         xy <- coordinates(locations)
         function(...) {

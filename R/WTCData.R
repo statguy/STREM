@@ -48,8 +48,8 @@ FinlandWTCData <- setRefClass(
     },
     
     saveData = function() {
-      require(gdata)
-      require(sp)
+      library(gdata)
+      library(sp)
       
       wtc <- read.xls(file.path(context$rawDataDirectory, "Kolmiot_1989_2011.xls"))
       names(wtc)[1:9] <- c("id","y","x","length","forest","field","year","date","duration")

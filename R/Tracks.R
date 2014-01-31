@@ -24,27 +24,165 @@ Tracks <- setRefClass(
     },
     
     loadTracks = function() {
-      load(getDataFileName())
+      load(getDataFileName(), envir=as.environment(.self))
       return(tracks)
     },
     
     plotTracks = function() {
-      require(sp)
-      require(adehabitatLT)
-      require(plyr)
+      library(sp)
+      library(adehabitatLT)
       
       tracksDF <- ld(tracks)
       plot(tracksDF$x, tracksDF$y, type="n")
-      ddply(tracksDF, .(id), function(tracksDF) {
-        lines(tracksDF$x, tracksDF$y, col=tracksDF$id)
-      })
+      apply(fun=function(x) lines(x$x, x$y, col=x$id))
       plot(study$studyArea$boundary, add=T)
+    },
+    
+    apply = function(variables=.(id), fun, ..., combine=F) {
+      tracksDF <- ld(tracks)
+      result <- dlply(.data=tracksDF, .variables=variables, .fun=fun, ...)
+      if (combine) result <- do.call("rbind", result)
+      return(result)
+    },
+        
+    thin = function(by) {
+      library(plyr)
+      
+      tracksDF <- ld(tracks)
+      d <- as.POSIXlt(tracksDF$date)
+      tracksDF$yday <- d$yday
+      tracksDF$year <- d$year
+      
+      tracksDFThinned <- ddply(tracksDF, .variables=.(id, year, yday), .fun=function(x, by) {
+        n <- nrow(x)
+        if (n==1) return(NULL)
+        i <- seq(1, n, by=by)
+        return(x[i,])
+      }, by=by)
+      
+      if (nrow(tracksDFThinned) == 0) return(NULL)
+      tracksThinned <- dl(tracksDFThinned)
+      return(Tracks$new(context=context, study=study, tracks=tracksThinned))
+    },
+    
+    getSampleIntervals = function() {
+      intervals <- TracksSampleIntervals$new()
+      intervals$getSampleIntervals(tracks=.self)
+      return(intervals)
+    },
+    
+    getThinnedTrackSampleIntervals = function(maxThins) {
+      intervals <- TracksSampleIntervals$new()
+      intervals$getThinnedTracksSampleIntervals(tracks=.self, maxThins=maxThins)
+      return(intervals)
+    }    
+  )
+)
+
+SimulatedTracksCollection <- setRefClass(
+  Class = "TracksCollection",
+  fields = list(
+    tracksList = "list"
+  ),
+  methods = list(
+    initialize = function() {
+      callSuper(tracksList=list())
+    },
+    
+    length = function() return(base::length(tracksList)),
+    
+    add = function(tracks) {
+      tracksList[[length() + 1]] <<- tracks
+    },
+    
+    get = function(index) {
+      if (base::length(tracksList) < index) stop("Invalid index = ", index, ".")
+      return(tracksList[[index]])
+    },
+    
+    load = function(study) {     
+      context <- study$context
+      tracksFiles <- context$listFiles(dir=context$processedDataDirectory, name="Tracks", response=paste(study$response, "\\d+", sep="-"), region=study$studyArea$region)
+      
+      for (iteration in 1:base::length(tracksFiles)) { # TODO: better to use iteration number rather than number of files
+        tracks <- SimulatedTracks$new(context=study$context, study=study, iteration=iteration)
+        tracks$loadTracks()
+        add(tracks)
+      }
+    },
+    
+    apply = function(fun, ...) {
+      return(lapply(X=tracksList, FUN=fun, ...))
+    }
+  )
+)
+
+TracksSampleIntervals <- setRefClass(
+  Class = "TracksSampleIntervals",
+  fields = list(
+    intervals = "data.frame"
+  ),
+  methods = list(
+    initialize = function() {
+      callSuper(intervals=data.frame())
+    },
+    
+    # Determines sampling intervals of the recorded movements for each day
+    getSampleIntervals = function(tracks) {
+      library(plyr)
+      
+      tracksDF <- ld(tracks$tracks)
+      tracksDF$row <- 1:nrow(tracksDF)
+      date <- as.POSIXlt(tracksDF$date)
+      tracksDF$yday <- date$yday
+      tracksDF$year <- date$year
+      intervals <<- ddply(tracksDF, .(burst, yday, year), function(x) {
+        s <- sum(x$dt, na.rm=T) / 3600
+        if (s < 23 | s > 25) return(NULL)
+        distKm <- sum(x$dist) / 1e3
+        if (is.na(distKm) | distKm > 100) return(NULL)
+        intervalMin <- 24 / nrow(x) * 60
+        if (intervalMin > 24*60) return(NULL)
+        x$intervalMin <- intervalMin
+        x$intervalH <- intervalMin / 60
+        x$distanceKm <- distKm
+        return(x[1, c("id","date","intervalH","intervalMin","distanceKm")])
+      })
+      
+      if (nrow(intervals) == 0) warning("Unable to determine sampling intervals.")
+    },
+    
+    getThinnedTracksSampleIntervals = function(tracks, maxThins) {
+      thinnedTracksCollection <- SimulatedTracksCollection$new()
+      thinnedTracksCollection$add(tracks)
+      intervalsList <- list()
+      intervalsList[[1]] <- tracks$getSampleIntervals()
+      
+      for (i in 2:maxThins) {
+        thinnedTracks <- thinnedTracksCollection$get(1)$thin(by=i)
+        if (is.null(thinnedTracks)) break
+        intervalsList[[i]] <- thinnedTracks$getSampleIntervals()
+        thinnedTracksCollection$add(tracks)
+      }
+      
+      intervals <<- ldply(intervalsList, function(x) x$intervals)
+      
+      return(invisible(thinnedTracksCollection))
+    },
+    
+    plotIntervalDistance = function() {
+      library(ggplot2)
+      p <- ggplot(intervals, aes(intervalH, distanceKm)) +
+        geom_point(aes(color=id)) +
+        #geom_line(aes(intervalH, fitted), color="red") +
+        ylab("Distance / day (km)") + xlab("Sampling interval (h)") + theme_bw(18)
+      print(p)
     }
   )
 )
 
 SimulatedTracks <- setRefClass(
-  Class = "SimulationTracks",
+  Class = "SimulatedTracks",
   contains = "Tracks",
   fields = list(
     iteration = "integer"
@@ -56,9 +194,9 @@ SimulatedTracks <- setRefClass(
     },
 
     setTracks = function(tracksDF) {
-      if (class(tracksDF) == "uninitializedField")
+      if (inherits(tracksDF, "uninitializedField"))
         stop("Provide tracksDF argument.")
-      
+      library(adehabitatLT)      
       xy <- tracksDF[,c("x","y")]
       date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, "0", "0"), format="%Y %j %H %M %S"))
       id <- tracksDF$agent
@@ -66,12 +204,14 @@ SimulatedTracks <- setRefClass(
       iteration <<- tracksDF$iteration[1]      
     },
     
-    saveTracks = function() {      
-      save(tracks, file=getDataFileName())
+    saveTracks = function() {
+      fileName <- getDataFileName()
+      message("Saving tracks to ", fileName)
+      save(tracks, file=fileName)
     },
     
     getDataFileName = function() {
-      if (class(study) == "undefinedField" | length(iteration) == 0)
+      if (inherits(study, "undefinedField") | length(iteration) == 0)
         stop("Provide study and iteration parameters.")
       response <- paste(study$response, iteration, sep="-")
       return(context$getFileName(dir=context$processedDataDirectory, name="Tracks", response=response, region=study$studyArea$region))
@@ -88,10 +228,10 @@ FinlandWTCTracks <- setRefClass(
     saveTracks = function() {
       maxSpeed <- 40 # km/h
       
-      require(sp)
-      require(plyr)
-      require(rgdal)
-      require(adehabitatLT)
+      library(sp)
+      library(plyr)
+      library(rgdal)
+      library(adehabitatLT)
       
       gps <- if (study$response == "canis.lupus") preprocessWolfData()
       else if (study$response == "lynx.lynx") preprocessLynxData()
@@ -120,7 +260,7 @@ FinlandWTCTracks <- setRefClass(
     },
     
     preprocessWolfData = function() {
-      require(gdata)
+      library(gdata)
       
       message("Reading raw data...")
       gps.raw <- read.xls(file.path(context$rawDataDirectory, "GPS_Finland_GPS_Finland_RKTL_Wolf_ec_import_tracks.xlsx"), na.strings="")  
@@ -134,7 +274,7 @@ FinlandWTCTracks <- setRefClass(
     },
     
     preprocessLynxData = function() {
-      require(gdata)
+      library(gdata)
 
       message("Reading raw data...")
       gps.raw <- read.xls(file.path(context$rawDataDirectory, "GPS_Finland_GPS_Finland_RKTL_Lynx_ec_import_tracks.xls"))  
@@ -146,7 +286,7 @@ FinlandWTCTracks <- setRefClass(
     },
     
     preprocessReindeerData = function() {
-      require(gdata)
+      library(gdata)
       
       message("Reading raw data...")
       gps.raw <- read.xls(file.path(context$rawDataDirectory, "GPS_Finland_GPS_Finland_RKTL_ForestReindeer_ec_import_tracks.xlsx"))  

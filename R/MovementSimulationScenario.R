@@ -30,8 +30,6 @@ MovementSimulationScenario <- setRefClass(
       loadHabitatRasterInMemory <<- FALSE
       callSuper(...)
       isTest <<- isTest
-    
-      # TODO: start cluster
       
       return(.self)
     },
@@ -48,7 +46,6 @@ MovementSimulationScenario <- setRefClass(
     },
     
     finalize = function() {
-      # TODO: stop cluster 
     },
         
     euclidean = function(c1, c2) sqrt( (c1[,1] - c2[,1])^2 + (c1[,2] - c2[,2])^2 ),
@@ -58,14 +55,14 @@ MovementSimulationScenario <- setRefClass(
     },
     
     randomizeVector = function(locations) {
-      require(sp)
-      require(raster)
+      library(sp)
+      library(raster)
       
       point <- SpatialPoints(locations[,,drop=F], proj4string=studyArea$proj4string)
       outsideBoundary <- is.na(over(point, studyArea$boundary))
       if (class(outsideBoundary) == "matrix") outsideBoundary <- outsideBoundary[,1]
 
-      if (class(habitatWeights) == "uninitializedField") {
+      if (inherits(habitatWeights, "uninitializedField")) {
         if (all(outsideBoundary == TRUE)) return(NULL)
         return(list(index=1, coords=locations[1,,drop=F]))
       }
@@ -81,8 +78,8 @@ MovementSimulationScenario <- setRefClass(
     },
         
     randomizeBCRWTrack = function(initialLocation, initialAngle, isFirst, nProposal) {
-      require(CircStats)
-      require(sp)
+      library(CircStats)
+      library(sp)
       
       maxTry <- 100
             
@@ -150,14 +147,14 @@ MovementSimulationScenario <- setRefClass(
     # etc.
     randomizeBirthDeath = function(param=list(mean=1, sd=1.1)) {
       bdRate <- rlnorm(n=1, meanlog=log(param$mean), sdlog=log(param$sd))
-      nTransform <- rpois(nAgents, bdRate)
+      nTransform <- rpois(length(agents), bdRate)
       
       nBorn <- sum(nTransform[nTransform > 1] - 1)
       nSurvive <- sum(nTransform[nTransform == 1]) + length(nTransform[nTransform > 1])
       nDie <- length(nTransform[nTransform == 0])
       
-      message("agents before = ", nAgents, " born = ", nBorn, ", survive = ", nSurvive, ", die = ", nDie, ", agents after = ", nSurvive + nBorn)
-            
+      message("agents before = ", length(agents), " -> born = ", nBorn, ", survive = ", nSurvive, ", die = ", nDie, " -> agents after = ", nSurvive + nBorn)
+      
       survivedIndex <- nTransform > 0      
       bornIndex <- nTransform > 1
       x <- rep(which(bornIndex), nTransform[bornIndex]-1)
@@ -166,20 +163,19 @@ MovementSimulationScenario <- setRefClass(
       agents <<- agents[survivedIndex]
       if (nBorn > 0) agents <<- c(agents, newAgentId:(newAgentId + nBorn - 1))
       newAgentId <<- as.integer(newAgentId + nBorn)
-      nAgents <<- length(agents)
       
       return(survivedBornIndex)
     },
     
     randomizeBCRWTracks = function() {
-      require(plyr)
-      require(maptools)
+      library(plyr)
+      library(maptools)
       
       initialLocations <- initialPopulation$randomize(nAgents)
       habitatTypes <- extract(studyArea$habitat, initialLocations)
       if (any(is.na(habitatTypes))) stop("Invalid initial coordinates.")
       
-      nProposal <- if (class(habitatWeights) == "uninitializedField") 1 else 10
+      nProposal <- if (inherits(habitatWeights, "uninitializedField")) 1 else 10
       message("Number of proposals = ", nProposal)
       
       agents <<- 1:nAgents
@@ -190,23 +186,25 @@ MovementSimulationScenario <- setRefClass(
       initialAngles <- runif(nAgents, 0, 2*pi)
       isFirst <- TRUE
       
+      nAgentsCurrent <- nAgents
+      
       for (year in 1:years) {
-        if (nAgents > 0) {
-          track <- ldply(1:nAgents,
+        if (nAgentsCurrent > 0) {
+          track <- ldply(1:nAgentsCurrent,
             function(agentIndex, initialLocations, initialAngles, isFirst, nProposal) {
-              require(sp)
-  
+              library(sp)
+              
               ## TODO: UNTESTED CODE
               if (length(habitatWeights) != 0 & loadHabitatRasterInMemory) {
-                require(raster)
-                require(rgdal)
+                library(raster)
+                library(rgdal)
                 if (!inMemory(studyArea$habitat)) {
                   message("Reading habitat raster to memory...")
                   studyArea$habitat <<- readAll(studyArea$habitat)
                 }
               }
               
-              message("Agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgents, ", Year = ", year,  " / ", years, "...")
+              message("Agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgentsCurrent, ", Year = ", year,  " / ", years, "...")
               track <- randomizeBCRWTrack(initialLocation=initialLocations[agentIndex,,drop=F], initialAngle=initialAngles[agentIndex], isFirst=isFirst, nProposal=nProposal)
               track$agent <- agents[agentIndex]
               return(track)
@@ -222,28 +220,25 @@ MovementSimulationScenario <- setRefClass(
           initialLocations <- as.matrix(track[survivedBornLastStepIndex, c("x","y"), drop=F])
           initialAngles <- track[survivedBornLastStepIndex, c("angle")]
           isFirst <- FALSE
+          nAgentsCurrent <- length(agents)
         }
       }
 
       return(tracks)
     },
-
-    randomizeIntersectionDays = function() {
-      return(round(runif(nAgents, 1, days)))
-    },
     
-    simulate = function(saveData=FALSE) {
-      simulatedTracks <- list()
+    simulate = function(save=FALSE) {
+      simulatedTracks <- SimulatedTracksCollection$new()
       
       for (i in 1:nIterations) {
         message("Iteration ", i, " of ", nIterations, "...")
-        tracks <- randomizeBCRWTracks()
-        tracks$iteration <- i
-        simulatedTracks[[i]] <- SimulatedTracks(context=context, study=.self, tracks=tracks, preprocessData=saveData)
+        tracksDF <- randomizeBCRWTracks()
+        tracksDF$iteration <- i
+        tracks <- SimulatedTracks$new(context=context, study=.self, tracks=tracksDF, preprocessData=save)
+        simulatedTracks$add(tracks)
       }
       
-      return(simulatedTracks)
-      #return(trackReplicates)
+      return(invisible(simulatedTracks))
       
       #spTracks <- dlply(trackReplicates, .(agent, year, iteration), function(x) {
       #  id <- paste(x[1, c("agent","year","iteration")], collapse=".")
@@ -256,37 +251,25 @@ MovementSimulationScenario <- setRefClass(
       #                                    spData,
       #                                    match.ID=FALSE)      
       #return(spdfTracks)
-    },
-    
-    plotTracks = function(tracks) {
-      require(sp)
-      require(plyr)
-      plot(tracks$x, tracks$y, type="n")
-      ddply(tracks, .(agent, year, iteration), function(tracks) {
-        lines(tracks$x, tracks$y, col=tracks$agent)
-      })
-      plot(studyArea$boundary, add=T)
-
-      #plot(tracks, col=tracks@data$agent)
-      #plot(studyArea$boundary, add=T, border="lightgray")
     }
-    
-    #getTracksFile = function() {
-    #  return(context$getFileName(context$resultDataDirectory, name="SimulatedTracks", response=response, region=studyArea$region))
-    #},
-    #
-    #saveTracks = function(tracks) {
-    #  save(tracks, file=getTracksFile())
-    #},
-    #
-    #loadTracks = function() {
-    #  load(getTracksFile())
-    #  return(tracks)
-    #},
-    #
-    #estimate = function(intersections) {
-    #  # TODO
+
+    #randomizeIntersectionDays = function() {
+    #  return(round(runif(nAgents, 1, days)))
     #}
+    
+    
+    #plotTracks = function(tracks) {
+    #  library(sp)
+    #  library(plyr)
+    #  plot(tracks$x, tracks$y, type="n")
+    #  ddply(tracks, .(agent, year, iteration), function(tracks) {
+    #    lines(tracks$x, tracks$y, col=tracks$agent)
+    #  })
+    #  plot(studyArea$boundary, add=T)
+    #
+    #  #plot(tracks, col=tracks@data$agent)
+    #  #plot(studyArea$boundary, add=T, border="lightgray")
+    #}    
   )
 )
 
@@ -339,7 +322,7 @@ MovementSimulationScenarioB <- setRefClass(
     }
     
     #discardMovements = function(tracks, retainDaysIndex) {
-    #  require(plyr)
+    #  library(plyr)
     #  x <- ddply(trackReplicates, .(year, individual, iteration), function(x, i) x[i,], i=retainDaysIndex)
     #  return(x)
     #}

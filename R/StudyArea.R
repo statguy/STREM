@@ -41,7 +41,7 @@ StudyArea <- setRefClass(
     },
     
     maskLargeRaster = function(inputRasterFile, outputRasterFile) {
-      require(maptools)
+      library(maptools)
       
       message("Writing boundary polygon as shape file...")
       tmpbase <- tempdir()
@@ -99,7 +99,7 @@ StudyArea <- setRefClass(
     },
             
     findLargestPolygon = function(gadm) {
-      require(maptools)
+      library(maptools)
       p <- list()
       for (i in 1:length(gadm)) {
         largest <- which.max(sapply(gadm@polygons[[i]]@Polygons, slot, "area"))
@@ -117,7 +117,7 @@ StudyArea <- setRefClass(
     loadBoundaryGADM = function(country, level=0, subregion, mainland=FALSE, thin=FALSE, coordinateScale=as.integer(1), tolerance=5000) {  
       coordinateScale <<- coordinateScale
       
-      require(rgdal)
+      library(rgdal)
       
       if (thin==TRUE & mainland==TRUE) mainland <- FALSE
       

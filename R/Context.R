@@ -1,30 +1,15 @@
 Context <- setRefClass(
   "Context",
   fields = list(
-    sourceUrl = "character",
-    resultDataDirectory = "ANY",
-    processedDataDirectory = "ANY",
-    rawDataDirectory = "ANY",
-    scratchDirectory = "ANY",
-    figuresDirectory = "ANY"
+    resultDataDirectory = "character",
+    processedDataDirectory = "character",
+    rawDataDirectory = "character",
+    scratchDirectory = "character",
+    figuresDirectory = "character"
   ),
   methods = list(
-    initialize = function(sourceUrl="https://raw.github.com/statguy/R-Winter-Track-Counts/master/", resultDataDirectory=NA, processedDataDirectory=NA, rawDataDirectory=NA, scratchDirectory=NA, figuresDirectory=NA) {
-      callSuper(sourceUrl=sourceUrl, resultDataDirectory=resultDataDirectory, processedDataDirectory=processedDataDirectory, rawDataDirectory=rawDataDirectory, scratchDirectory=scratchDirectory, figuresDirectory=figuresDirectory)
-    },
-    
-    loadSource = function(sourceFile) {
-      if (substr(sourceUrl, 1, 4) == "http") {
-        require(devtools)
-        src <- paste(sourceUrl, sourceFile, sep="/")
-        message("Loading source from ", src)
-        source_url(src)
-      }
-      else {
-        src <- file.path(sourceUrl, sourceFile)
-        message("Loading source from ", src)
-        source(src)
-      }
+    initialize = function(resultDataDirectory=".", processedDataDirectory=".", rawDataDirectory=".", scratchDirectory=".", figuresDirectory=".") {
+      callSuper(resultDataDirectory=resultDataDirectory, processedDataDirectory=processedDataDirectory, rawDataDirectory=rawDataDirectory, scratchDirectory=scratchDirectory, figuresDirectory=figuresDirectory)
     },
     
     getFileName = function(dir, name, response, region, ext=".RData") {
@@ -34,6 +19,14 @@ Context <- setRefClass(
         file.path(dir, paste(name, "-", response, "-", region, ext, sep=""))
       message("File = ", fileName)
       return(fileName)
+    },
+    
+    listFiles = function(dir, name, response, region, ext=".RData") {
+      pattern <- if (missing(response))
+        paste(name, "-", region, ext, sep="")
+      else
+        paste(name, "-", response, "-", region, ext, sep="")
+      return(list.files(dir, pattern))
     }
   )
 )
