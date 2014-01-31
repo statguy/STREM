@@ -346,6 +346,8 @@ MovementSimulationScenarioB <- setRefClass(
   )
 )
 
+# TODO: scenario C
+
 # Biased correlated random walk in a homogenous landscape, spatial variation in initial locations
 MovementSimulationScenarioD <- setRefClass(
   Class = "MovementSimulationScenarioD",

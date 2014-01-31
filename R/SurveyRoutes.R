@@ -21,6 +21,10 @@ getTriangles <- function(centroids, angles, sideLength) {
   return(triangles)
 }
 
+
+
+########### TODO: parallel
+
 SurveyRoutes <- setRefClass(
   Class = "SurveyRoutes",
   fields = list(
@@ -48,17 +52,19 @@ SurveyRoutes <- setRefClass(
             }, surveyRoutes=surveyRoutes, tracks=tracks, j=j, .parallel=runParallel)
         }
       }
-      else if (dimension == 1) {
-        intersections <- parSapply(cluster$remoteCluster, 1:nTracks, function(j, surveyRoutes, tracks, cluster) {
-          nSurveyRoutes <- length(surveyRoutes)
-          nTracks <- length(tracks)
-          message("Finding intersections for track ", j," / ", nTracks, "...")
-          
+      else if (dimension == 1) { # TODO: untested
+        clusterEvalQ(cluster, {
           require(plyr)
           require(parallel)
           require(doMC)
           registerDoMC(cores=detectCores())
           require(rgeos)
+        })
+        
+        intersections <- parSapply(cluster$remoteCluster, 1:nTracks, function(j, surveyRoutes, tracks, cluster) {
+          nSurveyRoutes <- length(surveyRoutes)
+          nTracks <- length(tracks)
+          message("Finding intersections for track ", j," / ", nTracks, "...")
           
           x <- laply(1:nSurveyRoutes,
             function(i, surveyRoutes, tracks, j) {
@@ -68,18 +74,20 @@ SurveyRoutes <- setRefClass(
           return(x)
         }, surveyRoutes=surveyRoutes, tracks=tracks)
       }
-      else if (dimension == 2) {
-        intersections <- parSapply(cluster$remoteCluster, 1:nSurveyRoutes, function(i, surveyRoutes, tracks) {
-          nSurveyRoutes <- length(surveyRoutes)
-          nTracks <- length(tracks)
-          message("Finding intersections for survey route ", i, " / ", nSurveyRoutes, "...")
-          
+      else if (dimension == 2) { # TODO: untested
+        clusterEvalQ(cluster, {
           require(plyr)
           require(parallel)
           require(doMC)
           registerDoMC(cores=detectCores())
           require(rgeos)
-          
+        })
+        
+        intersections <- parSapply(cluster$remoteCluster, 1:nSurveyRoutes, function(i, surveyRoutes, tracks) {
+          nSurveyRoutes <- length(surveyRoutes)
+          nTracks <- length(tracks)
+          message("Finding intersections for survey route ", i, " / ", nSurveyRoutes, "...")
+                    
           x <- laply(1:nTracks,
             function(j, surveyRoutes, tracks, i) {
               return(length(gIntersection(surveyRoutes[i], tracks[j,], byid=TRUE)))
