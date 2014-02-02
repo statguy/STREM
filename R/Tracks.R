@@ -39,6 +39,7 @@ Tracks <- setRefClass(
     },
     
     apply = function(variables=.(id), fun, ..., combine=F) {
+      tracksDF <- dl
       result <- dlply(.data=tracksDF, .variables=variables, .fun=fun, ...)
       if (combine) result <- do.call("rbind", result)
       return(result)
