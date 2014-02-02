@@ -39,7 +39,6 @@ Tracks <- setRefClass(
     },
     
     apply = function(variables=.(id), fun, ..., combine=F) {
-      tracksDF <- ld(tracks)
       result <- dlply(.data=tracksDF, .variables=variables, .fun=fun, ...)
       if (combine) result <- do.call("rbind", result)
       return(result)
@@ -53,15 +52,32 @@ Tracks <- setRefClass(
       tracksDF$yday <- d$yday
       tracksDF$year <- d$year
       
-      tracksDFThinned <- ddply(tracksDF, .variables=.(id, year, yday), .fun=function(x, by) {
+      oldDt <- mean(tracksDF$dt, na.rm=T)
+      
+      tracksDFThinned <- ddply(tracksDF, .variables=.(id, burst, year, yday), .fun=function(x, by) {
         n <- nrow(x)
         if (n==1) return(NULL)
-        i <- seq(1, n, by=by)
-        return(x[i,])
+        retainIndex <- seq(1, n, by=by) 
+        return(x[retainIndex,])
       }, by=by)
-      
+
       if (nrow(tracksDFThinned) == 0) return(NULL)
+      
       tracksThinned <- dl(tracksDFThinned)
+      tracksDFThinned <- ld(tracksThinned)
+      
+      newDt <- mean(tracksDFThinned$dt, na.rm=T)
+      message("Thinned movements from dt = ", oldDt, " to dt = ", newDt)      
+      
+#      tracksDFThinned <- ddply(tracksDFThinned, .variables=.(id, burst), .fun=function(x, maxInterval) {
+##message(paste(x$dt, collapse=","))
+#        if (any(x$dt[!is.na(x$dt)] > maxInterval)) return(NULL)
+#        return(x)
+#      }, maxInterval=maxInterval)
+#      
+#      if (nrow(tracksDFThinned) == 0) return(NULL)
+#
+#      tracksThinned <- dl(tracksDFThinned)
       return(Tracks$new(context=context, study=study, tracks=tracksThinned))
     },
     
@@ -71,121 +87,11 @@ Tracks <- setRefClass(
       return(intervals)
     },
     
-    getThinnedTracksSampleIntervals = function(maxThins) {
+    getThinnedTracksSampleIntervals = function() {
       intervals <- TracksSampleIntervals$new()
-      intervals$getThinnedTracksSampleIntervals(tracks=.self, maxThins=maxThins)
+      intervals$getThinnedTracksSampleIntervals(tracks=.self)
       return(intervals)
     }    
-  )
-)
-
-SimulatedTracksCollection <- setRefClass(
-  Class = "TracksCollection",
-  fields = list(
-    tracksList = "list"
-  ),
-  methods = list(
-    initialize = function() {
-      callSuper(tracksList=list())
-    },
-    
-    length = function() return(base::length(tracksList)),
-    
-    add = function(tracks) {
-      tracksList[[length() + 1]] <<- tracks
-    },
-    
-    get = function(index) {
-      if (base::length(tracksList) < index) stop("Invalid index = ", index, ".")
-      return(tracksList[[index]])
-    },
-    
-    load = function(study) {     
-      context <- study$context
-      tracksFiles <- context$listFiles(dir=context$processedDataDirectory, name="Tracks", response=paste(study$response, "\\d+", sep="-"), region=study$studyArea$region)
-      
-      for (iteration in 1:base::length(tracksFiles)) { # TODO: better to use iteration number rather than number of files
-        tracks <- SimulatedTracks$new(context=study$context, study=study, iteration=iteration)
-        tracks$loadTracks()
-        add(tracks)
-      }
-    },
-    
-    apply = function(fun, ...) {
-      return(lapply(X=tracksList, FUN=fun, ...))
-    }
-  )
-)
-
-TracksSampleIntervals <- setRefClass(
-  Class = "TracksSampleIntervals",
-  fields = list(
-    intervals = "data.frame",
-    predictions = "data.frame"
-  ),
-  methods = list(
-    initialize = function() {
-      callSuper(intervals=data.frame())
-    },
-    
-    # Determines sampling intervals of the recorded movements for each day
-    getSampleIntervals = function(tracks) {
-      library(plyr)
-      
-      tracksDF <- ld(tracks$tracks)
-      tracksDF$row <- 1:nrow(tracksDF)
-      date <- as.POSIXlt(tracksDF$date)
-      tracksDF$yday <- date$yday
-      tracksDF$year <- date$year
-      intervals <<- ddply(tracksDF, .(burst, yday, year), function(x) {
-        s <- sum(x$dt, na.rm=T) / 3600
-        if (s < 23 | s > 25) return(NULL)
-        distKm <- sum(x$dist) / 1e3
-        if (is.na(distKm) | distKm > 100) return(NULL)
-        intervalMin <- 24 / nrow(x) * 60
-        if (intervalMin > 24*60) return(NULL)
-        x$intervalMin <- intervalMin
-        x$intervalH <- intervalMin / 60
-        x$distanceKm <- distKm
-        return(x[1, c("id","date","intervalH","intervalMin","distanceKm")])
-      })
-      
-      if (nrow(intervals) == 0) warning("Unable to determine sampling intervals.")
-    },
-    
-    getThinnedTracksSampleIntervals = function(tracks, maxThins) {
-      thinnedTracksCollection <- SimulatedTracksCollection$new()
-      thinnedTracksCollection$add(tracks)
-      intervalsList <- list()
-      intervalsList[[1]] <- tracks$getSampleIntervals()
-      
-      for (i in 2:maxThins) {
-        thinnedTracks <- thinnedTracksCollection$get(1)$thin(by=i)
-        if (is.null(thinnedTracks)) break
-        intervalsList[[i]] <- thinnedTracks$getSampleIntervals()
-        thinnedTracksCollection$add(tracks)
-      }
-      
-      intervals <<- ldply(intervalsList, function(x) x$intervals)
-      
-      return(invisible(thinnedTracksCollection))
-    },
-    
-    fit = function() {
-      library(lme4)
-      result <- lmer(log(distanceKm) ~ log(intervalH) + (1|id), data=intervals)
-      predictions <<- data.frame(intervalH=seq(0, 24, by=0.1))
-      predictions$distanceKm <<- exp(predict(object=result, newdata=predictions, REform=NA))
-    },
-    
-    plotIntervalDistance = function() {
-      library(ggplot2)
-      p <- ggplot(intervals, aes(intervalH, distanceKm)) +
-        geom_point(aes(color=id)) +
-        ylab("Distance / day (km)") + xlab("Sampling interval (h)") + theme_bw(18)      
-      if (nrow(predictions) > 0) p <- p + geom_line(data=predictions, aes(intervalH, distanceKm), color="red")
-      print(p)
-    }
   )
 )
 
@@ -196,20 +102,13 @@ SimulatedTracks <- setRefClass(
     iteration = "integer"
   ),
   methods = list(
-    initialize = function(tracksDF, preprocessData=FALSE, ...) {
-      if (!missing(tracksDF)) setTracks(tracksDF)
+    initialize = function(xy, id, date, preprocessData=FALSE, ...) {
+      if (!missing(xy) && !missing(id) && !missing(date)) setTracks(xy=xy, id=id, date=date)
       callSuper(preprocessData=preprocessData, ...)
     },
-
-    setTracks = function(tracksDF) {
-      if (inherits(tracksDF, "uninitializedField"))
-        stop("Provide tracksDF argument.")
-      library(adehabitatLT)      
-      xy <- tracksDF[,c("x","y")]
-      date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
-      id <- tracksDF$agent
-      tracks <<- as.ltraj(xy=xy, date=date, id=id, infolocs=NULL)
-      iteration <<- tracksDF$iteration[1]      
+    
+    setTracks = function(xy, id, date) {
+      tracks <<- as.ltraj(xy=xy, date=date, id=id, burst=id)
     },
     
     saveTracks = function() {
@@ -283,7 +182,7 @@ FinlandWTCTracks <- setRefClass(
     
     preprocessLynxData = function() {
       library(gdata)
-
+      
       message("Reading raw data...")
       gps.raw <- read.xls(file.path(context$rawDataDirectory, "GPS_Finland_GPS_Finland_RKTL_Lynx_ec_import_tracks.xls"))  
       gps <- data.frame(id=gps.raw$UnitID,
@@ -303,6 +202,134 @@ FinlandWTCTracks <- setRefClass(
                         x=gps.raw$X, y=gps.raw$Y)
       
       return(list(gps=gps, fromProj="+init=epsg:4326"))
+    }
+  )
+)
+
+SimulatedTracksCollection <- setRefClass(
+  Class = "TracksCollection",
+  fields = list(
+    tracksList = "list"
+  ),
+  methods = list(
+    initialize = function() {
+      callSuper(tracksList=list())
+    },
+    
+    length = function() return(base::length(tracksList)),
+    
+    add = function(tracks) {
+      tracksList[[length() + 1]] <<- tracks
+    },
+    
+    get = function(index) {
+      if (base::length(tracksList) < index) stop("Invalid index = ", index, ".")
+      return(tracksList[[index]])
+    },
+    
+    load = function(study) {     
+      context <- study$context
+      tracksFiles <- context$listFiles(dir=context$processedDataDirectory, name="Tracks", response=paste(study$response, "\\d+", sep="-"), region=study$studyArea$region)
+      
+      for (iteration in 1:base::length(tracksFiles)) { # TODO: better to use iteration number rather than number of files
+        tracks <- SimulatedTracks$new(context=study$context, study=study, iteration=iteration)
+        tracks$loadTracks()
+        add(tracks)
+      }
+    },
+    
+    apply = function(fun, ...) {
+      return(lapply(X=tracksList, FUN=fun, ...))
+    }
+  )
+)
+
+TracksSampleIntervals <- setRefClass(
+  Class = "TracksSampleIntervals",
+  fields = list(
+    intervals = "data.frame",
+    predictions = "data.frame"
+  ),
+  methods = list(
+    initialize = function() {
+      callSuper(intervals=data.frame())
+    },
+    
+    # Determines sampling intervals of the recorded movements for each day
+    getSampleIntervals = function(tracks) {
+      library(plyr)
+      
+      tracksDF <- ld(tracks$tracks)
+      tracksDF$row <- 1:nrow(tracksDF)
+      date <- as.POSIXlt(tracksDF$date)
+      tracksDF$yday <- date$yday
+      tracksDF$year <- date$year
+      intervals <<- ddply(tracksDF, .(burst, yday, year), function(x) {
+        s <- sum(x$dt, na.rm=T) / 3600
+        if (s < 23 | s > 25) return(NULL)
+        distKm <- sum(x$dist) / 1e3
+        if (is.na(distKm) | distKm > 100) return(NULL)
+        intervalMin <- 24 / nrow(x) * 60
+        if (intervalMin > 24*60) return(NULL)
+        x$intervalSec <- intervalMin * 60
+        x$intervalMin <- intervalMin
+        x$intervalH <- intervalMin / 60
+        x$distanceKm <- distKm
+        return(x[1, c("id","date","intervalH","intervalMin","intervalSec","distanceKm")])
+      })
+      
+      if (nrow(intervals) == 0) warning("Unable to determine sampling intervals.")
+    },
+    
+    getThinnedTracksSampleIntervals = function(tracks) {
+      tracksDF <- ld(tracks$tracks)
+      date <- as.POSIXlt(tracksDF$date)
+      #tracksDF$burst <- paste(tracksDF$id, date$yday, date$year, sep=".")      
+      tracksDF <- ddply(tracksDF, .(id), function(x) { x$sampleid <- 1:nrow(x); return(x) })
+      tracks$tracks <- dl(tracksDF)      
+      
+      thinnedTracksCollection <- SimulatedTracksCollection$new()
+      thinnedTracksCollection$add(tracks)
+      intervalsList <- list()
+      intervalsList[[1]] <- tracks$getSampleIntervals()
+      
+      maxThins <- 1000
+      for (i in 2:maxThins) {
+        #thinnedTracks <- thinnedTracksCollection$get(1)$thin(by=i)
+        thinnedTracks <- thinnedTracksCollection$get(i-1)$thin(by=2)
+        if (is.null(thinnedTracks)) break
+        thinnedIntervals <- thinnedTracks$getSampleIntervals()
+        
+        retainIndex <- thinnedIntervals$intervals$intervalSec <= 60*60*12
+        retainIdBurst <- unique(thinnedIntervals$intervals[retainIndex,c("id","burst")])
+        if (sum(retainIndex) == 0) break
+        thinnedTracks$tracks <- thinnedTracks$tracks[id = retainIdBurst$id][burst = retainIdBurst$burst]
+        thinnedIntervals$intervals <- thinnedIntervals$intervals[retainIndex,]
+        
+        intervalsList[[i]] <- thinnedIntervals         
+        thinnedTracksCollection$add(thinnedTracks)
+      }
+      if (i == maxThins) stop("Something wrong with thinning.")
+      
+      intervals <<- ldply(intervalsList, function(x) x$intervals)
+      
+      return(invisible(thinnedTracksCollection))
+    },
+    
+    fit = function() {
+      library(lme4)
+      result <- lmer(log(distanceKm) ~ log(intervalH) + (1|id) + (1|sampleid), data=intervals)
+      predictions <<- data.frame(intervalH=seq(0, 24, by=0.1))
+      predictions$distanceKm <<- exp(predict(object=result, newdata=predictions, REform=NA))
+    },
+    
+    plotIntervalDistance = function() {
+      library(ggplot2)
+      p <- ggplot(intervals, aes(intervalH, distanceKm)) +
+        geom_point(aes(color=id)) +
+        ylab("Distance / day (km)") + xlab("Sampling interval (h)") + theme_bw(18)      
+      if (nrow(predictions) > 0) p <- p + geom_line(data=predictions, aes(intervalH, distanceKm), color="red")
+      print(p)
     }
   )
 )

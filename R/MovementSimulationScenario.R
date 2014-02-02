@@ -139,7 +139,7 @@ MovementSimulationScenario <- setRefClass(
       stepHours <- rep(seq(0, 24-stepIntervalHours, by=stepIntervalHours), days)
       stepMinutes <- (stepHours - trunc(stepHours)) * 60
       stepSeconds <- (stepMinutes - trunc(stepMinutes)) * 60
-      return(data.frame(x=coords[index,1], y=coords[index,2], angle=angles[index], day=stepDays, hour=trunc(stepHours), minute=trunc(stepMinutes), second=trunc(stepSeconds)))
+      return(data.frame(x=coords[index,1], y=coords[index,2], angle=angles[index], day=stepDays, hour=trunc(stepHours), minute=trunc(stepMinutes), second=round(stepSeconds)))
     },
     
     # Combined birth-death process:
@@ -235,8 +235,8 @@ MovementSimulationScenario <- setRefClass(
       for (i in 1:nIterations) {
         message("Iteration ", i, " of ", nIterations, "...")
         tracksDF <- randomizeBCRWTracks()
-        tracksDF$iteration <- i
-        tracks <- SimulatedTracks$new(context=context, study=.self, tracks=tracksDF, preprocessData=save)
+        date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
+        tracks <- SimulatedTracks$new(context=context, study=.self, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$id, date=date, iteration=i)
         simulatedTracks$add(tracks)
       }
       
