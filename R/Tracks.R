@@ -71,7 +71,7 @@ Tracks <- setRefClass(
       return(intervals)
     },
     
-    getThinnedTrackSampleIntervals = function(maxThins) {
+    getThinnedTracksSampleIntervals = function(maxThins) {
       intervals <- TracksSampleIntervals$new()
       intervals$getThinnedTracksSampleIntervals(tracks=.self, maxThins=maxThins)
       return(intervals)
@@ -120,7 +120,8 @@ SimulatedTracksCollection <- setRefClass(
 TracksSampleIntervals <- setRefClass(
   Class = "TracksSampleIntervals",
   fields = list(
-    intervals = "data.frame"
+    intervals = "data.frame",
+    predictions = "data.frame"
   ),
   methods = list(
     initialize = function() {
@@ -170,12 +171,19 @@ TracksSampleIntervals <- setRefClass(
       return(invisible(thinnedTracksCollection))
     },
     
+    fit = function() {
+      library(lme4)
+      result <- lmer(log(distanceKm) ~ log(intervalH) + (1|id), data=intervals)
+      predictions <<- data.frame(intervalH=seq(0, 24, by=0.1))
+      predictions$distanceKm <<- exp(predict(object=result, newdata=predictions, REform=NA))
+    },
+    
     plotIntervalDistance = function() {
       library(ggplot2)
       p <- ggplot(intervals, aes(intervalH, distanceKm)) +
         geom_point(aes(color=id)) +
-        #geom_line(aes(intervalH, fitted), color="red") +
-        ylab("Distance / day (km)") + xlab("Sampling interval (h)") + theme_bw(18)
+        ylab("Distance / day (km)") + xlab("Sampling interval (h)") + theme_bw(18)      
+      if (nrow(predictions) > 0) p <- p + geom_line(data=predictions, aes(intervalH, distanceKm), color="red")
       print(p)
     }
   )
@@ -198,7 +206,7 @@ SimulatedTracks <- setRefClass(
         stop("Provide tracksDF argument.")
       library(adehabitatLT)      
       xy <- tracksDF[,c("x","y")]
-      date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, "0", "0"), format="%Y %j %H %M %S"))
+      date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
       id <- tracksDF$agent
       tracks <<- as.ltraj(xy=xy, date=date, id=id, infolocs=NULL)
       iteration <<- tracksDF$iteration[1]      

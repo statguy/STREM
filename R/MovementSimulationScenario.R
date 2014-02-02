@@ -137,7 +137,9 @@ MovementSimulationScenario <- setRefClass(
       index <- if (isFirst) 1:nSteps else 1:nSteps+1
       stepDays <- rep(1:days, each=24 / stepIntervalHours)
       stepHours <- rep(seq(0, 24-stepIntervalHours, by=stepIntervalHours), days)
-      return(data.frame(x=coords[index,1], y=coords[index,2], angle=angles[index], day=stepDays, hour=stepHours))
+      stepMinutes <- (stepHours - trunc(stepHours)) * 60
+      stepSeconds <- (stepMinutes - trunc(stepMinutes)) * 60
+      return(data.frame(x=coords[index,1], y=coords[index,2], angle=angles[index], day=stepDays, hour=trunc(stepHours), minute=trunc(stepMinutes), second=trunc(stepSeconds)))
     },
     
     # Combined birth-death process:
@@ -239,37 +241,11 @@ MovementSimulationScenario <- setRefClass(
       }
       
       return(invisible(simulatedTracks))
-      
-      #spTracks <- dlply(trackReplicates, .(agent, year, iteration), function(x) {
-      #  id <- paste(x[1, c("agent","year","iteration")], collapse=".")
-      #  return(Lines(list(Line(x[,c("x","y")])), ID=id))
-      #}, .parallel=runParallel)
-      #spData <- ddply(trackReplicates, .(agent, year, iteration), function(x) {
-      #  return(x[1, c("agent","year","iteration"), drop=F])
-      #}, .parallel=runParallel)
-      #spdfTracks <- SpatialLinesDataFrame(SpatialLines(spTracks, proj4string=studyArea$proj4string),
-      #                                    spData,
-      #                                    match.ID=FALSE)      
-      #return(spdfTracks)
     }
 
     #randomizeIntersectionDays = function() {
     #  return(round(runif(nAgents, 1, days)))
     #}
-    
-    
-    #plotTracks = function(tracks) {
-    #  library(sp)
-    #  library(plyr)
-    #  plot(tracks$x, tracks$y, type="n")
-    #  ddply(tracks, .(agent, year, iteration), function(tracks) {
-    #    lines(tracks$x, tracks$y, col=tracks$agent)
-    #  })
-    #  plot(studyArea$boundary, add=T)
-    #
-    #  #plot(tracks, col=tracks@data$agent)
-    #  #plot(studyArea$boundary, add=T, border="lightgray")
-    #}    
   )
 )
 
@@ -278,8 +254,8 @@ MovementSimulationScenarioIntensive <- setRefClass(
   Class = "MovementSimulationScenarioIntensive",
   contains = "MovementSimulationScenario",
   methods = list(
-    initialize = function(response="Intensive", nAgents=as.integer(100), nIterations=as.integer(1), runParallel=T, ...) {
-      callSuper(response=response, isTest=F, years=as.integer(1), nAgents=nAgents, nIterations=nIterations, days=as.integer(60), stepIntervalHours=0.1, stepSpeedScale=0.5, CRWCorrelation=0.8, runParallel=runParallel, ...)
+    initialize = function(response="Intensive", nAgents=as.integer(2), nIterations=as.integer(1), runParallel=T, ...) {
+      callSuper(response=response, isTest=F, years=as.integer(1), nAgents=nAgents, nIterations=nIterations, days=as.integer(10), stepIntervalHours=0.1, stepSpeedScale=0.5, CRWCorrelation=0.8, runParallel=runParallel, ...)
       return(.self)
     },
     
