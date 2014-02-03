@@ -15,7 +15,7 @@ Collate:
   StudyArea.R
   Study.R
   Tracks.R
-  WTCData.R
+  Intersections.R
   SurveyRoutes.R
   InitialPopulation.R
   MovementSimulationScenario.R

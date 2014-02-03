@@ -92,6 +92,7 @@ StudyArea <- setRefClass(
     },
     
     loadHabitatRaster = function() {
+      library(raster)
       if (!file.exists(getHabitatRasterFile()))
         stop("Habitat raster file ", getHabitatRasterFile(), " not found.")
       habitat <<- raster(getHabitatRasterFile())
@@ -117,6 +118,7 @@ StudyArea <- setRefClass(
     loadBoundaryGADM = function(country, level=0, subregion, mainland=FALSE, thin=FALSE, coordinateScale=as.integer(1), tolerance=5000) {  
       coordinateScale <<- coordinateScale
       
+      library(sp)
       library(rgdal)
       
       if (thin==TRUE & mainland==TRUE) mainland <- FALSE
@@ -189,6 +191,7 @@ TestStudyArea <- setRefClass(
   contains = "StudyArea",
   methods = list(
     initialize = function(...) {
+      library(sp)
       callSuper(region="test", proj4string=CRS("+init=epsg:2393"), ...)
       return(.self)
     },
@@ -200,6 +203,7 @@ TestStudyArea <- setRefClass(
     
     loadHabitatRaster = function() {
       callSuper()
+      library(raster)
       habitat <<- crop(habitat, boundary)
       habitat <<- readAll(habitat)
       habitat[is.na(habitat[])] <<- 44      
@@ -216,6 +220,7 @@ FinlandStudyArea <- setRefClass(
   contains = "StudyArea",
   methods = list(
     initialize = function(...) {
+      library(sp)
       callSuper(region="Finland", proj4string=CRS("+init=epsg:2393"), ...)
       return(.self)
     },

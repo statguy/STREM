@@ -1,164 +1,107 @@
 library(sp)
 
-rotate <- function(x, y, angle) {
-  return(cbind(x * cos(angle) - y * sin(angle), x * sin(angle) + y * cos(angle)))
-}
-
-getTriangles <- function(centroids, angles, sideLength) {
-  require(plyr)
-  
-  l2 <- sideLength / 2
-  lmid <- l2 * sin(pi / 3)
-  xy <- coordinates(centroids)
-  c1 <- rotate(-l2, lmid, angles) + xy
-  c2 <- rotate(l2, lmid, angles) + xy
-  c3 <- rotate(0, -lmid, angles) + xy
-  
-  triangles <- llply(1:nrow(c1), function(i, c1, c2, c3) {
-    return(Lines(list(Polygon(rbind(c1[i,], c2[i,], c3[i,], c1[i,]))), ID=i))
-  }, c1=c1, c2=c2, c3=c3)
-  triangles <- SpatialLines(triangles, proj4string=centroids@proj4string)
-  return(triangles)
-}
-
-
-
-########### TODO: parallel
-
 SurveyRoutes <- setRefClass(
   Class = "SurveyRoutes",
   fields = list(
+    studyArea = "StudyArea",
     surveyRoutes = "SpatialLines"
   ),
   methods = list(
-    findIntersections = function(tracks, runParallel=TRUE, cluster, dimension) {
-      require(sp)
-      require(parallel)
-      
-      nSurveyRoutes <- length(surveyRoutes)
-      nTracks <- length(tracks)
-      intersections <- matrix(0, nrow=nSurveyRoutes, ncol=nTracks)
-      rownames(intersections) <- names(surveyRoutes)
-      colnames(intersections) <- names(tracks@lines)
-      
-      if (missing(cluster) | missing(dimension)) {
-        require(rgeos)
-        require(plyr)
-        for (j in 1:nTracks) {
-          message("Finding intersections for track ", j, " / ", nTracks, "...")
-          intersections[,j] <- laply(1:nSurveyRoutes,
-            function(i, surveyRoutes, tracks, j) {
-              return(length(gIntersection(surveyRoutes[i], tracks[j,], byid=TRUE)))
-            }, surveyRoutes=surveyRoutes, tracks=tracks, j=j, .parallel=runParallel)
-        }
-      }
-      else if (dimension == 1) { # TODO: untested
-        clusterEvalQ(cluster, {
-          require(plyr)
-          require(parallel)
-          require(doMC)
-          registerDoMC(cores=detectCores())
-          require(rgeos)
-        })
-        
-        intersections <- parSapply(cluster$remoteCluster, 1:nTracks, function(j, surveyRoutes, tracks, cluster) {
-          nSurveyRoutes <- length(surveyRoutes)
-          nTracks <- length(tracks)
-          message("Finding intersections for track ", j," / ", nTracks, "...")
-          
-          x <- laply(1:nSurveyRoutes,
-            function(i, surveyRoutes, tracks, j) {
-              return(length(gIntersection(surveyRoutes[i], tracks[j,], byid=TRUE)))
-            }, surveyRoutes=surveyRoutes, tracks=tracks, j=j, .parallel=TRUE)
-          
-          return(x)
-        }, surveyRoutes=surveyRoutes, tracks=tracks)
-      }
-      else if (dimension == 2) { # TODO: untested
-        clusterEvalQ(cluster, {
-          require(plyr)
-          require(parallel)
-          require(doMC)
-          registerDoMC(cores=detectCores())
-          require(rgeos)
-        })
-        
-        intersections <- parSapply(cluster$remoteCluster, 1:nSurveyRoutes, function(i, surveyRoutes, tracks) {
-          nSurveyRoutes <- length(surveyRoutes)
-          nTracks <- length(tracks)
-          message("Finding intersections for survey route ", i, " / ", nSurveyRoutes, "...")
-                    
-          x <- laply(1:nTracks,
-            function(j, surveyRoutes, tracks, i) {
-              return(length(gIntersection(surveyRoutes[i], tracks[j,], byid=TRUE)))
-            }, surveyRoutes=surveyRoutes, tracks=tracks, i=i, .parallel=TRUE)
-          
-          return(x)
-        }, surveyRoutes=surveyRoutes, tracks=tracks)
-        
-        intersections <- t(intersections)
-      }
-      
-      message("Found ", sum(intersections) / nTracks, " intersections per animal track.")
-      message("Found ", sum(intersections) / nSurveyRoutes, " intersections per survey route.")
-      
-      return(intersections)
+    rotate = function(x, y, angle) {
+      return(cbind(x * cos(angle) - y * sin(angle), x * sin(angle) + y * cos(angle)))
+    },
+    
+    plotSurveyRoutes = function() {
+      plot(studyArea$boundary)
+      plot(surveyRoutes, col="blue", add=T)
     }
+      
+    #findIntersections = function(tracks, runParallel=TRUE, cluster, dimension) {
+    #}
   )
 )
 
-FinlandRandomSurveyRoutes <- setRefClass(
-  Class = "FinlandRandomSurveyRoutes",
+TriangleSurveyRoutes <- setRefClass(
+  Class = "TriangleSurveyRoutes",
   contains = "SurveyRoutes",
+  fields = list(
+  ),
+  methods = list(
+    getTriangles = function(centroids, angles, sideLength) {
+      library(plyr)
+      
+      l2 <- sideLength / 2
+      lmid <- l2 * sin(pi / 3)
+      xy <- coordinates(centroids)
+      c1 <- rotate(-l2, lmid, angles) + xy
+      c2 <- rotate(l2, lmid, angles) + xy
+      c3 <- rotate(0, -lmid, angles) + xy
+      
+      triangles <- llply(1:nrow(c1), function(i, c1, c2, c3) {
+        return(Lines(list(Polygon(rbind(c1[i,], c2[i,], c3[i,], c1[i,]))), ID=i))
+      }, c1=c1, c2=c2, c3=c3)
+      triangles <- SpatialLines(triangles, proj4string=centroids@proj4string)
+      return(triangles)
+    }
+    
+    #findIntersections = function(tracks, runParallel=TRUE, cluster, dimension) {
+    #}
+  )
+)
+
+FinlandRandomWTCSurveyRoutes <- setRefClass(
+  Class = "FinlandRandomWTCSurveyRoutes",
+  contains = "TriangleSurveyRoutes",
   fields = list(
     context = "Context"
   ),
   methods = list(
-    initialize = function(...) {
-      callSuper(...)
+    initialize = function(context=context, ...) {
+      if (missing(context))
+        stop("Provide context.")
+      callSuper(context=context, ...)
       return(.self)
     },
     
     newInstance = function(nStudyRoutes) {
-      studyArea <- FinlandStudyArea(context=context)$newInstance()
-      surveyRoutes <<- getRandomSurveyRoutes(nStudyRoutes=nStudyRoutes, studyArea$boundary)
+      surveyRoutes <<- getRandomSurveyRoutes(nStudyRoutes=nStudyRoutes)
       return(.self)
     },
     
-    getRandomSurveyRoutes = function(nStudyRoutes, boundary) {
-      initialPopulation <- RandomInitialPopulation(boundary)
+    getRandomSurveyRoutes = function(nStudyRoutes) {
+      initialPopulation <- RandomInitialPopulation$new(studyArea=studyArea)
       centroids <- initialPopulation$randomize(nStudyRoutes)
       angles <- runif(length(centroids), 0, 2*pi)
       return(getTriangles(centroids, angles, 4000))
     }
-    
   )  
 )
 
 FinlandWTCSurveyRoutes <- setRefClass(
   Class = "FinlandSurveyRoutes",
-  contains = "SurveyRoutes",
+  contains = "TriangleSurveyRoutes",
   fields = list(
     context = "Context",
-    wtcData = "WTCData"  
+    intersections = "Intersections"  
   ),
   methods = list(
-    initialize = function(...) {
-      callSuper(...)
+    initialize = function(context, ...) {
+      if (missing(context))
+        stop("Provide context.")
+      callSuper(context=context, ...)
       return(.self)
     },
     
     newInstance = function() {
-      wtcData <<- FinlandWTCData(context=context)$newInstance()
+      intersections <<- FinlandWinterTrackCounts$new(context=context)$newInstance()
       surveyRoutes <<- getWTCSurveyRoutes()
       return(.self)
     },
         
     getWTCSurveyRoutes = function() {
-      centroids <- wtcData$getSampleLocations()
+      centroids <- intersections$getSampleLocations()
       angles <- runif(length(centroids), 0, 2*pi) # Angles are unknown, randomize
       return(getTriangles(centroids, angles, 4000))
     }
-    
   )
 )

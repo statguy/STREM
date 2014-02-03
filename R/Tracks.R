@@ -24,11 +24,19 @@ Tracks <- setRefClass(
     },
     
     loadTracks = function() {
+      library(adehabitatLT)
       load(getDataFileName(), envir=as.environment(.self))
       return(tracks)
     },
     
-    plotTracks = function() {
+    getSpatialLines = function() {
+      library(sp)
+      tracksSP <- ltraj2sldf(tracks, byid=FALSE)
+      proj4string(tracksSP) <- study$studyArea$proj4string
+      return(tracksSP)
+    },
+    
+    plotTracks = function(surveyRoutes) {
       library(sp)
       library(adehabitatLT)
       
@@ -36,10 +44,12 @@ Tracks <- setRefClass(
       plot(tracksDF$x, tracksDF$y, type="n")
       apply(fun=function(x) lines(x$x, x$y, col=x$id))
       plot(study$studyArea$boundary, add=T)
+      if (!missing(surveyRoutes))
+        plot(surveyRoutes$surveyRoutes, col="blue", add=T)
     },
     
     apply = function(variables=.(id), fun, ..., combine=F) {
-      tracksDF <- dl
+      tracksDF <- ld(tracks)
       result <- dlply(.data=tracksDF, .variables=variables, .fun=fun, ...)
       if (combine) result <- do.call("rbind", result)
       return(result)
@@ -70,15 +80,6 @@ Tracks <- setRefClass(
       newDt <- mean(tracksDFThinned$dt, na.rm=T)
       message("Thinned movements from dt = ", oldDt, " to dt = ", newDt)      
       
-#      tracksDFThinned <- ddply(tracksDFThinned, .variables=.(id, burst), .fun=function(x, maxInterval) {
-##message(paste(x$dt, collapse=","))
-#        if (any(x$dt[!is.na(x$dt)] > maxInterval)) return(NULL)
-#        return(x)
-#      }, maxInterval=maxInterval)
-#      
-#      if (nrow(tracksDFThinned) == 0) return(NULL)
-#
-#      tracksThinned <- dl(tracksDFThinned)
       return(Tracks$new(context=context, study=study, tracks=tracksThinned))
     },
     
@@ -109,7 +110,9 @@ SimulatedTracks <- setRefClass(
     },
     
     setTracks = function(xy, id, date) {
-      tracks <<- as.ltraj(xy=xy, date=date, id=id, burst=id)
+      d <- as.POSIXlt(date)
+      burst <- paste(id, d$year, sep=".")
+      tracks <<- as.ltraj(xy=xy, date=date, id=id, burst=burst)
     },
     
     saveTracks = function() {

@@ -255,7 +255,7 @@ MovementSimulationScenarioIntensive <- setRefClass(
   contains = "MovementSimulationScenario",
   methods = list(
     initialize = function(response="Intensive", nAgents=as.integer(2), nIterations=as.integer(1), runParallel=T, ...) {
-      callSuper(response=response, isTest=F, years=as.integer(1), nAgents=nAgents, nIterations=nIterations, days=as.integer(10), stepIntervalHours=0.1, stepSpeedScale=0.5, CRWCorrelation=0.8, runParallel=runParallel, ...)
+      callSuper(response=response, isTest=F, years=as.integer(2), nAgents=nAgents, nIterations=nIterations, days=as.integer(10), stepIntervalHours=0.1, stepSpeedScale=0.5, CRWCorrelation=0.8, runParallel=runParallel, ...)
       return(.self)
     },
     
