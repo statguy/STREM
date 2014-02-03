@@ -78,7 +78,7 @@ Tracks <- setRefClass(
       tracksDFThinned <- ld(tracksThinned)
       
       newDt <- mean(tracksDFThinned$dt, na.rm=T)
-      message("Thinned movements from dt = ", oldDt, " to dt = ", newDt)      
+      message("Thinned movements from dt = ", oldDt, " to dt = ", newDt, " (note: these values can be misleading)")      
       
       return(Tracks$new(context=context, study=study, tracks=tracksThinned))
     },
@@ -279,17 +279,16 @@ TracksSampleIntervals <- setRefClass(
         x$intervalMin <- intervalMin
         x$intervalH <- intervalMin / 60
         x$distanceKm <- distKm
-        return(x[1, c("id","date","intervalH","intervalMin","intervalSec","distanceKm")])
+        return(x[1, c("id","date","intervalH","intervalMin","intervalSec","distanceKm","thinid")])
       })
-      
+            
       if (nrow(intervals) == 0) warning("Unable to determine sampling intervals.")
     },
     
     getThinnedTracksSampleIntervals = function(tracks) {
       tracksDF <- ld(tracks$tracks)
       date <- as.POSIXlt(tracksDF$date)
-      #tracksDF$burst <- paste(tracksDF$id, date$yday, date$year, sep=".")      
-      tracksDF <- ddply(tracksDF, .(id), function(x) { x$sampleid <- 1:nrow(x); return(x) })
+      tracksDF$thinid <- as.factor(paste(date$year, date$yday, tracksDF$burst))
       tracks$tracks <- dl(tracksDF)      
       
       thinnedTracksCollection <- SimulatedTracksCollection$new()
@@ -322,10 +321,11 @@ TracksSampleIntervals <- setRefClass(
     
     fit = function() {
       library(lme4)
-      result <- lmer(log(distanceKm) ~ log(intervalH) + (1|id) + (1|sampleid), data=intervals)
+      result <- lmer(log(distanceKm) ~ log(intervalH) + (1|id) + (1|thinid), data=intervals)
+      print(result)
       predictions <<- data.frame(intervalH=seq(0, 24, by=0.1))
       predictions$distanceKm <<- exp(predict(object=result, newdata=predictions, REform=NA))
-    },
+    },    
     
     plotIntervalDistance = function() {
       library(ggplot2)

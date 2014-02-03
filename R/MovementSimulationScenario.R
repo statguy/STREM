@@ -236,11 +236,17 @@ MovementSimulationScenario <- setRefClass(
         message("Iteration ", i, " of ", nIterations, "...")
         tracksDF <- randomizeBCRWTracks()
         date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
-        tracks <- SimulatedTracks$new(context=context, study=.self, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$id, date=date, iteration=i)
+        tracks <- SimulatedTracks$new(context=context, study=.self, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=i)
         simulatedTracks$add(tracks)
       }
       
       return(invisible(simulatedTracks))
+    },
+        
+    loadTracksCollection = function() {
+      tracks <- SimulatedTracksCollection$new()
+      tracks$load(.self)
+      return(tracks)
     }
 
     #randomizeIntersectionDays = function() {
@@ -254,8 +260,8 @@ MovementSimulationScenarioIntensive <- setRefClass(
   Class = "MovementSimulationScenarioIntensive",
   contains = "MovementSimulationScenario",
   methods = list(
-    initialize = function(response="Intensive", nAgents=as.integer(2), nIterations=as.integer(1), runParallel=T, ...) {
-      callSuper(response=response, isTest=F, years=as.integer(2), nAgents=nAgents, nIterations=nIterations, days=as.integer(10), stepIntervalHours=0.1, stepSpeedScale=0.5, CRWCorrelation=0.8, runParallel=runParallel, ...)
+    initialize = function(response="Intensive", nAgents=as.integer(2), nIterations=as.integer(1), years=as.integer(2), days=as.integer(10), stepIntervalHours=0.1, runParallel=T, ...) {
+      callSuper(response=response, isTest=F, years=years, nAgents=nAgents, nIterations=nIterations, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=0.8, runParallel=runParallel, ...)
       return(.self)
     },
     

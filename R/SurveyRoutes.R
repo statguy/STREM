@@ -4,7 +4,8 @@ SurveyRoutes <- setRefClass(
   Class = "SurveyRoutes",
   fields = list(
     studyArea = "StudyArea",
-    surveyRoutes = "SpatialLines"
+    surveyRoutes = "SpatialLines",
+    centroids = "SpatialPoints"
   ),
   methods = list(
     rotate = function(x, y, angle) {
@@ -15,7 +16,7 @@ SurveyRoutes <- setRefClass(
       plot(studyArea$boundary)
       plot(surveyRoutes, col="blue", add=T)
     }
-      
+    
     #findIntersections = function(tracks, runParallel=TRUE, cluster, dimension) {
     #}
   )
@@ -70,7 +71,7 @@ FinlandRandomWTCSurveyRoutes <- setRefClass(
     
     getRandomSurveyRoutes = function(nStudyRoutes) {
       initialPopulation <- RandomInitialPopulation$new(studyArea=studyArea)
-      centroids <- initialPopulation$randomize(nStudyRoutes)
+      centroids <<- initialPopulation$randomize(nStudyRoutes)
       angles <- runif(length(centroids), 0, 2*pi)
       return(getTriangles(centroids, angles, 4000))
     }
@@ -99,7 +100,7 @@ FinlandWTCSurveyRoutes <- setRefClass(
     },
         
     getWTCSurveyRoutes = function() {
-      centroids <- intersections$getSampleLocations()
+      centroids <<- intersections$getSampleLocations()
       angles <- runif(length(centroids), 0, 2*pi) # Angles are unknown, randomize
       return(getTriangles(centroids, angles, 4000))
     }

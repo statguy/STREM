@@ -39,6 +39,9 @@ Intersections <- setRefClass(
 SimulatedIntersections <- setRefClass(
   Class = "SimulatedIntersections",
   contains = "Intersections",
+  fields = list(
+    intersectionsMatrix = "matrix"
+  ),
   methods = list(
     initialize = function(preprocessData=FALSE, ...) {
       callSuper(...)
@@ -51,29 +54,21 @@ SimulatedIntersections <- setRefClass(
     },
     
     findIntersections = function(tracks, surveyRoutes, ...) {
-      tracksSP <- tracks$getSpatialLines()
-      intersectionsMatrix <- findIntersections.Internal(tracksSP, surveyRoutes$surveyRoutes, ...)
-      
-      #tracksDF <- ld(tracks$tracks)
-      #ddply(tracksDF, .(burst), function(x) {
-      #  date <- as.POSIXlt(x$date)
-      #  data.frame(year=date$year)
-      #}
-      #intersections <<- data.frame()
-      
-      return(intersectionsMatrix)
+      tracksSP <- tracks$getSpatialLines()      
+      findIntersectionsMatrix(tracksSP, surveyRoutes$surveyRoutes, ...)      
+      aggregateIntersectionsMatrix(tracks, surveyRoutes)
     },
-    
-    findIntersections.Internal = function(tracks, surveyRoutes, dimension=1) {
+        
+    findIntersectionsMatrix = function(tracks, surveyRoutes, dimension=1) {
       library(sp)
       library(CNPCluster)
-      
+
       nSurveyRoutes <- length(surveyRoutes)
       nTracks <- length(tracks)
       #intersectionsMatrix <- matrix(0, nrow=nSurveyRoutes, ncol=nTracks)
       
       if (dimension == 1) {
-        intersectionsMatrix <- cnpClusterListApplyGeneric(1:nTracks, function(j, surveyRoutes, tracks, cluster) {          
+        intersectionsMatrix <<- cnpClusterListApplyGeneric(1:nTracks, function(j, surveyRoutes, tracks, cluster) {          
           library(plyr)
           library(rgeos)
           
@@ -90,7 +85,7 @@ SimulatedIntersections <- setRefClass(
         }, surveyRoutes=surveyRoutes, tracks=tracks)
       }
       else if (dimension == 2) {
-        intersectionsMatrix <- cnpClusterListApplyGeneric(1:nSurveyRoutes, function(i, surveyRoutes, tracks) {
+        intersectionsMatrix <<- cnpClusterListApplyGeneric(1:nSurveyRoutes, function(i, surveyRoutes, tracks) {
           library(plyr)
           library(rgeos)
           
@@ -106,16 +101,32 @@ SimulatedIntersections <- setRefClass(
           return(x)
         }, surveyRoutes=surveyRoutes, tracks=tracks)
         
-        intersectionsMatrix <- t(intersectionsMatrix)
+        intersectionsMatrix <<- t(intersectionsMatrix)
       }
 
-      rownames(intersectionsMatrix) <- names(surveyRoutes)
-      colnames(intersectionsMatrix) <- sapply(tracks@lines, function(x) x@ID)
-     
       message("Found ", sum(intersectionsMatrix) / nTracks, " intersections per track.")
       message("Found ", sum(intersectionsMatrix) / nSurveyRoutes, " intersections per survey route.")
-            
-      return(invisible(intersectionsMatrix))
+      
+      rownames(intersectionsMatrix) <<- names(surveyRoutes)
+      colnames(intersectionsMatrix) <<- sapply(tracks@lines, function(x) x@ID)     
+    },
+    
+    aggregateIntersectionsMatrix = function(tracks, surveyRoutes) {
+      tracksDF <- ld(tracks$tracks)
+      burstYear <- ddply(tracksDF, .(burst), function(x) {
+        date <- as.POSIXlt(x$date[1])
+        data.frame(burst=x$burst[1], year=date$year + 1900)
+      })
+      
+      data <- data.frame()
+      for (year in sort(unique(y$year))) {
+        yearToBurstsIndex <- burstYear$year == year
+        bursts <- burstYear[yearToBurstsIndex,]$burst
+        x <- data.frame(x=coordinates(surveyRoutes$centroids)[,1], y=coordinates(surveyRoutes$centroids)[,2], year=year, simulated.species=rowSums(intersectionsMatrix[,bursts]))
+        data <- rbind(data, x)
+      }
+      
+      intersections <<- SpatialPointsDataFrame(coords=data[,c("x","y")], data=data[,!names(data) %in% c("x","y")], proj4string=surveyRoutes$surveyRoutes@proj4string, match.ID=FALSE)
     }
   )
 )
