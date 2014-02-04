@@ -10,12 +10,16 @@ Imports: INLA,sp,CircStats,plyr,maptools,raster,rgdal,parallel,adehabitatLT,gdat
 Suggests: grid,lattice,ggplot2
 License: MIT
 Collate:
+  Utils.R
   Context.R
   HabitatWeights.R
   StudyArea.R
   Study.R
   Tracks.R
+  TracksCollection.R
   Intersections.R
+  IntersectionsCollection.R
+  MovementSampleIntervals.R
   SurveyRoutes.R
   InitialPopulation.R
   MovementSimulationScenario.R

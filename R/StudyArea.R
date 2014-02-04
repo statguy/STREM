@@ -182,6 +182,13 @@ StudyArea <- setRefClass(
     plotHabitatRaster = function() {
       plot(habitat)
       plot(boundary, add=T)
+    },
+    
+    readRasterIntoMemory = function() {
+      if (!inMemory(habitat)) {
+        message("Reading habitat raster into memory...")
+        habitat <<- readAll(habitat)
+      }
     }
   )
 )

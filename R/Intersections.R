@@ -3,8 +3,7 @@ library(sp)
 Intersections <- setRefClass(
   Class = "Intersections",
   fields = list(
-    context = "Context",
-    studyArea = "StudyArea",
+    study = "Study",
     intersections = "SpatialPointsDataFrame"
   ),
   methods = list(
@@ -19,7 +18,7 @@ Intersections <- setRefClass(
     },
     
     getIntersectionsFileName = function() {
-      return(context$getFileName(context$processedDataDirectory, name="WTC", region=studyArea$region))
+      return(study$context$getFileName(context$processedDataDirectory, name="Intersections", region=study$studyArea$region))
     },
     
     saveIntersections = function() {
@@ -40,12 +39,13 @@ SimulatedIntersections <- setRefClass(
   Class = "SimulatedIntersections",
   contains = "Intersections",
   fields = list(
-    intersectionsMatrix = "matrix"
+    intersectionsMatrix = "matrix",
+    iteration = "integer"
   ),
   methods = list(
     initialize = function(preprocessData=FALSE, ...) {
+      if (preprocessData) stop("Unsupported.")
       callSuper(...)
-      if (preprocessData) saveIntersections()
       return(.self)
     },
     
@@ -119,25 +119,42 @@ SimulatedIntersections <- setRefClass(
       })
       
       data <- data.frame()
-      for (year in sort(unique(y$year))) {
+      for (year in sort(unique(burstYear$year))) {
         yearToBurstsIndex <- burstYear$year == year
         bursts <- burstYear[yearToBurstsIndex,]$burst
-        x <- data.frame(x=coordinates(surveyRoutes$centroids)[,1], y=coordinates(surveyRoutes$centroids)[,2], year=year, simulated.species=rowSums(intersectionsMatrix[,bursts]))
+        centroids <- coordinates(surveyRoutes$centroids)        
+        x <- data.frame(x=centroids[,1], y=centroids[,2],
+                        year=year,
+                        species=study$response,
+                        intersections=rowSums(intersectionsMatrix[,bursts]))
         data <- rbind(data, x)
       }
       
       intersections <<- SpatialPointsDataFrame(coords=data[,c("x","y")], data=data[,!names(data) %in% c("x","y")], proj4string=surveyRoutes$surveyRoutes@proj4string, match.ID=FALSE)
+    },
+    
+    getIntersectionsFileName = function() {
+      if (inherits(study, "undefinedField") | length(iteration) == 0)
+        stop("Provide study and iteration parameters.")
+      response <- paste(study$response, iteration, sep="-")
+      return(study$context$getFileName(dir=study$context$processedDataDirectory, name="Intersections", response=response, region=study$studyArea$region))
+    },
+    
+    saveIntersections = function() {
+      fileName <- getIntersectionsFileName()
+      message("Saving intersections to ", fileName)
+      save(intersections, intersectionsMatrix, iteration, file=fileName)
     }
   )
 )
 
-FinlandWinterTrackCounts <- setRefClass(
-  Class = "FinlandWinterTrackCounts",
+FinlandWTCIntersections <- setRefClass(
+  Class = "FinlandWTCIntersections",
   contains = "Intersections",
   methods = list(
-    newInstance = function() {
-      callSuper()
-      studyArea <<- FinlandStudyArea(context=context)$newInstance()
+    newInstance = function(...) {
+      callSuper(...)
+      #studyArea <<- FinlandStudyArea(context=context)$newInstance()
       return(.self)
     },
     
@@ -145,7 +162,7 @@ FinlandWinterTrackCounts <- setRefClass(
       library(gdata)
       library(sp)
       
-      wtc <- read.xls(file.path(context$rawDataDirectory, "Kolmiot_1989_2011.xls"))
+      wtc <- read.xls(file.path(study$context$rawDataDirectory, "Kolmiot_1989_2011.xls"))
       names(wtc)[1:9] <- c("id","y","x","length","forest","field","year","date","duration")
       names(wtc)[16] <- "canis.lupus"
       names(wtc)[29] <- "lynx.lynx"
@@ -156,8 +173,13 @@ FinlandWinterTrackCounts <- setRefClass(
       wtc <- subset(wtc, duration<4 & duration>0 & length>0)  
       # Transects 168 and 1496 are at the same location but separate, take average, ignore or something...
       wtc <- subset(wtc, id!=1496)
-      wtc <- SpatialPointsDataFrame(cbind(wtc$x, wtc$y), data=wtc, proj4string=CRS("+init=epsg:2393"))      
-      intersections <<- wtc
+      wtc <- SpatialPointsDataFrame(cbind(wtc$x, wtc$y), data=wtc, proj4string=CRS("+init=epsg:2393"))
+      
+      intersections <<- wtc[,1:9]
+      intersections <<- rbind(intersections, intersections, intersections)
+      intersections$species <<- c(rep("canis.lupus", times=nrow(wtc)), rep("lynx.lynx", times=nrow(wtc)), rep("rangifer.tarandus.fennicus", times=nrow(wtc)))
+      intersections$intersections <<- c(wtc$canis.lupus, wtc$lynx.lynx, wtc$rangifer.tarandus.fennicus)
+      
       save(intersections, file=getDataFileName())
     }
   )
