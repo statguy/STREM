@@ -48,21 +48,26 @@ SimulatedTracksCollection <- setRefClass(
       }
     },
     
-    randomizeObservationDays = function() {
-      tracksList <<- apply(function(tracks) {
+    randomizeObservationDays = function(minYday=0, maxYday=60) {
+      tracks <- apply(function(tracks, minYday, maxYday) {
         tracksDF <- ld(tracks$tracks)
         date <- as.POSIXlt(tracksDF$date)
         years <- date$year + 1900
         randomizedDayTracksDF <- data.frame()
+        
         for (year in sort(unique(years))) {
           yearIndex <- years == year
           days <- date$yday[yearIndex]
-          randomDay <- sample(days, 1)
+          daysPeriod <- subset(days, days >= minYday & days <= maxYday)
+          randomDay <- sample(daysPeriod, 1)
+          message("Randomize day ", randomDay + 1, " for year ", year)
           dayIndex <- days == randomDay
           randomizedDayTracksDF <- rbind(randomizedDayTracksDF, tracksDF[yearIndex,][dayIndex,])
         }
-        return(dl(randomizedDayTracksDF))
-      })
+
+        tracks$tracks <- dl(randomizedDayTracksDF)        
+        return(tracks)
+      }, minYday=minYday, maxYday=maxYday)
     },
     
     findIntersections = function(surveyRoutes, dimension, save=FALSE) {

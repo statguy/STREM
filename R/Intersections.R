@@ -68,6 +68,8 @@ SimulatedIntersections <- setRefClass(
       #intersectionsMatrix <- matrix(0, nrow=nSurveyRoutes, ncol=nTracks)
       
       if (dimension == 1) {
+        # TODO: If only one agent, do we still get matrix not vector?
+        
         intersectionsMatrix <<- cnpClusterListApplyGeneric(1:nTracks, function(j, surveyRoutes, tracks, cluster) {          
           library(plyr)
           library(rgeos)
@@ -81,7 +83,7 @@ SimulatedIntersections <- setRefClass(
              return(length(gIntersection(surveyRoutes[i], tracks[j,], byid=TRUE)))
             }, surveyRoutes=surveyRoutes, tracks=tracks, j=j, .parallel=TRUE)
           
-          return(x)
+          return(as.matrix(x))
         }, surveyRoutes=surveyRoutes, tracks=tracks)
       }
       else if (dimension == 2) {
@@ -98,7 +100,7 @@ SimulatedIntersections <- setRefClass(
              return(length(gIntersection(surveyRoutes[i], tracks[j,], byid=TRUE)))
             }, surveyRoutes=surveyRoutes, tracks=tracks, i=i, .parallel=TRUE)
           
-          return(x)
+          return(as.matrix(x))
         }, surveyRoutes=surveyRoutes, tracks=tracks)
         
         intersectionsMatrix <<- t(intersectionsMatrix)
@@ -114,19 +116,24 @@ SimulatedIntersections <- setRefClass(
     aggregateIntersectionsMatrix = function(tracks, surveyRoutes) {
       tracksDF <- ld(tracks$tracks)
       burstYear <- ddply(tracksDF, .(burst), function(x) {
-        date <- as.POSIXlt(x$date[1])
-        data.frame(burst=x$burst[1], year=date$year + 1900)
+        date <- as.POSIXlt(x$date)
+        data.frame(burst=x$burst[1],
+                   year=date$year[1] + 1900,
+                   duration=round(as.numeric(difftime(max(x$date), min(x$date))))) # Here it is assumed that the observation period is continuous
       })
       
       data <- data.frame()
       for (year in sort(unique(burstYear$year))) {
         yearToBurstsIndex <- burstYear$year == year
         bursts <- burstYear[yearToBurstsIndex,]$burst
-        centroids <- coordinates(surveyRoutes$centroids)        
+        duration <- burstYear[yearToBurstsIndex,]$duration[1]
+        centroids <- coordinates(surveyRoutes$centroids)
         x <- data.frame(x=centroids[,1], y=centroids[,2],
                         year=year,
-                        species=study$response,
-                        intersections=rowSums(intersectionsMatrix[,bursts]))
+                        response=study$response,
+                        intersections=rowSums(intersectionsMatrix[,bursts,drop=F]),
+                        duration=duration,
+                        length=surveyRoutes$lengths)
         data <- rbind(data, x)
       }
       
@@ -177,7 +184,7 @@ FinlandWTCIntersections <- setRefClass(
       
       intersections <<- wtc[,1:9]
       intersections <<- rbind(intersections, intersections, intersections)
-      intersections$species <<- c(rep("canis.lupus", times=nrow(wtc)), rep("lynx.lynx", times=nrow(wtc)), rep("rangifer.tarandus.fennicus", times=nrow(wtc)))
+      intersections$response <<- c(rep("canis.lupus", times=nrow(wtc)), rep("lynx.lynx", times=nrow(wtc)), rep("rangifer.tarandus.fennicus", times=nrow(wtc)))
       intersections$intersections <<- c(wtc$canis.lupus, wtc$lynx.lynx, wtc$rangifer.tarandus.fennicus)
       
       save(intersections, file=getDataFileName())

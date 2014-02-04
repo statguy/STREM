@@ -25,7 +25,6 @@ Tracks <- setRefClass(
     loadTracks = function() {
       library(adehabitatLT)
       load(getTracksFileName(), envir=as.environment(.self))
-      return(tracks)
     },
     
     getSpatialLines = function() {
@@ -41,7 +40,7 @@ Tracks <- setRefClass(
       
       tracksDF <- ld(tracks)
       plot(tracksDF$x, tracksDF$y, type="n")
-      apply(fun=function(x) lines(x$x, x$y, col=x$id))
+      apply(fun=function(x) lines(x$x, x$y, col=x$id), variables=.(burst))
       plot(study$studyArea$boundary, add=T)
       if (!missing(surveyRoutes))
         plot(surveyRoutes$surveyRoutes, col="blue", add=T)
