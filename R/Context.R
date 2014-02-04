@@ -31,6 +31,14 @@ Context <- setRefClass(
       else
         paste(name, "-", response, "-", region, ext, sep="")
       return(list.files(dir, pattern))
+    },
+    
+    getLongFileName = function(dir, name, response, region, tag, ext=".RData") {
+      return(getFileName(dir=dir, name=name, response=response, region=paste(region, tag, sep="-"), ext=ext))
+    },
+    
+    listLongFiles = function(dir, name, response, region, tag, ext=".RData") {
+      return(listFiles(dir=dir, name=name, response=response, region=paste(region, tag, sep="-"), ext=ext))
     }
   )
 )

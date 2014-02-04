@@ -18,7 +18,7 @@ Intersections <- setRefClass(
     },
     
     getIntersectionsFileName = function() {
-      return(study$context$getFileName(context$processedDataDirectory, name="Intersections", region=study$studyArea$region))
+      return(study$context$getFileName(context$resultDataDirectory, name="Intersections", region=study$studyArea$region))
     },
     
     saveIntersections = function() {
@@ -67,9 +67,9 @@ SimulatedIntersections <- setRefClass(
       nTracks <- length(tracks)
       #intersectionsMatrix <- matrix(0, nrow=nSurveyRoutes, ncol=nTracks)
       
+      # Assumes all survey routes were sampled each year
+      # TODO: If only one agent, do we still get matrix not vector?
       if (dimension == 1) {
-        # TODO: If only one agent, do we still get matrix not vector?
-        
         intersectionsMatrix <<- cnpClusterListApplyGeneric(1:nTracks, function(j, surveyRoutes, tracks, cluster) {          
           library(plyr)
           library(rgeos)
@@ -133,7 +133,8 @@ SimulatedIntersections <- setRefClass(
                         response=study$response,
                         intersections=rowSums(intersectionsMatrix[,bursts,drop=F]),
                         duration=duration,
-                        length=surveyRoutes$lengths)
+                        length=surveyRoutes$lengths,
+                        distance=tracks$distances)
         data <- rbind(data, x)
       }
       
@@ -143,8 +144,7 @@ SimulatedIntersections <- setRefClass(
     getIntersectionsFileName = function() {
       if (inherits(study, "undefinedField") | length(iteration) == 0)
         stop("Provide study and iteration parameters.")
-      response <- paste(study$response, iteration, sep="-")
-      return(study$context$getFileName(dir=study$context$processedDataDirectory, name="Intersections", response=response, region=study$studyArea$region))
+      return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Intersections", response=study$response, region=study$studyArea$region, tag=iteration))
     },
     
     saveIntersections = function() {

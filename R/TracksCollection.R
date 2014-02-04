@@ -30,6 +30,13 @@ TracksCollection <- setRefClass(
     
     findIntersections = function(surveyRoutes, dimension) {
       stop("Unimplemented method.")
+    },
+    
+    getDistances = function(surveyRoutes) {
+      tracksList <<- apply(function(tracks, surveyRoutes) {
+        tracks$getDistances(surveyRoutes)
+        return(tracks)
+      }, surveyRoutes=surveyRoutes)
     }
   )
 )
@@ -39,7 +46,7 @@ SimulatedTracksCollection <- setRefClass(
   contains = "TracksCollection",
   methods = list(
     load = function() {     
-      tracksFiles <- study$context$listFiles(dir=study$context$processedDataDirectory, name="Tracks", response=paste(study$response, "\\d+", sep="-"), region=study$studyArea$region)
+      tracksFiles <- study$context$listLongFiles(dir=study$context$resultDataDirectory, name="Tracks", response=study$response, tag="\\d+", region=study$studyArea$region)
       
       for (iteration in 1:base::length(tracksFiles)) { # TODO: better to use iteration number rather than number of files
         tracks <- SimulatedTracks$new(study=study, iteration=iteration)
@@ -49,7 +56,7 @@ SimulatedTracksCollection <- setRefClass(
     },
     
     randomizeObservationDays = function(minYday=0, maxYday=60) {
-      tracks <- apply(function(tracks, minYday, maxYday) {
+      tracksList <<- apply(function(tracks, minYday, maxYday) {
         tracksDF <- ld(tracks$tracks)
         date <- as.POSIXlt(tracksDF$date)
         years <- date$year + 1900

@@ -35,7 +35,7 @@ SimulatedIntersectionsCollection <- setRefClass(
   contains = "IntersectionsCollection",
   methods = list(
     load = function() {     
-      intersectionFiles <- context$listFiles(dir=study$context$processedDataDirectory, name="Intersections", response=paste(study$response, "\\d+", sep="-"), region=study$studyArea$region)
+      intersectionFiles <- context$listLongFiles(dir=study$context$resultDataDirectory, name="Intersections", response=study$response, tag="\\d+", region=study$studyArea$region)
       
       for (iteration in 1:base::length(intersectionFiles)) { # TODO: better to use iteration number rather than number of files
         intersections <- SimulatedIntersections$new(study=study, iteration=iteration)

@@ -5,7 +5,8 @@ Tracks <- setRefClass(
   Class = "Tracks",
   fields = list(
     study = "Study",
-    tracks = "ltraj"
+    tracks = "ltraj",
+    distances = "numeric"
   ),
   methods = list(
     initialize = function(preprocessData=FALSE, ...) {
@@ -15,7 +16,7 @@ Tracks <- setRefClass(
     },
     
     getTracksFileName = function() {
-      return(study$context$getFileName(study$context$processedDataDirectory, name="Tracks", response=study$response, region=study$studyArea$region))
+      return(study$context$getFileName(study$context$resultDataDirectory, name="Tracks", response=study$response, region=study$studyArea$region))
     },
     
     saveTracks = function() {
@@ -91,7 +92,28 @@ Tracks <- setRefClass(
       intervals <- TracksSampleIntervals$new()
       intervals$getThinnedTracksSampleIntervals(tracks=.self)
       return(intervals)
-    }    
+    },
+    
+    # Note! Call this before randomizing observation days. Otherwise you'd lose details of the last movements.
+    getDistances = function(surveyRoutes) {
+      warning("Spatial variation in distances not considered in vicinity of the survey routes.")
+      
+      tracksDF <- ld(tracks)
+      d <- as.POSIXlt(tracksDF$date)
+      tracksDF$yday <- d$yday
+      tracksDF$year <- d$year
+      distance <- ddply(.data=tracksDF, .variables=.(id, burst, yday, year), .fun=function(x) {
+        s <- sum(x$dt, na.rm=T) / 3600
+        if (s < 23 | s > 25) return(NA)
+        distance <- sum(x$dist) / sum(x$dt) * 24 * 3600
+        return(distance)
+      })$V1
+      
+      if (all(is.na(distance))) stop("Unable to determine movement distance.")
+      message(sum(!is.na(distance)), " / ", length(distance), " of day movements used to determine mean movement distance = ", mean(distance, na.rm=T), " ± ", sd(distance, na.rm=T), ".")
+      
+      distances <<- rep(mean(distance, na.rm=T), times=length(surveyRoutes$surveyRoutes))
+    }
   )
 )
 
@@ -116,8 +138,7 @@ SimulatedTracks <- setRefClass(
     getTracksFileName = function() {
       if (inherits(study, "undefinedField") | length(iteration) == 0)
         stop("Provide study and iteration parameters.")
-      response <- paste(study$response, iteration, sep="-")
-      return(study$context$getFileName(dir=study$context$processedDataDirectory, name="Tracks", response=response, region=study$studyArea$region))
+      return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Tracks", response=study$response, region=study$studyArea$region, tag=iteration))
     },
     
     saveTracks = function() {

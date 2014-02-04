@@ -6,7 +6,8 @@ SurveyRoutes <- setRefClass(
     study = "Study",
     surveyRoutes = "SpatialLines",
     centroids = "SpatialPoints",
-    lengths = "numeric"
+    lengths = "numeric",
+    covariates = "data.frame"
   ),
   methods = list(    
     plotSurveyRoutes = function() {
