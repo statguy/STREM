@@ -1,4 +1,4 @@
-euclidean <- function(c1, c2) sqrt( (c1[,1] - c2[,1])^2 + (c1[,2] - c2[,2])^2 )
+euclidean <- function(c1, c2) sqrt((c1[,1] - c2[,1])^2 + (c1[,2] - c2[,2])^2)
 
 getVector <- function(coords, distance, angle) {
   return(cbind(coords[,1] + distance * cos(angle), coords[,2] + distance * sin(angle)))
@@ -25,4 +25,16 @@ getTriangles <- function(centroids, angles, sideLength) {
   triangles <- SpatialLines(triangles, proj4string=centroids@proj4string)
   
   return(triangles)
+}
+
+getINLAEstimates <- function(marginal, fun=identity, coordsScale=1) {
+  m <- inla.tmarginal(function(x) fun(x) / coordsScale, marginal)
+  e <- inla.emarginal(identity, m)
+  e2 <- inla.emarginal(function(x) x^2, m)
+  sd <- sqrt(e2 - e^2)
+  q <- inla.qmarginal(c(0.025, 0.5, 0.975), m)
+  mode <- inla.mmarginal(m)
+  x <- data.frame(e=e, sd=sd, q1=q[1], q2=q[2], q3=q[3], mode=mode)
+  colnames(x) <- c("mean", "sd", "0.025quant","0.5quant","0.975quant", "mode")
+  return(x)
 }

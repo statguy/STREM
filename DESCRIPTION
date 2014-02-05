@@ -11,6 +11,7 @@ Suggests: grid,lattice,ggplot2
 License: MIT
 Collate:
   Utils.R
+  SpatioTemporalRaster.R
   Context.R
   HabitatWeights.R
   StudyArea.R

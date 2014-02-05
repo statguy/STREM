@@ -3,7 +3,9 @@ HabitatWeights <- setRefClass(
   fields = list(
   ),
   methods = list(
-    initialize = function(habitatWeightList) {
+    initialize = function(...) {
+      callSuper(...)
+      return(.self)
     },
     
     classify = function(habitatValues) {
@@ -12,6 +14,13 @@ HabitatWeights <- setRefClass(
     
     getWeights = function(habitatValues) {
       return(rep(1, times=length(habitatValues)))
+    },
+    
+    getRaster = function(habitat, aggregationScale=100) { # TODO: determine aggregation scale automatically
+      library(raster)
+      weightsRaster <- aggregate(habitat, aggregationScale,
+        function(habitatValue, na.rm) mean(classify(habitatValue), na.rm=na.rm), na.rm=T)
+      return(weightsRaster)
     }
   )
 )
@@ -23,7 +32,8 @@ CORINEHabitatWeights <- setRefClass(
     weights = "data.frame"
   ),
   methods = list(
-    initialize = function(habitatWeightList=list(urban=1, agriculture=1, forestland=1, peatland=1, water=1)) {
+    initialize = function(habitatWeightsList=list(urban=1, agriculture=1, forestland=1, peatland=1, water=1), ...) {
+      callSuper(...)
       weights <<- data.frame(
         habitat=0:255,
         type=c(
@@ -37,11 +47,11 @@ CORINEHabitatWeights <- setRefClass(
         ),
         weight=c(
           rep(0,1), # unknown
-          rep(habitatWeightList$urban,13),
-          rep(habitatWeightList$agriculture,4),
-          rep(habitatWeightList$forestland,18),
-          rep(habitatWeightList$peatland,6),
-          rep(habitatWeightList$water,3),
+          rep(habitatWeightsList$urban,13),
+          rep(habitatWeightsList$agriculture,4),
+          rep(habitatWeightsList$forestland,18),
+          rep(habitatWeightsList$peatland,6),
+          rep(habitatWeightsList$water,3),
           rep(0,256-(1+13+4+18+6+3)) # undefined
         )
       )
