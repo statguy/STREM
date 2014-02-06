@@ -3,7 +3,7 @@ library(raster)
 SpatioTemporalRaster <- setRefClass(
   Class = "SpatioTemporalRaster",
   fields = list(
-    rasterLayers = "RasterLayer"
+    rasterStack = "RasterStack"
   ),
   methods = list(
     initialize = function(meanRasterList, ...) {
@@ -15,20 +15,20 @@ SpatioTemporalRaster <- setRefClass(
         
     setLayers = function(layerList) {
       library(raster)
-      rasterLayers <<- stack(layerList)
+      rasterStack <<- stack(layerList)
     },
     
     addLayer = function(layer) { # TODO: problem here. fix!
       library(raster)
-      rasterLayers <<- addLayer(rasterLayers, layer)
+      rasterStack <<- raster::addLayer(rasterStack, layer)
     },
     
     integrate = function(weights=1) {
       library(raster)
       
       volume <- data.frame()
-      for (index in 1:nlayers(rasterLayers)) {
-        weightedDensity <- rasterLayers[[index]] * weights
+      for (index in 1:nlayers(rasterStack)) {
+        weightedDensity <- rasterStack[[index]] * weights
         year <- names(meanRaster[[index]])
         volume <- rbind(volume, data.frame(Year=year, Estimated=cellStats(weightedDensity, sum)))
       }

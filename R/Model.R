@@ -21,7 +21,8 @@ Model <- setRefClass(
     A = "Matrix",
     dataStack = "inla.data.stack",
     offset = "numeric",
-    result = "inla"
+    result = "inla",
+    node = "list"
   ),
   methods = list(
     initialize = function(...) {
@@ -124,10 +125,25 @@ SmoothModel <- setRefClass(
       indexObserved <- inla.stack.index(dataStack, "observed")$data
       #fitted <- exp(result$summary.linear.predictor$mean[indexObserved]) # exp(E(eta))
       eta <- result$marginals.linear.predictor[indexObserved]
-      fitted <- ldply(eta, function(eta) getINLAEstimates(eta, exp))[,-1] # E(exp(eta))
+      fitted <- try(ldply(eta, function(eta) getINLAEstimates(eta, exp))[,-1]) # E(exp(eta))
+      if (inherits(fitted, "try-error")) {
+        warning("Could not estimate expected response values. Resorting to provided response values.")
+        fitted$mean <- exp(result$summary.linear.predictor$mean[indexObserved]) # exp(E(eta))
+        fitted$sd <- exp(result$summary.linear.predictor$sd[indexObserved])
+      }
       data$eta <<- result$summary.linear.predictor$mean[indexObserved]
       data$fittedMean <<- fitted$mean
       data$fittedSD <<- fitted$sd
+      
+      
+      # TODO: this is wrong, fix!
+      intercept <- result$summary.fixed["intercept","mean"]
+      st <- ldply(result$marginals.random$st,
+                  function(st) getINLAEstimates(st, function(st) exp(st + intercept)))[,-1]
+      node <<- list()
+      node$mean <<- matrix(data=st$mean, nrow=length(years), ncol=mesh$n)
+      node$sd <<- matrix(data=st$sd, nrow=length(years), ncol=mesh$n)
+      
       
       spdeResult <- inla.spde2.result(result, "st", spde)
       logKappa <- getINLAEstimates(spdeResult$marginals.log.kappa[[1]], coordsScale=1)
@@ -144,7 +160,7 @@ SmoothModel <- setRefClass(
       if (any(rownames(result$summary.hyperpar)=="GroupRho for st"))
         x <- rbind(x, rho=result$summary.hyperpar["GroupRho for st",])
 
-      return(invisible(x))
+      return(x)
     },
     
     project = function(estimates, projectionRaster, maskPolygon) {
@@ -167,28 +183,24 @@ SmoothModel <- setRefClass(
     getPopulationDensity = function(projectionRaster) {
       library(raster)
 
-      populationDensityRaster <- SpatioTemporalRaster$new()
+      meanPopulationDensityRaster <- SpatioTemporalRaster$new()
+      sdPopulationDensityRaster <- SpatioTemporalRaster$new()      
       
-      intersectionsMean <- matrix(data=data$fittedMean, nrow=length(years), ncol=mesh$n)
-      intersectionsSD <- matrix(data=data$fittedSD, nrow=length(years), ncol=mesh$n)
-      
-      for (yearIndex in 1:nrow(intersectionsMean)) {
+      for (yearIndex in 1:nrow(node$mean)) {
         year <- as.character(yearIndex + years[1] - 1)
         message("Processing year ", year, "...")
         
-        meanRasterLayer <- project(estimates=intersectionsMean[yearIndex,], projectionRaster=projectionRaster, maskPolygon=study$studyArea$boundary)
-        names(meanRasterLayer) <- year
-        #populationDensityMean[[yearIndex]] <- x
+        meanRaster <- project(estimates=node$mean[yearIndex,], projectionRaster=projectionRaster, maskPolygon=study$studyArea$boundary)
+        names(meanRaster) <- year
         
-        sdRasterLayer <- project(estimates=intersectionsSD[yearIndex,], projectionRaster=projectionRaster, maskPolygon=study$studyArea$boundary)
-        names(sdRasterLayer) <- year
-        #populationDensitySD[[yearIndex]] <- x
+        sdRaster <- project(estimates=node$sd[yearIndex,], projectionRaster=projectionRaster, maskPolygon=study$studyArea$boundary)
+        names(sdRaster) <- year
         
-        populationDensityRaster$addRasters(meanRasterLayer=meanRasterLayer, sdRasterLayer=sdRasterLayer)
+        meanPopulationDensityRaster$addLayer(meanRaster)
+        sdPopulationDensityRaster$addLayer(sdRaster)
       }
       
-      #populationDensityRaster$setRasters(populationDensityMean, populationDensitySD)
-      return(invisible(populationDensityRaster))
+      return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
     }    
   )
 )
