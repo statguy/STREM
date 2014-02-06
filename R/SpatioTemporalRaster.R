@@ -3,36 +3,33 @@ library(raster)
 SpatioTemporalRaster <- setRefClass(
   Class = "SpatioTemporalRaster",
   fields = list(
-    meanRaster = "RasterLayer",
-    sdRaster = "RasterLayer"
+    rasterLayers = "RasterLayer"
   ),
   methods = list(
-    initialize = function(meanRasterList, sdRasterList, ...) {
+    initialize = function(meanRasterList, ...) {
       callSuper(...)
-      if (!missing(meanRasterList) & !missing(sdRasterList))
-        setRasters(meanRasterList=meanRasterList, sdRasterList=sdRasterList)
+      if (!missing(meanRasterList))
+        setLayers(meanRasterList=meanRasterList)
       return(.self)
     },
         
-    setRasters = function(meanRasterList, sdRasterList) {
+    setLayers = function(layerList) {
       library(raster)
-      meanRaster <<- stack(meanRasterList)
-      sdRaster <<- stack(sdRasterList)
+      rasterLayers <<- stack(layerList)
     },
     
-    addRasters = function(meanRasterLayer, sdRasterLayer) { # TODO: problem here. fix!
+    addLayer = function(layer) { # TODO: problem here. fix!
       library(raster)
-      meanRaster <<- addLayer(meanRaster, meanRasterLayer)
-      sdRaster <<- addLayer(sdRaster, sdRasterLayer)
+      rasterLayers <<- addLayer(rasterLayers, layer)
     },
     
     integrate = function(weights=1) {
       library(raster)
       
       volume <- data.frame()
-      for (yearIndex in 1:nlayers(meanRaster)) {
-        weightedDensity <- meanRaster[[yearIndex]] * weights
-        year <- names(meanRaster[[i]])
+      for (index in 1:nlayers(rasterLayers)) {
+        weightedDensity <- rasterLayers[[index]] * weights
+        year <- names(meanRaster[[index]])
         volume <- rbind(volume, data.frame(Year=year, Estimated=cellStats(weightedDensity, sum)))
       }
       

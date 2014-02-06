@@ -173,6 +173,7 @@ SmoothModel <- setRefClass(
       
       for (yearIndex in 1:nrow(intersectionsMean)) {
         year <- as.character(yearIndex + years[1] - 1)
+        message("Processing year ", year, "...")
         
         meanRasterLayer <- project(estimates=intersectionsMean[yearIndex,], projectionRaster=projectionRaster, maskPolygon=study$studyArea$boundary)
         names(meanRasterLayer) <- year
