@@ -130,6 +130,7 @@ SimulatedTracks <- setRefClass(
     },
     
     setTracks = function(xy, id, date) {
+      library(adehabitatLT)
       d <- as.POSIXlt(date)
       burst <- paste(id, d$year, sep=".")
       tracks <<- as.ltraj(xy=xy, date=date, id=id, burst=burst)

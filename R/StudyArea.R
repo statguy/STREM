@@ -101,18 +101,19 @@ StudyArea <- setRefClass(
       p <- list()
       for (i in 1:length(gadm)) {
         largest <- which.max(sapply(gadm@polygons[[i]]@Polygons, slot, "area"))
-        p[[i]] <- Polygons(list(Polygon(gadm@polygons[[i]]@Polygons[[largest]])), ID=i)
+        p[[i]] <- Polygons(list(Polygon(gadm@polygons[[i]]@Polygons[[largest]])), ID=i-1)
       }
       p <- SpatialPolygonsDataFrame(SpatialPolygons(p, proj4string=gadm@proj4string), data=gadm@data)
       return(p)
     },
     
     thinGADM = function(gadm, tolerance) {
+      library(maptools)
       p <- findLargestPolygon(gadm)
       return(thinnedSpatialPoly(p, tolerance=tolerance))
     },    
     
-    loadBoundaryGADM = function(country, level=0, subregion, mainland=FALSE, thin=FALSE, coordinateScale=as.integer(1), tolerance=5000) {  
+    loadBoundaryGADM = function(country, level=0, subregion, mainland=FALSE, thin=FALSE, coordinateScale=as.integer(1), tolerance=0.1) {  
       coordinateScale <<- coordinateScale
       
       library(sp)
