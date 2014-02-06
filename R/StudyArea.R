@@ -98,10 +98,11 @@ StudyArea <- setRefClass(
             
     findLargestPolygon = function(gadm) {
       library(maptools)
+      rownames(gadm@data) <- 1:nrow(gadm@data)      
       p <- list()
       for (i in 1:length(gadm)) {
         largest <- which.max(sapply(gadm@polygons[[i]]@Polygons, slot, "area"))
-        p[[i]] <- Polygons(list(Polygon(gadm@polygons[[i]]@Polygons[[largest]])), ID=i-1)
+        p[[i]] <- Polygons(list(Polygon(gadm@polygons[[i]]@Polygons[[largest]])), ID=i)
       }
       p <- SpatialPolygonsDataFrame(SpatialPolygons(p, proj4string=gadm@proj4string), data=gadm@data)
       return(p)
