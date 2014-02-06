@@ -59,11 +59,12 @@ SmoothModel <- setRefClass(
     setup = function(intersections, meshParams) {
       library(INLA)
             
-      message("Constructing mesh...")      
+      message("Constructing mesh...")
 
-      data <<- subset(intersections$intersections, response == study$response)@data
+      intersectionsSubset <- subset(intersections$intersections, response == study$response)
+      data <<- intersectionsSubset@data
       coordsScale <<- meshParams$coordsScale
-      locations <<- coordinates(intersections$intersections) * coordsScale
+      locations <<- coordinates(intersectionsSubset) * coordsScale
       mesh <<- inla.mesh.create.helper(points.domain=locations,
                                        min.angle=meshParams$minAngle,
                                        max.edge=meshParams$maxEdge * coordsScale,
@@ -80,7 +81,7 @@ SmoothModel <- setRefClass(
       
       index <<- inla.spde.make.index("st", n.spde=mesh$n, n.group=nYears)
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
-      dataStack <<- inla.stack(data=list(response=as.numeric(data$response)),
+      dataStack <<- inla.stack(data=list(response=data$intersections),
                                A=list(A),
                                effects=list(c(index, list(intercept=1))),
                                tag="observed")
