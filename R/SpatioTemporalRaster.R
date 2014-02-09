@@ -18,7 +18,7 @@ SpatioTemporalRaster <- setRefClass(
       rasterStack <<- stack(layerList)
     },
     
-    addLayer = function(layer) { # TODO: problem here. fix!
+    addLayer = function(layer) {
       library(raster)
       rasterStack <<- raster::addLayer(rasterStack, layer)
     },
@@ -29,11 +29,11 @@ SpatioTemporalRaster <- setRefClass(
       volume <- data.frame()
       for (index in 1:nlayers(rasterStack)) {
         weightedDensity <- rasterStack[[index]] * weights
-        year <- names(meanRaster[[index]])
+        year <- names(rasterStack[[index]])
         volume <- rbind(volume, data.frame(Year=year, Estimated=cellStats(weightedDensity, sum)))
       }
       
-      return(invisible(volume))
+      return(volume)
     }   
   )
 )

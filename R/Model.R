@@ -33,11 +33,13 @@ Model <- setRefClass(
     getResultFileName = function() {
       if (inherits(study, "undefinedField") | length(name) == 0)
         stop("Provide study and name parameters.")
-      return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Result", response=response, region=study$studyArea$region, tag=name))
+      return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Result", response=study$response, region=study$studyArea$region, tag=name))
     },
     
     saveResult = function() {
-      save(name, locations, covariates, model, coordsScale, years, mesh, spde, index, A, dataStack, offset, result, file=getResultFileName())
+      fileName <- getResultFileName()
+      message("Saving result to ", fileName, "...")
+      save(name, locations, covariates, model, coordsScale, years, mesh, spde, index, A, dataStack, offset, result, file=fileName)
     },
     
     loadResult = function() {
@@ -102,7 +104,7 @@ SmoothModel <- setRefClass(
       plot(surveyRoutes$surveyRoutes, col="blue", add=T)
     },
 
-    estimate = function(family="nbinomial") {
+    estimate = function(family="nbinomial", save=FALSE) {
       library(INLA)
       
       result <<- inla(model,
@@ -115,6 +117,9 @@ SmoothModel <- setRefClass(
       
       if (is.null(result$ok) || result$ok == FALSE) {
         warning("INLA failed to run.")
+      }
+      else {
+        if (save) saveResult()
       }
     },
     
