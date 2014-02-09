@@ -19,7 +19,7 @@ HabitatWeights <- setRefClass(
     getRaster = function(habitat, aggregationScale=100) { # TODO: determine aggregation scale automatically
       library(raster)
       weightsRaster <- aggregate(habitat, aggregationScale,
-        function(habitatValue, na.rm) mean(classify(habitatValue), na.rm=na.rm), na.rm=T)
+        function(habitatValue, na.rm) mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
       return(weightsRaster)
     }
   )
@@ -57,15 +57,15 @@ CORINEHabitatWeights <- setRefClass(
       )
     },
 
-    classify = function(habitatValues) {
+    classify = function(habitatValues, na.value=NA) {
       x <- weights$type[match(habitatValues, weights$habitat)]
-      x[is.na(x)] <- 0
+      x[is.na(x)] <- na.value
       return(x)
     },
 
-    getWeights = function(habitatValues) {
+    getWeights = function(habitatValues, na.value=NA) {
       x <- weights$weight[match(habitatValues, weights$habitat)]
-      x[is.na(x)] <- 0
+      x[is.na(x)] <- na.value
       return(x)
     }
   )
