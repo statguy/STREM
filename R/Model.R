@@ -11,7 +11,7 @@ Model <- setRefClass(
     study = "Study",
     data = "data.frame",
     locations = "matrix",
-    covariates = "data.frame",
+    #covariates = "data.frame",
     model = "formula",
     coordsScale = "numeric",
     years = "integer",
@@ -39,7 +39,7 @@ Model <- setRefClass(
     saveResult = function() {
       fileName <- getResultFileName()
       message("Saving result to ", fileName, "...")
-      save(name, locations, covariates, model, coordsScale, years, mesh, spde, index, A, dataStack, offset, result, file=fileName)
+      save(name, locations, data, model, coordsScale, years, mesh, spde, index, A, dataStack, offset, result, file=fileName)
     },
     
     loadResult = function() {
