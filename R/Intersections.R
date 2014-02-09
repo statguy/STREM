@@ -7,18 +7,15 @@ Intersections <- setRefClass(
     intersections = "SpatialPointsDataFrame"
   ),
   methods = list(
-    initialize = function(preprocessData=FALSE, ...) {
+    initialize = function(...) {
       callSuper(...)
-      if (preprocessData) saveIntersections()
       return(.self)
     },
-    
-    newInstance = function() {
-      loadIntersections()
-    },
-    
+        
     getIntersectionsFileName = function() {
-      return(study$context$getFileName(context$resultDataDirectory, name="Intersections", region=study$studyArea$region))
+      if (inherits(study, "undefinedField"))
+        stop("Provide study parameters.")
+      return(study$context$getFileName(dir=study$context$resultDataDirectory, name="Intersections", response=study$response, region=study$studyArea$region))
     },
     
     saveIntersections = function() {
@@ -27,9 +24,10 @@ Intersections <- setRefClass(
         
     loadIntersections = function() {
       load(getIntersectionsFileName(), envir=as.environment(.self))
+      return(.self)
     },
     
-    getIntersectionsLocations = function() {
+    getSurveyLocations = function() {
       return(SpatialPoints(unique(coordinates(intersections)), proj4string=intersections@proj4string))
     }
   )
@@ -58,7 +56,7 @@ SimulatedIntersections <- setRefClass(
       findIntersectionsMatrix(tracksSP, surveyRoutes$surveyRoutes, ...)      
       aggregateIntersectionsMatrix(tracks, surveyRoutes)
     },
-        
+    
     findIntersectionsMatrix = function(tracks, surveyRoutes, dimension=1) {
       library(sp)
       library(CNPCluster)
@@ -169,25 +167,36 @@ FinlandWTCIntersections <- setRefClass(
       library(gdata)
       library(sp)
       
+      message("Processing ", study$response, "...")
+      
       wtc <- read.xls(file.path(study$context$rawDataDirectory, "Kolmiot_1989_2011.xls"))
       names(wtc)[1:9] <- c("id","y","x","length","forest","field","year","date","duration")
       names(wtc)[16] <- "canis.lupus"
       names(wtc)[29] <- "lynx.lynx"
       names(wtc)[33] <- "rangifer.tarandus.fennicus"
+      
+      responseIndex <- switch (study$response,
+              canis.lupus=16,
+              lynx.lynx=29,
+              rangifer.tarandus.fennicus=33)
+      wtc <- wtc[,c(1:9,responseIndex)]
+      colnames(wtc)[ncol(wtc)] <- "intersections"
+      wtc$response <- study$response
+      
       wtc$date <- strptime(wtc$date, "%Y%m%d")
       wtc$x <- (wtc$x+3000)*1000
       wtc$y <- wtc$y*1000
       wtc <- subset(wtc, duration<4 & duration>0 & length>0)  
       # Transects 168 and 1496 are at the same location but separate, take average, ignore or something...
       wtc <- subset(wtc, id!=1496)
-      wtc <- SpatialPointsDataFrame(cbind(wtc$x, wtc$y), data=wtc, proj4string=CRS("+init=epsg:2393"))
-      
-      intersections <<- wtc[,1:9]
-      intersections <<- rbind(intersections, intersections, intersections)
-      intersections$response <<- c(rep("canis.lupus", times=nrow(wtc)), rep("lynx.lynx", times=nrow(wtc)), rep("rangifer.tarandus.fennicus", times=nrow(wtc)))
-      intersections$intersections <<- c(wtc$canis.lupus, wtc$lynx.lynx, wtc$rangifer.tarandus.fennicus)
-      
-      save(intersections, file=getDataFileName())
+      intersections <<- SpatialPointsDataFrame(cbind(wtc$x, wtc$y), data=wtc, proj4string=CRS("+init=epsg:2393"))
+
+      save(intersections, file=getIntersectionsFileName())
+    },
+    
+    # TODO
+    addDistances = function() {
+      intersections$distance <<- 1
     }
   )
 )

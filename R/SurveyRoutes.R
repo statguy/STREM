@@ -13,6 +13,7 @@ SurveyRoutes <- setRefClass(
     plotSurveyRoutes = function() {
       plot(study$studyArea$boundary)
       plot(surveyRoutes, col="blue", add=T)
+      return(invisible(.self))
     },
     
     getLengths = function() {
@@ -40,6 +41,7 @@ SurveyRoutes <- setRefClass(
       names(outsideLengths) <- outsideNames
       lengths <<- c(lengths, outsideLengths)
       lengths <<- lengths[order(as.numeric(names(lengths)))]
+      return(invisible(.self))
     }
   )
 )
@@ -52,13 +54,13 @@ FinlandRandomWTCSurveyRoutes <- setRefClass(
   methods = list(
     initialize = function(...) {
       callSuper(...)
-      return(.self)
+      return(invisible(.self))
     },
     
     newInstance = function(nStudyRoutes) {
       surveyRoutes <<- getRandomSurveyRoutes(nStudyRoutes=nStudyRoutes)
       getLengths()
-      return(.self)
+      return(invisible(.self))
     },
     
     getRandomSurveyRoutes = function(nStudyRoutes) {
@@ -70,7 +72,6 @@ FinlandRandomWTCSurveyRoutes <- setRefClass(
   )  
 )
 
-## TODO: untested
 FinlandWTCSurveyRoutes <- setRefClass(
   Class = "FinlandSurveyRoutes",
   contains = "SurveyRoutes",
@@ -79,19 +80,20 @@ FinlandWTCSurveyRoutes <- setRefClass(
   methods = list(
     initialize = function(...) {
       callSuper(...)
-      return(.self)
+      return(invisible(.self))
     },
     
     newInstance = function() {
       getWTCSurveyRoutes()
       getLengths()
-      return(.self)
+      return(invisible(.self))
     },
         
-    getWTCSurveyRoutes = function(intersections) {
-      intersections <- FinlandWTCIntersections$new(study=study)$newInstance()
-      centroids <<- unique(intersections$getSampleLocations())
-      angles <- runif(length(centroids), 0, 2 * pi) # Angles are unknown, randomize. TODO: find angles conforming the landscape
+    getWTCSurveyRoutes = function() {
+      intersections <- FinlandWTCIntersections$new(study=study)$loadIntersections()
+      centroids <<- intersections$getSurveyLocations()
+      # Angles are unknown, randomize. TODO: Find the most likely angles given the landscape.
+      angles <- runif(length(centroids), 0, 2 * pi)
       surveyRoutes <<- getTriangles(centroids, angles, 4000)
     }
   )

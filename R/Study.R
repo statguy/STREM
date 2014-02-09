@@ -45,9 +45,19 @@ FinlandWTCStudy <- setRefClass(
   fields = list(
   ),
   methods = list(
-    initialize <- function(context, ...) {
+    initialize = function(context, ...) {
       callSuper(context=context, ...)
       studyArea <<- FinlandStudyArea(context=context)$newInstance()
+    },
+    
+    preprocess = function() {
+      intersections <- FinlandWTCIntersections(study=.self)
+      response <<- "canis.lupus"
+      intersections$saveIntersections()
+      response <<- "lynx.lynx"
+      intersections$saveIntersections()
+      response <<- "rangifer.tarandus.fennicus"
+      intersections$saveIntersections()
     }
   )
 )
