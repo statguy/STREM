@@ -26,6 +26,7 @@ Tracks <- setRefClass(
     loadTracks = function() {
       library(adehabitatLT)
       load(getTracksFileName(), envir=as.environment(.self))
+      return(invisible(.self))
     },
     
     getSpatialLines = function() {
@@ -94,7 +95,7 @@ Tracks <- setRefClass(
       return(intervals)
     },
     
-    # Note! Call this before randomizing observation days. Otherwise you'd lose details of the last movements.
+    # Note! Call this before randomizing observation days. Otherwise you'll lose details of the last movements.
     getDistances = function(surveyRoutes) {
       warning("Spatial variation in distances not considered in vicinity of the survey routes.")
       
@@ -113,6 +114,47 @@ Tracks <- setRefClass(
       message(sum(!is.na(distance)), " / ", length(distance), " of day movements used to determine mean movement distance = ", mean(distance, na.rm=T), " ± ", sd(distance, na.rm=T), ".")
       
       distances <<- rep(mean(distance, na.rm=T), times=length(surveyRoutes$surveyRoutes))
+    },
+    
+    ### ### ###
+    
+    getExpectedLandtypeDistributions = function(movements, habitatWeights, nSamples) {
+      library(plyr)
+      library(raster)
+
+      movements <- movements[!(is.na(movements$x) | is.na(movements$y) | is.na(movements$dx) | is.na(movements$dy)),]      
+      
+      p <- dlply(movements, .(id, burst), function(m, habitat, habitatWeights, nSamples) {
+        message("Burst = ", m$burst[1], ", n = ", nrow(m))
+        
+        locations <- m[,c("x","y")]
+        p <- habitatWeights$getHabitatFrequencies(c())
+        
+        for (i in 1:nrow(locations)) {
+          location <- locations[i,]
+          randomizedSteps <- m[sample(1:nrow(m), min(nSamples, nrow(m))), c("dx","dy")]
+          randomizedLocations <- cbind(x=location$x + randomizedSteps$dx, y=location$y + randomizedSteps$dy)
+          habitatSample <- extract(habitat, SpatialPoints(randomizedLocations, CRS(projection(habitat))))    
+          p <- p + habitatWeights$getHabitatFrequencies(habitatSample)
+        }
+        
+        return(prop.table(p))
+      }, habitat=study$studyArea$habitat, habitatWeights=habitatWeights, nSamples=nSamples, .parallel=TRUE, .paropts=list(.packages=c("raster","sp")))
+
+      x <- do.call(rbind, p)
+      return(as.data.frame(x))
+    },
+    
+    getHabitatPreferences = function(habitatWeights, nSamples=30, save=FALSE) {
+      intervals <- getSampleIntervals()
+      maxIntervalH <- as.numeric(names(which.max(table(intervals$intervals$intervalH))))
+      maxIntervals <- subset(intervals$intervals, intervalH == maxIntervalH)
+      tracksDF <- ld(tracks)
+      tracksDF <- subset(tracksDF, burst %in% maxIntervals$burst & id %in% maxIntervals$id)
+      
+      #habitatWeights <- CORINEHabitatWeights$new()
+      p <- getExpectedLandtypeDistributions(movements=tracksDF, habitatWeights=habitatWeights, nSamples=nSamples)
+      return(p)
     }
   )
 )
@@ -176,18 +218,19 @@ FinlandWTCTracks <- setRefClass(
       gps <- gps[complete.cases(gps),] # Remove missing data
       coordinates(gps) <- ~x+y
       proj4string(gps) <- fromProj
-      gps <- spTransform(gps, studyArea$proj4string)
+      gps <- spTransform(gps, study$studyArea$proj4string)
       gpsLT <- as.ltraj(coordinates(gps), gps$date, gps$id, infolocs=NULL)
       gpsLT <- gdltraj(gpsLT, min=0, max=2, type="mon") # Limit to WTC period, TODO: period is 3 months in the Northern Finland
       gpsLT <- cutltraj(gpsLT, "dt > 3600*24*200", nextr=TRUE) # Cut years apart
       gpsLT <- cutltraj(gpsLT, paste("(dist/1000)/(dt/3600) >", maxSpeed)) # Remove unrealistic movements
-      assign(".b", studyArea$boundary@polygons[[1]]@Polygons[[1]]@coords, envir=.GlobalEnv)
+      assign(".b", study$studyArea$boundary@polygons[[1]]@Polygons[[1]]@coords, envir=.GlobalEnv)
       gpsLT <- cutltraj(gpsLT, "point.in.polygon(x, y, .b[,1], .b[,2])==0") # Remove movements outside the boundary
       rm(".b", envir=.GlobalEnv)
       
       message("Saving processed data...")
       tracks <<- gpsLT
       save(tracks, file=getTracksFileName())
+      return(invisible(.self))
     },
     
     preprocessWolfData = function() {
@@ -220,7 +263,7 @@ FinlandWTCTracks <- setRefClass(
       library(gdata)
       
       message("Reading raw data...")
-      gps.raw <- read.xls(file.path(study$context$rawDataDirectory, "GPS_Finland_GPS_Finland_RKTL_ForestReindeer_ec_import_tracks.xlsx"))  
+      gps.raw <- read.xls(file.path(study$context$rawDataDirectory, "GPS_Finland_GPS_Finland_RKTL_ForestReindeer_ec_import_tracks.xlsx"))
       gps <- data.frame(id=gps.raw$UnitID,
                         date=as.POSIXct(gps.raw$Date*60*60*24-60*60*2*24-60*60*.3, origin="1900-01-01"),
                         x=gps.raw$X, y=gps.raw$Y)

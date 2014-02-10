@@ -29,7 +29,10 @@ MovementSampleIntervals <- setRefClass(
         x$intervalMin <- intervalMin
         x$intervalH <- intervalMin / 60
         x$distanceKm <- distKm
-        return(x[1, c("id","date","intervalH","intervalMin","intervalSec","distanceKm","thinid")])
+        if (any("thinid" %in% colnames(x)))
+          return(x[1, c("id","date","intervalH","intervalMin","intervalSec","distanceKm","thinid")])
+        else
+          return(x[1, c("id","date","intervalH","intervalMin","intervalSec","distanceKm")])
       })
       
       if (nrow(intervals) == 0) warning("Unable to determine sampling intervals.")
