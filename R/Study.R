@@ -50,18 +50,25 @@ FinlandWTCStudy <- setRefClass(
       studyArea <<- FinlandStudyArea$new(context=context)$newInstance()
     },
     
-    preprocess = function() {
+    
+    preprocessResponse = function(response) {
+      response <<- response
+      
       intersections <- FinlandWTCIntersections$new(study=.self)
-      tracks <- FinlandWTCTracks$new(study=.self)
-      response <<- "canis.lupus"
+      tracks <- FinlandWTCTracks$new(study=.self)      
+      habitatWeights <- CORINEHabitatWeights$new(study=.self)
+
       intersections$saveIntersections()
       tracks$saveTracks()
-      response <<- "lynx.lynx"
-      intersections$saveIntersections()
-      tracks$saveTracks()
-      response <<- "rangifer.tarandus.fennicus"
-      intersections$saveIntersections()
-      tracks$saveTracks()
+      habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=T)
+      habitatWeights <- CORINEHabitatWeights$new(study=study)$setHabitatSelectionWeights(habitatSelection)
+      habitatWeights$getWeightsRaster(aggregationScale=100, save=T)
+    },
+    
+    preprocess = function() {
+      preprocessResponse("canis.lupus")
+      preprocessResponse("lynx.lynx")
+      preprocessResponse("rangifer.tarandus.fennicus")
     }
   )
 )

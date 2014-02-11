@@ -3,12 +3,12 @@ HabitatSelection <- setRefClass(
   fields = list(
     study = "Study",
     tracks = "Tracks",
-    expected = "data.frame",
-    realized = "data.frame",
-    relative = "data.frame"
+    nullModelUsage = "data.frame",
+    realizedUsage = "data.frame",
+    relativeUsage = "data.frame"
   ),
   methods = list(
-    getExpectedHabitatDistributions = function(movements, habitatWeightsTemplate, nSamples) {
+    getNullModelMovementHabitatDistributions = function(movements, habitatWeightsTemplate, nSamples) {
       library(plyr)
       library(raster)
       
@@ -61,14 +61,28 @@ HabitatSelection <- setRefClass(
       tracksDF <- ld(tracks$tracks)
       tracksDF <- subset(tracksDF, burst %in% maxIntervals$burst & id %in% maxIntervals$id)
       
-      #habitatWeightsTemplate <- CORINEHabitatWeights$new()
-      expected <<- getExpectedMovementHabitatDistributions(movements=tracksDF, habitatWeightsTemplate=habitatWeightsTemplate, nSamples=nSamples)
-      realized <<- getRealizedMovementHabitatDistributions(movements=tracksDF, habitatWeightsTemplate=habitatWeightsTemplate)
-      relative <<- colSums(realizedMovementHabitatUsage) / colSums(expectedMovementHabitatUsage)
+      nullModelUsage <<- getNullModelMovementHabitatDistributions(movements=tracksDF, habitatWeightsTemplate=habitatWeightsTemplate, nSamples=nSamples)
+      realizedUsage <<- getRealizedMovementHabitatDistributions(movements=tracksDF, habitatWeightsTemplate=habitatWeightsTemplate)
+      relativeUsage <<- as.data.frame(as.list(colSums(realizedUsage) / colSums(nullModelUsage)))
       
-      #forestRelativeMovementHabitatUsage <- relativeMovementHabitatUsage / relativeMovementHabitatUsage["Forest"]
+      if (save) saveHabitatSelection()
+      
+      return(.self)
+    },
+
+    getHabitatSelectionFileName = function() {
+      return(study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region))
+    },
+    
+    saveHabitatSelection = function() {
+      fileName <- getHabitatSelectionFileName()
+      message("Saving habitat preferences to ", fileName, "...")
+      save(nullModelUsage, realizedUsage, relativeUsage, file=fileName)
+    },
+    
+    loadHabitatSelection = function() {
+      load(file=getHabitatSelectionFileName(), envir=as.environment(.self))
+      return(invisible(.self))
     }
-    
-    
   )
 )

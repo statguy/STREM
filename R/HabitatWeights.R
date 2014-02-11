@@ -1,11 +1,12 @@
 HabitatWeights <- setRefClass(
   Class = "HabitatWeights",
   fields = list(
+    study = "Study"
   ),
   methods = list(
     initialize = function(...) {
       callSuper(...)
-      return(.self)
+      return(invisible(.self))
     },
     
     classify = function(habitatValues) {
@@ -15,16 +16,38 @@ HabitatWeights <- setRefClass(
     getWeights = function(habitatValues) {
       return(rep(1, times=length(habitatValues)))
     },
-    
-    getRaster = function(habitat, aggregationScale=100) { # TODO: determine aggregation scale automatically
+
+    getWeightsRasterFileName = function() {
+      study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeightsRaster", response=study$response, region=study$studyArea$region, ext="")
+    },
+
+    getWeightsRaster = function(aggregationScale=100, save=FALSE) { # TODO: determine aggregation scale automatically
       library(raster)
-      weightsRaster <- aggregate(habitat, aggregationScale,
-        function(habitatValue, na.rm) mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
+      
+      if (save) {
+        fileName <- getWeightsRasterFileName()
+        message("Saving habitat weights raster to ", fileName, ".grd...")
+        weightsRaster <- aggregate(study$studyArea$habitat, aggregationScale, filename=fileName,
+          fun=function(habitatValue, na.rm) mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
+      }
+      else {
+        weightsRaster <- aggregate(habitat, aggregationScale,
+          fun=function(habitatValue, na.rm) mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
+      }
+      
       return(weightsRaster)
+    },
+
+    loadWeightsRaster = function(study) {
+      return(raster(getWeightsRasterFileName()))
     },
     
     getHabitatFrequencies = function(habitatValues) {
-      stop("Implement this method in subclass.")
+      stop("Implement this method in a subclass.")
+    },
+    
+    setHabitatSelectionWeights = function(relativeHabitatUsage) {
+      stop("Implement this method in a subclass.")
     }
   )
 )
@@ -37,7 +60,7 @@ CORINEHabitatWeights <- setRefClass(
     habitatTypes = "integer"
   ),
   methods = list(
-    initialize = function(habitatWeightsList=list(urban=1, agriculture=1, forestland=1, peatland=1, water=1), ...) {
+    initialize = function(habitatWeightsList=list(Urban=1, Agriculture=1, Forestland=1, Peatland=1, Water=1), ...) {
       callSuper(...)
       
       lastIndex <- 1+13+4+18+6+3
@@ -55,18 +78,26 @@ CORINEHabitatWeights <- setRefClass(
         ),
         weight=c(
           rep(0,1), # unknown
-          rep(habitatWeightsList$urban,13),
-          rep(habitatWeightsList$agriculture,4),
-          rep(habitatWeightsList$forestland,18),
-          rep(habitatWeightsList$peatland,6),
-          rep(habitatWeightsList$water,3),
+          rep(habitatWeightsList$Urban,13),
+          rep(habitatWeightsList$Agriculture,4),
+          rep(habitatWeightsList$Forestland,18),
+          rep(habitatWeightsList$Peatland,6),
+          rep(habitatWeightsList$Water,3),
           rep(0,256-lastIndex) # undefined
         )
       )
       
       habitatTypes <<- unique(weights$type[2:lastIndex])
+      
+      return(invisible(.self))
     },
 
+    setHabitatSelectionWeights = function(habitatSelection) {
+      w <- as.list(habitatSelection$relativeUsage / habitatSelection$relativeUsage[["Forestland"]])
+      initialize(habitatWeightsList=w)
+      return(invisible(.self))
+    },
+    
     classify = function(habitatValues, na.value=NA) {
       x <- weights$type[match(habitatValues, weights$habitat)]
       x[is.na(x)] <- na.value

@@ -13,9 +13,9 @@ Collate:
   Utils.R
   SpatioTemporalRaster.R
   Context.R
-  HabitatWeights.R
   StudyArea.R
   Study.R
+  HabitatWeights.R
   Tracks.R
   HabitatSelection.R
   TracksCollection.R
