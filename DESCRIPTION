@@ -17,6 +17,7 @@ Collate:
   StudyArea.R
   Study.R
   Tracks.R
+  HabitatSelection.R
   TracksCollection.R
   Intersections.R
   IntersectionsCollection.R
