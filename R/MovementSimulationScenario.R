@@ -194,7 +194,7 @@ MovementSimulationScenario <- setRefClass(
                 study$studyArea$readRasterIntoMemory()                
               }
               
-              message("Agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgentsCurrent, ", Year = ", year,  " / ", years, "...")
+              message("Agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgentsCurrent, ", year = ", year,  " / ", years, ", days = ", days, "...")
               track <- randomizeBCRWTrack(initialLocation=initialLocations[agentIndex,,drop=F], initialAngle=initialAngles[agentIndex], isFirst=isFirst, nProposal=nProposal)
               track$agent <- agents[agentIndex]
               return(track)

@@ -16,7 +16,7 @@ Tracks <- setRefClass(
     },
     
     getTracksFileName = function() {
-      return(study$context$getFileName(study$context$resultDataDirectory, name="Tracks", response=study$response, region=study$studyArea$region))
+      return(study$context$getFileName(study$context$scratchDirectory, name="Tracks", response=study$response, region=study$studyArea$region))
     },
     
     saveTracks = function() {
