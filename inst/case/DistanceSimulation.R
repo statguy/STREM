@@ -8,8 +8,8 @@ mssIntensive <- MovementSimulationScenarioIntensive$new(stepIntervalHours=4)$new
 tracks <- mssIntensive$simulate(save=TRUE)
 
 study <- mssIntensive$study
-surveyRoutes <- FinlandRandomWTCSurveyRoutes$new(study=study)$newInstance(800)
 tracks <- study$loadTracksCollection()
+surveyRoutes <- FinlandRandomWTCSurveyRoutes$new(study=study)$newInstance(800)
 tracks$getDistances(surveyRoutes)
 intersections <- tracks$findIntersections(surveyRoutes, dimension=1, save=TRUE)
 
