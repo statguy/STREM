@@ -48,7 +48,7 @@ SimulatedTracksCollection <- setRefClass(
     loadTracks = function() {
       # TODO: bad design here if directory or file name pattern changes in Tracks (sub)class...
       tracksFiles <- study$context$listLongFiles(dir=study$context$scratchDirectory, name="Tracks", response=study$response, tag="\\d+", region=study$studyArea$region)
-      if (base::length(tracksFiles))
+      if (base::length(tracksFiles) == 0)
         stop("Cannot find any tracks files in ", study$context$scratchDirectory)
       
       for (iteration in 1:base::length(tracksFiles)) { # TODO: better to use iteration number rather than number of files
