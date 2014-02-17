@@ -217,10 +217,12 @@ MovementSimulationScenario <- setRefClass(
       return(tracks)
     },
     
-    simulate = function(save=FALSE) {
+    simulate = function(restartIteration=1, save=FALSE) {
+      stopifnot(restartIteration <= nIterations)
+      
       simulatedTracks <- SimulatedTracksCollection$new(study=study)
       
-      for (i in 1:nIterations) {
+      for (i in restartIteration:nIterations) {
         message("Iteration ", i, " of ", nIterations, "...")
         tracksDF <- randomizeBCRWTracks()
         date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))

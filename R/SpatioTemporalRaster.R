@@ -26,12 +26,14 @@ SpatioTemporalRaster <- setRefClass(
     integrate = function(weights=1) {
       library(raster)
       
-      volume <- data.frame()
+      volume <- PopulationSize$new()
+      
       for (index in 1:nlayers(rasterStack)) {
-        weightedDensity <- rasterStack[[index]] * weights        
+        weightedDensity <- rasterStack[[index]] * weights
+        weightedSum <- cellStats(weightedDensity, sum)
         year <- names(rasterStack[[index]])
-        if (substr(year, 1, 1) == "X") year <- substr(year, 2, length(year))
-        volume <- rbind(volume, data.frame(Year=year, Estimated=cellStats(weightedDensity, sum)))
+        if (substr(year, 1, 1) == "X") year <- substr(year, 2, nchar(year))
+        volume$add(year=year, size=weightedSum)
       }
       
       return(volume)

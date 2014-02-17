@@ -122,7 +122,9 @@ StudyArea <- setRefClass(
       
       if (thin==TRUE & mainland==TRUE) mainland <- FALSE
       
-      gadm <- raster::getData('GADM', country=country, level=level, path=context$scratchDirectory)
+      gadm <- try(raster::getData('GADM', country=country, level=level, path=context$scratchDirectory))
+      if (inherits(gadm, "try-error"))
+        stop("Failed to download country boundary: ", gadm)
       
       if (mainland) gadm <- findLargestPolygon(gadm)
       if (thin) gadm <- thinGADM(gadm, tolerance)
