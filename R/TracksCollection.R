@@ -45,9 +45,11 @@ SimulatedTracksCollection <- setRefClass(
   Class = "SimulatedTracksCollection",
   contains = "TracksCollection",
   methods = list(
-    loadTracks = function() {     
-      # TOOD: bad design here: ask for the directory from Tracks object rather than fixing it
-      tracksFiles <- study$context$listLongFiles(dir=study$context$scratchDirectory, name="Tracks", response=study$response, tag="\\d+", region=study$studyArea$region)
+    loadTracks = function() {
+      # TODO: bad design here, rely on Tracks class on listing files instead
+      tracksFiles <- study$context$listLongFiles(dir=getTracksDirectory(), name="Tracks", response=study$response, tag="\\d+", region=study$studyArea$region)
+      if (length(tracksFiles))
+        stop("Cannot find any tracks files in ", study$context$scratchDirectory)
       
       for (iteration in 1:base::length(tracksFiles)) { # TODO: better to use iteration number rather than number of files
         tracks <- SimulatedTracks$new(study=study, iteration=iteration)

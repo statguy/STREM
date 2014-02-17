@@ -15,8 +15,10 @@ Tracks <- setRefClass(
       return(.self)
     },
     
+    getTracksDirectory = function() return(study$context$scratchDirectory),
+    
     getTracksFileName = function() {
-      return(study$context$getFileName(study$context$scratchDirectory, name="Tracks", response=study$response, region=study$studyArea$region))
+      return(study$context$getFileName(getTracksDirectory(), name="Tracks", response=study$response, region=study$studyArea$region))
     },
     
     saveTracks = function() {
@@ -146,7 +148,7 @@ SimulatedTracks <- setRefClass(
     getTracksFileName = function() {
       if (inherits(study, "undefinedField") | length(iteration) == 0)
         stop("Provide study and iteration parameters.")
-      return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Tracks", response=study$response, region=study$studyArea$region, tag=iteration))
+      return(study$context$getLongFileName(dir=getTracksDirectory(), name="Tracks", response=study$response, region=study$studyArea$region, tag=iteration))
     },
     
     saveTracks = function() {
