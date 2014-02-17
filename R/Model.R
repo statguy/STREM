@@ -127,7 +127,9 @@ SmoothModel <- setRefClass(
       }
     },
 
-    collectResults = function(processFitted=FALSE) {
+    collectResults = function(processFitted=FALSE, quick=FALSE) {
+      if (quick) return(collectResultsQuick())
+      
       library(INLA)
       library(plyr)
       
