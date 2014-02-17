@@ -173,11 +173,13 @@ SmoothModel <- setRefClass(
                  range=range)
       if (any(rownames(result$summary.hyperpar)=="GroupRho for st"))
         x <- rbind(x, rho=result$summary.hyperpar["GroupRho for st",])
-
+            
       return(x)
     },
 
     collectResultsQuick = function() {
+      library(INLA)
+      
       indexObserved <- inla.stack.index(dataStack, "observed")$data
       data$eta <<- result$summary.linear.predictor$mean[indexObserved]
       data$fittedMean <<- exp(result$summary.linear.predictor$mean[indexObserved])
@@ -219,12 +221,16 @@ SmoothModel <- setRefClass(
       area <- prod(res(projectionRaster))
       values(projectionRaster) <- t(projectedEstimates[,ncol(projectedEstimates):1]) * area
       
-      if (!missing(maskPolygon)) projectionRaster <- mask(projectionRaster, maskPolygon)
+      if (!missing(maskPolygon) & !is.null(maskPolygon))
+        projectionRaster <- mask(projectionRaster, maskPolygon)
       
       return(invisible(projectionRaster))
     },
     
-    getPopulationDensity = function(projectionRaster) {
+    getPopulationDensity = function(projectionRaster, maskPolygon=study$studyArea$boundary, getSD=TRUE) {
+      if (length(node) == 0)
+        stop("Did you forgot to run collectResults() first?")
+      
       library(raster)
 
       meanPopulationDensityRaster <- SpatioTemporalRaster$new()
@@ -234,14 +240,15 @@ SmoothModel <- setRefClass(
         year <- as.character(yearIndex + years[1] - 1)
         message("Processing year ", year, "...")
         
-        meanRaster <- project(estimates=node$mean[yearIndex,], projectionRaster=projectionRaster, maskPolygon=study$studyArea$boundary)
+        meanRaster <- project(estimates=node$mean[yearIndex,], projectionRaster=projectionRaster, maskPolygon=maskPolygon)
         names(meanRaster) <- year
-        
-        sdRaster <- project(estimates=node$sd[yearIndex,], projectionRaster=projectionRaster, maskPolygon=study$studyArea$boundary)
-        names(sdRaster) <- year
-        
         meanPopulationDensityRaster$addLayer(meanRaster)
-        sdPopulationDensityRaster$addLayer(sdRaster)
+        
+        if (getSD) {
+          sdRaster <- project(estimates=node$sd[yearIndex,], projectionRaster=projectionRaster, maskPolygon=maskPolygon)
+          names(sdRaster) <- year
+          sdPopulationDensityRaster$addLayer(sdRaster)
+        }
       }
       
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
