@@ -20,7 +20,7 @@ TracksCollection <- setRefClass(
       return(tracksList[[index]])
     },
     
-    load = function() {
+    loadTracks = function() {
       stop("Unimplemented method.")
     },
     
@@ -45,8 +45,9 @@ SimulatedTracksCollection <- setRefClass(
   Class = "SimulatedTracksCollection",
   contains = "TracksCollection",
   methods = list(
-    load = function() {     
-      tracksFiles <- study$context$listLongFiles(dir=study$context$resultDataDirectory, name="Tracks", response=study$response, tag="\\d+", region=study$studyArea$region)
+    loadTracks = function() {     
+      # TOOD: bad design here: ask for the directory from Tracks object rather than fixing it
+      tracksFiles <- study$context$listLongFiles(dir=study$context$scratchDirectory, name="Tracks", response=study$response, tag="\\d+", region=study$studyArea$region)
       
       for (iteration in 1:base::length(tracksFiles)) { # TODO: better to use iteration number rather than number of files
         tracks <- SimulatedTracks$new(study=study, iteration=iteration)

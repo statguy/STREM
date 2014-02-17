@@ -27,7 +27,7 @@ SimulationStudy <- setRefClass(
     
     loadTracksCollection = function() {
       tracks <- SimulatedTracksCollection$new(study=.self)
-      tracks$load()
+      tracks$loadTracks()
       return(tracks)
     },
     
