@@ -30,20 +30,22 @@ Model <- setRefClass(
       return(invisible(.self))
     },
     
-    getResultFileName = function() {
-      if (inherits(study, "undefinedField") | length(name) == 0)
-        stop("Provide study and name parameters.")
-      return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Result", response=study$response, region=study$studyArea$region, tag=name))
-    },
+    #getResultFileName = function() {
+    #  if (inherits(study, "undefinedField") | length(name) == 0)
+    #    stop("Provide study and name parameters.")
+    #  return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Result", response=study$response, region=study$studyArea$region, tag=name))
+    #},
     
-    saveResult = function() {
-      fileName <- getResultFileName()
+    saveResult = function(fileName) {
+      #fileName <- getItemFileName(directory, name)
+      #fileName <- getResultFileName()
       message("Saving result to ", fileName, "...")
       save(name, locations, data, model, coordsScale, years, mesh, spde, index, A, dataStack, offset, result, file=fileName)
     },
     
-    loadResult = function() {
-      load(getResultFileName(), envir=as.environment(.self))
+    loadResult = function(fileName) {
+      load(fileName, envir=as.environment(.self))
+      #load(getResultFileName(), envir=as.environment(.self))
       return(invisible(.self))
     }
   )
@@ -53,6 +55,7 @@ SmoothModel <- setRefClass(
   Class = "SmoothModel",
   contains = "Model",
   fields = list(
+    family = "character"
   ),
   methods = list(
     initialize = function(...) {
@@ -60,9 +63,11 @@ SmoothModel <- setRefClass(
       return(invisible(.self))
     },
     
-    setup = function(intersections, meshParams) {
+    setup = function(intersections, meshParams, family="nbinomial") {
       library(INLA)
-            
+      
+      family <<- family
+      
       message("Constructing mesh...")
 
       intersectionsSubset <- subset(intersections$intersections, response == study$response)
@@ -108,7 +113,7 @@ SmoothModel <- setRefClass(
       else plot(surveyRoutes$surveyRoutes, col="blue", add=T)
     },
 
-    estimate = function(family="nbinomial", save=FALSE) {
+    estimate = function(save=FALSE, fileName) {
       library(INLA)
       
       result <<- inla(model,
@@ -123,7 +128,7 @@ SmoothModel <- setRefClass(
         warning("INLA failed to run.")
       }
       else {
-        if (save) saveResult()
+        if (save) saveResult(fileName=fileName)
       }
     },
 

@@ -33,7 +33,7 @@ SimulationStudy <- setRefClass(
     
     loadIntersectionsCollection = function() {
       intersections <- SimulatedIntersectionsCollection$new(study=.self)
-      intersections$load()
+      intersections$loadIntersections()
       return(intersections)      
     }
   )

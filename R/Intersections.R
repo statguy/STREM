@@ -126,7 +126,8 @@ SimulatedIntersections <- setRefClass(
         bursts <- burstYear[yearToBurstsIndex,]$burst
         duration <- burstYear[yearToBurstsIndex,]$duration[1]
         centroids <- coordinates(surveyRoutes$centroids)
-        x <- data.frame(x=centroids[,1], y=centroids[,2],
+        x <- data.frame(surveyRoute=rownames(intersectionsMatrix[,bursts,drop=F]),
+                        x=centroids[,1], y=centroids[,2],
                         year=year,
                         response=study$response,
                         intersections=rowSums(intersectionsMatrix[,bursts,drop=F]),
@@ -136,7 +137,10 @@ SimulatedIntersections <- setRefClass(
         data <- rbind(data, x)
       }
       
-      intersections <<- SpatialPointsDataFrame(coords=data[,c("x","y")], data=data[,!names(data) %in% c("x","y")], proj4string=surveyRoutes$surveyRoutes@proj4string, match.ID=FALSE)
+      intersections <<- SpatialPointsDataFrame(coords=data[,c("x","y")],
+                                               data=data[,!names(data) %in% c("x","y")],
+                                               proj4string=surveyRoutes$surveyRoutes@proj4string,
+                                               match.ID=FALSE)
     },
     
     getIntersectionsFileName = function() {

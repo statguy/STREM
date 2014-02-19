@@ -27,4 +27,4 @@ Collate:
   InitialPopulation.R
   MovementSimulationScenario.R
   Model.R
-  
+  ModelCollection.R

@@ -7,34 +7,36 @@ TracksCollection <- setRefClass(
   methods = list(
     initialize = function(...) {
       callSuper(...)
+      return(invisible(.self))
     },
   
     length = function() return(base::length(tracksList)),
     
     add = function(tracks) {
       tracksList[[length() + 1]] <<- tracks
+      return(invisible(.self))
     },
     
     get = function(index) {
       if (base::length(tracksList) < index) stop("Invalid index = ", index, ".")
       return(tracksList[[index]])
     },
-    
-    loadTracks = function() {
-      stop("Unimplemented method.")
-    },
-    
+        
     apply = function(fun, ...) {
       return(lapply(X=tracksList, FUN=fun, ...))
     },
+    
+    loadTracks = function() {
+      stop("Unimplemented method.")
+    },    
     
     findIntersections = function(surveyRoutes, dimension) {
       stop("Unimplemented method.")
     },
     
-    getDistances = function(surveyRoutes) {
+    determineDistances = function(surveyRoutes) {
       tracksList <<- apply(function(tracks, surveyRoutes) {
-        tracks$getDistances(surveyRoutes)
+        tracks$determineDistances(surveyRoutes)
         return(tracks)
       }, surveyRoutes=surveyRoutes)
     }
