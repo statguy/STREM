@@ -12,9 +12,13 @@ mssIntensive <- MovementSimulationScenarioIntensive$new(stepIntervalHours=4)$new
 
 study <- mssIntensive$study
 tracks <- study$loadTracksCollection()
+
+sampleIntervals <- MovementSampleIntervals$new()
+thinnedTracks <- sampleIntervals$getThinnedTracksSampleIntervals(tracks$getTracks(1))
+thinnedTracks$determineDistances()
+
 surveyRoutes <- FinlandRandomWTCSurveyRoutes$new(study=study)$newInstance(800)
-tracks$determineDistances(surveyRoutes)
-intersections <- tracks$findIntersections(surveyRoutes, dimension=1, save=TRUE)
+intersections <- thinnedTracks$findIntersections(surveyRoutes, dimension=1, save=TRUE) # TODO: save results of thinned tracks separately
 
 intersections <- study$loadIntersectionsCollection()
 #meshParams <- list(maxEdge=c(.05e6, .15e6), cutOff=.02e6, coordsScale=1e-6)

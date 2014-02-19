@@ -10,19 +10,19 @@ TracksCollection <- setRefClass(
       return(invisible(.self))
     },
   
-    length = function() return(base::length(tracksList)),
+    getNumberOfTracks = function() return(length(tracksList)),
     
-    add = function(tracks) {
-      tracksList[[length() + 1]] <<- tracks
+    addTracks = function(tracks) {
+      tracksList[[getNumberOfTracks() + 1]] <<- tracks
       return(invisible(.self))
     },
     
-    get = function(index) {
-      if (base::length(tracksList) < index) stop("Invalid index = ", index, ".")
+    getTracks = function(index) {
+      if (getNumberOfTracks() < index) stop("Invalid index = ", index, ".")
       return(tracksList[[index]])
     },
         
-    apply = function(fun, ...) {
+    applyTracks = function(fun, ...) {
       return(lapply(X=tracksList, FUN=fun, ...))
     },
     
@@ -34,11 +34,9 @@ TracksCollection <- setRefClass(
       stop("Unimplemented method.")
     },
     
-    determineDistances = function(surveyRoutes) {
-      tracksList <<- apply(function(tracks, surveyRoutes) {
-        tracks$determineDistances(surveyRoutes)
-        return(tracks)
-      }, surveyRoutes=surveyRoutes)
+    determineDistances = function() {
+      applyTracks(function(tracks) return(tracks$determineDistances()))
+      return(invisible(.self))
     }
   )
 )
@@ -50,13 +48,13 @@ SimulatedTracksCollection <- setRefClass(
     loadTracks = function() {
       # TODO: bad design here if directory or file name pattern changes in Tracks (sub)class...
       tracksFiles <- study$context$listLongFiles(dir=study$context$scratchDirectory, name="Tracks", response=study$response, tag="\\d+", region=study$studyArea$region)
-      if (base::length(tracksFiles) == 0)
+      if (length(tracksFiles) == 0)
         stop("Cannot find any tracks files in ", study$context$scratchDirectory)
       
-      for (iteration in 1:base::length(tracksFiles)) { # TODO: better to use iteration number rather than number of files
+      for (iteration in 1:length(tracksFiles)) { # TODO: better to use iteration number rather than number of files
         tracks <- SimulatedTracks$new(study=study, iteration=iteration)
         tracks$loadTracks()
-        add(tracks)
+        addTracks(tracks)
       }
     },
     
@@ -83,7 +81,7 @@ SimulatedTracksCollection <- setRefClass(
     },
     
     findIntersections = function(surveyRoutes, dimension, save=FALSE) {
-      intersectionsList <- apply(function(tracks, surveyTracks, dimension, save) {
+      intersectionsList <- applyTracks(function(tracks, surveyTracks, dimension, save) {
         message("Finding intersections for response = ", study$response, ", iteration = ", tracks$iteration)        
         intersections <- SimulatedIntersections$new(study=study, iteration=tracks$iteration)
         intersections$findIntersections(tracks, surveyRoutes, dimension)

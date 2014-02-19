@@ -5,8 +5,9 @@ MovementSampleIntervals <- setRefClass(
     predictions = "data.frame"
   ),
   methods = list(
-    initialize = function() {
-      callSuper(intervals=data.frame())
+    initialize = function(...) {
+      callSuper(...)
+      return(invisible(.self))
     },
     
     # Determines sampling intervals of the recorded movements for each day
@@ -45,14 +46,14 @@ MovementSampleIntervals <- setRefClass(
       tracks$tracks <- dl(tracksDF)      
       
       thinnedTracksCollection <- SimulatedTracksCollection$new()
-      thinnedTracksCollection$add(tracks)
+      thinnedTracksCollection$addTracks(tracks)
       intervalsList <- list()
       intervalsList[[1]] <- tracks$getSampleIntervals()
       
       maxThins <- 1000
       for (i in 2:maxThins) {
-        #thinnedTracks <- thinnedTracksCollection$get(1)$thin(by=i)
-        thinnedTracks <- thinnedTracksCollection$get(i-1)$thin(by=2)
+        #thinnedTracks <- thinnedTracksCollection$getTracks(1)$thin(by=i)
+        thinnedTracks <- thinnedTracksCollection$getTracks(i-1)$thin(by=2)
         if (is.null(thinnedTracks)) break
         thinnedIntervals <- thinnedTracks$getSampleIntervals()
         
@@ -63,7 +64,7 @@ MovementSampleIntervals <- setRefClass(
         thinnedIntervals$intervals <- thinnedIntervals$intervals[retainIndex,]
         
         intervalsList[[i]] <- thinnedIntervals         
-        thinnedTracksCollection$add(thinnedTracks)
+        thinnedTracksCollection$addTracks(thinnedTracks)
       }
       if (i == maxThins) stop("Something wrong with thinning.")
       

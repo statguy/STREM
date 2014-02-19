@@ -133,7 +133,7 @@ SimulatedIntersections <- setRefClass(
                         intersections=rowSums(intersectionsMatrix[,bursts,drop=F]),
                         duration=duration,
                         length=surveyRoutes$lengths,
-                        distance=tracks$distances)
+                        distance=tracks$distance)
         data <- rbind(data, x)
       }
       

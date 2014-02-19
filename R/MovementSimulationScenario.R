@@ -227,7 +227,7 @@ MovementSimulationScenario <- setRefClass(
         tracksDF <- randomizeBCRWTracks()
         date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
         tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=i)
-        simulatedTracks$add(tracks)
+        simulatedTracks$addTracks(tracks)
       }
       
       return(invisible(simulatedTracks))
