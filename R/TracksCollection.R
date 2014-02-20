@@ -82,10 +82,11 @@ SimulatedTracksCollection <- setRefClass(
     
     findIntersections = function(surveyRoutes, dimension, save=FALSE) {
       intersectionsList <- applyTracks(function(tracks, surveyTracks, dimension, save) {
-        message("Finding intersections for response = ", study$response, ", iteration = ", tracks$iteration)        
+        message("Finding intersections for response = ", study$response, ", iteration = ", tracks$iteration)
         intersections <- SimulatedIntersections$new(study=study, iteration=tracks$iteration)
         intersections$findIntersections(tracks, surveyRoutes, dimension)
-        if (save) intersections$saveIntersections()
+        if (save)
+          intersections$saveIntersections()
         return(intersections)
       }, surveyTracks=surveyTracks, dimension=dimension, save=save)
       

@@ -57,34 +57,6 @@ Tracks <- setRefClass(
       return(result)
     },
         
-    thin = function(by) {
-      library(plyr)
-      
-      tracksDF <- ld(tracks)
-      d <- as.POSIXlt(tracksDF$date)
-      tracksDF$yday <- d$yday
-      tracksDF$year <- d$year
-      
-      oldDt <- mean(tracksDF$dt, na.rm=T)
-      
-      tracksDFThinned <- ddply(tracksDF, .variables=.(id, burst, year, yday), .fun=function(x, by) {
-        n <- nrow(x)
-        if (n==1) return(NULL)
-        retainIndex <- seq(1, n, by=by) 
-        return(x[retainIndex,])
-      }, by=by)
-
-      if (nrow(tracksDFThinned) == 0) return(NULL)
-      
-      tracksThinned <- dl(tracksDFThinned)
-      tracksDFThinned <- ld(tracksThinned)
-      
-      newDt <- mean(tracksDFThinned$dt, na.rm=T)
-      message("Thinned movements from dt = ", oldDt, " to dt = ", newDt, " (note: these values can be misleading)")      
-      
-      return(Tracks$new(study=study, tracks=tracksThinned))
-    },
-    
     getSampleIntervals = function() {
       intervals <- MovementSampleIntervals$new()
       intervals$getSampleIntervals(tracks=.self)
@@ -132,11 +104,13 @@ SimulatedTracks <- setRefClass(
   Class = "SimulatedTracks",
   contains = "Tracks",
   fields = list(
-    iteration = "integer"
+    iteration = "integer",
+    thinId = "integer"
   ),
   methods = list(
-    initialize = function(xy, id, date, preprocessData=FALSE, ...) {
+    initialize = function(xy, id, date, thinId, preprocessData=FALSE, ...) {
       if (!missing(xy) && !missing(id) && !missing(date)) setTracks(xy=xy, id=id, date=date)
+      if (missing(thinId)) thinId <<- as.integer(1)
       callSuper(preprocessData=preprocessData, ...)
     },
     
@@ -156,7 +130,38 @@ SimulatedTracks <- setRefClass(
     saveTracks = function() {
       fileName <- getTracksFileName()
       message("Saving tracks to ", fileName)
-      save(tracks, iteration, file=fileName)
+      save(tracks, iteration, thinId, file=fileName)
+    },
+
+    .internal.thin = function(by) {
+      library(plyr)
+      
+      tracksDF <- ld(tracks)
+      d <- as.POSIXlt(tracksDF$date)
+      tracksDF$yday <- d$yday
+      tracksDF$year <- d$year
+      
+      oldDt <- mean(tracksDF$dt, na.rm=T)
+      
+      tracksDFThinned <- ddply(tracksDF, .variables=.(id, burst, year, yday), .fun=function(x, by) {
+        n <- nrow(x)
+        if (n==1) return(NULL)
+        retainIndex <- seq(1, n, by=by) 
+        return(x[retainIndex,])
+      }, by=by)
+      
+      if (nrow(tracksDFThinned) == 0) return(NULL)
+      
+      tracksThinned <- dl(tracksDFThinned)
+      tracksDFThinned <- ld(tracksThinned)
+      
+      newDt <- mean(tracksDFThinned$dt, na.rm=T)
+      message("Thinned movements from dt = ", oldDt, " to dt = ", newDt, " (note: these values can be misleading)")      
+      return(tracksThinned)
+    },
+    
+    thin = function(by) {
+      return(SimulatedTracks$new(study=study, tracks=.internal.thin(by=by), thinId=thinId+1))
     }
   )
 )

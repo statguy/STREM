@@ -1,6 +1,7 @@
 MovementSampleIntervals <- setRefClass(
   Class = "MovementSampleIntervals",
   fields = list(
+    study = "Study",
     intervals = "data.frame",
     predictions = "data.frame"
   ),
@@ -45,7 +46,7 @@ MovementSampleIntervals <- setRefClass(
       tracksDF$thinid <- as.factor(paste(date$year, date$yday, tracksDF$burst))
       tracks$tracks <- dl(tracksDF)      
       
-      thinnedTracksCollection <- SimulatedTracksCollection$new()
+      thinnedTracksCollection <- SimulatedTracksCollection$new(study=study)
       thinnedTracksCollection$addTracks(tracks)
       intervalsList <- list()
       intervalsList[[1]] <- tracks$getSampleIntervals()

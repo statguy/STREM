@@ -13,7 +13,7 @@ mssIntensive <- MovementSimulationScenarioIntensive$new(stepIntervalHours=4)$new
 study <- mssIntensive$study
 tracks <- study$loadTracksCollection()
 
-sampleIntervals <- MovementSampleIntervals$new()
+sampleIntervals <- MovementSampleIntervals$new(study=study)
 thinnedTracks <- sampleIntervals$getThinnedTracksSampleIntervals(tracks$getTracks(1))
 thinnedTracks$determineDistances()
 
