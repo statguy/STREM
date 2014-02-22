@@ -28,7 +28,7 @@ IntersectionsCollection <- setRefClass(
       return(lapply(X=intersectionsList, FUN=fun, ...))
     },
     
-    estimate = function() {
+    estimate = function(meshParams, save=FALSE) {
       stop("Unimplemented method.")
     }
   )

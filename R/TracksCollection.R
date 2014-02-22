@@ -82,15 +82,17 @@ SimulatedTracksCollection <- setRefClass(
     
     findIntersections = function(surveyRoutes, dimension, save=FALSE) {
       intersectionsList <- applyTracks(function(tracks, surveyTracks, dimension, save) {
-        message("Finding intersections for response = ", study$response, ", iteration = ", tracks$iteration)
+        message("Finding intersections for response = ", study$response, ", iteration = ", tracks$iteration, ", thin = ", tracks$thinId)
         intersections <- SimulatedIntersections$new(study=study, iteration=tracks$iteration)
         intersections$findIntersections(tracks, surveyRoutes, dimension)
+        if (tracks$thinId != 1 & save)
+          stop("Saving thinned tracks intersections unsupported.")
         if (save)
           intersections$saveIntersections()
         return(intersections)
       }, surveyTracks=surveyTracks, dimension=dimension, save=save)
-      
-      intersectionsCollection <- IntersectionsCollection$new(study=study, intersectionsList=intersectionsList)
+
+      intersectionsCollection <- SimulatedIntersectionsCollection$new(study=study, intersectionsList=intersectionsList)
       return(intersectionsCollection)
     }
   )

@@ -111,6 +111,7 @@ SimulatedTracks <- setRefClass(
     initialize = function(xy, id, date, thinId, preprocessData=FALSE, ...) {
       if (!missing(xy) && !missing(id) && !missing(date)) setTracks(xy=xy, id=id, date=date)
       if (missing(thinId)) thinId <<- as.integer(1)
+      else thinId <<- thinId
       callSuper(preprocessData=preprocessData, ...)
     },
     
@@ -130,6 +131,8 @@ SimulatedTracks <- setRefClass(
     saveTracks = function() {
       fileName <- getTracksFileName()
       message("Saving tracks to ", fileName)
+      if (thinId != 1)
+        stop("Saving thinned tracks unsupported.")
       save(tracks, iteration, thinId, file=fileName)
     },
 
@@ -161,7 +164,11 @@ SimulatedTracks <- setRefClass(
     },
     
     thin = function(by) {
-      return(SimulatedTracks$new(study=study, tracks=.internal.thin(by=by), thinId=thinId+1))
+      message("Thinning iteration = ", iteration, ", thin = ", thinId)
+      thinnedTracksDF <- .internal.thin(by=by)
+      if (is.null(thinnedTracksDF)) return(NULL)
+      thinnedTracks <- SimulatedTracks$new(study=study, tracks=thinnedTracksDF, iteration=iteration, thinId=as.integer(thinId+1))
+      return(thinnedTracks)
     }
   )
 )
