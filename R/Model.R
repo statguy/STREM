@@ -7,7 +7,6 @@ setOldClass("inla")
 Model <- setRefClass(
   Class = "Model",
   fields = list(
-    name = "character",
     study = "Study",
     data = "data.frame",
     locations = "matrix",
@@ -40,7 +39,7 @@ Model <- setRefClass(
       #fileName <- getItemFileName(directory, name)
       #fileName <- getResultFileName()
       message("Saving result to ", fileName, "...")
-      save(name, locations, data, model, coordsScale, years, mesh, spde, index, A, dataStack, offset, result, file=fileName)
+      save(locations, data, model, coordsScale, years, mesh, spde, index, A, dataStack, offset, result, file=fileName)
     },
     
     loadResult = function(fileName) {
@@ -59,7 +58,7 @@ SmoothModel <- setRefClass(
   ),
   methods = list(
     initialize = function(...) {
-      callSuper(name="Smooth", ...)
+      callSuper(...)
       return(invisible(.self))
     },
     
@@ -111,6 +110,8 @@ SmoothModel <- setRefClass(
       if (missing(surveyRoutes)) {}
         # TODO: plot intersection coordinates
       else plot(surveyRoutes$surveyRoutes, col="blue", add=T)
+      
+      return(invisible(.self))
     },
 
     estimate = function(save=FALSE, fileName) {
@@ -132,37 +133,28 @@ SmoothModel <- setRefClass(
       }
     },
 
-    collectResults = function(processFitted=FALSE, quick=FALSE) {
+    # TODO: fix this if needed
+    collectResults = function(quick=FALSE) {
       if (quick) return(collectResultsQuick())
       
       library(INLA)
       library(plyr)
       
-      if (processFitted) {
-        message("Processing fitted values...")
-        indexObserved <- inla.stack.index(dataStack, "observed")$data
-        #fitted <- exp(result$summary.linear.predictor$mean[indexObserved]) # exp(E(eta))
-        eta <- result$marginals.linear.predictor[indexObserved]
-        fitted <- try(ldply(eta, function(eta) getINLAEstimates(eta, exp), .parallel=TRUE)[,-1]) # E(exp(eta))
-        if (inherits(fitted, "try-error")) {
-          warning("Could not estimate expected response values. Resorting to provided response values.")
-          fitted$mean <- exp(result$summary.linear.predictor$mean[indexObserved]) # exp(E(eta))
-          fitted$sd <- exp(result$summary.linear.predictor$sd[indexObserved])
-        }
-        data$eta <<- result$summary.linear.predictor$mean[indexObserved]
-        data$fittedMean <<- fitted$mean
-        data$fittedSD <<- fitted$sd
-      }
+      message("Processing fitted values...")
+      indexObserved <- inla.stack.index(dataStack, "observed")$data
+
+      data$eta <<- result$summary.linear.predictor$mean[indexObserved]
+      data$fittedMean <<- result$summary.fitted.values$mean[indexObserved]
+      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved]
       
-      
-      message("Processing random effects...")
-      # TODO: this is wrong, fix!
-      intercept <- result$summary.fixed["intercept","mean"]
-      st <- ldply(result$marginals.random$st,
-                  function(st) getINLAEstimates(st, function(st) exp(st + intercept)), .parallel=TRUE)[,-1]
-      node <<- list()
-      node$mean <<- matrix(data=st$mean, nrow=length(years), ncol=mesh$n)
-      node$sd <<- matrix(data=st$sd, nrow=length(years), ncol=mesh$n)
+      #message("Processing random effects...")
+      ## TODO: this is wrong, fix!
+      #intercept <- result$summary.fixed["intercept","mean"]
+      #st <- ldply(result$marginals.random$st,
+      #            function(st) getINLAEstimates(st, function(st) exp(st + intercept)), .parallel=TRUE)[,-1]
+      #node <<- list()
+      #node$mean <<- matrix(data=st$mean, nrow=length(years), ncol=mesh$n)
+      #node$sd <<- matrix(data=st$sd, nrow=length(years), ncol=mesh$n)
       
       
       message("Processing hyperparameters...")
@@ -189,18 +181,12 @@ SmoothModel <- setRefClass(
       
       indexObserved <- inla.stack.index(dataStack, "observed")$data
       data$eta <<- result$summary.linear.predictor$mean[indexObserved]
-      data$fittedMean <<- exp(result$summary.linear.predictor$mean[indexObserved])
-      data$fittedSD <<- exp(result$summary.linear.predictor$sd[indexObserved])
-
-      intercept <- result$summary.fixed["intercept",]
-      st <- list()
-      st$mean <- exp(intercept[["mean"]] + result$summary.random$st$mean)
-      st$sd <- exp(intercept[["sd"]] + result$summary.random$st$sd)
+      data$fittedMean <<- result$summary.fitted.values$mean[indexObserved]
+      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved]
       
       node <<- list()
       node$mean <<- matrix(data=st$mean, nrow=length(years), ncol=mesh$n)
       node$sd <<- matrix(data=st$sd, nrow=length(years), ncol=mesh$n)
-
       
       spdeResult <- inla.spde2.result(result, "st", spde)
       logKappa <- spdeResult$summary.log.kappa
@@ -260,14 +246,5 @@ SmoothModel <- setRefClass(
       
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
     }    
-  )
-)
-
-FinlandSmoothModel <- setRefClass(
-  Class = "FinlandSmoothModel",
-  contains = "SmoothModel",
-  fields = list(
-  ),
-  methods = list(
   )
 )

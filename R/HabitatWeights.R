@@ -23,18 +23,8 @@ HabitatWeights <- setRefClass(
 
     getWeightsRaster = function(aggregationScale=100, save=FALSE) { # TODO: determine aggregation scale automatically
       library(raster)
-      
-      if (save) {
-        fileName <- getWeightsRasterFileName()
-        message("Saving habitat weights raster to ", fileName, ".grd...")
-        weightsRaster <- aggregate(study$studyArea$habitat, aggregationScale, filename=fileName,
-          fun=function(habitatValue, na.rm) mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
-      }
-      else {
-        weightsRaster <- aggregate(habitat, aggregationScale,
-          fun=function(habitatValue, na.rm) mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
-      }
-      
+      weightsRaster <- raster(study$studyArea$habitat)
+      dim(weightsRaster) <- dim(weightsRaster) / aggregationScale
       return(weightsRaster)
     },
 
@@ -117,6 +107,23 @@ CORINEHabitatWeights <- setRefClass(
                         levels=habitatTypes,
                         labels=c("Urban", "Agriculture", "Forestland", "Peatland", "Water")))
       return(p)
+    },
+    
+    getWeightsRaster = function(aggregationScale=100, save=FALSE) { # TODO: determine aggregation scale automatically
+      library(raster)
+      
+      if (save) {
+        fileName <- getWeightsRasterFileName()
+        message("Saving habitat weights raster to ", fileName, ".grd...")
+        weightsRaster <- aggregate(study$studyArea$habitat, aggregationScale, filename=fileName,
+                                   fun=function(habitatValue, na.rm) mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
+      }
+      else {
+        weightsRaster <- aggregate(habitat, aggregationScale,
+                                   fun=function(habitatValue, na.rm) mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
+      }
+      
+      return(weightsRaster)
     }
   )
 )

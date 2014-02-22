@@ -1,11 +1,16 @@
 PopulationSize <- setRefClass(
   Class = "PopulationSize",
   fields = list(
-    size = "data.frame"
+    sizeData = "data.frame"
   ),
   methods = list(
-    add = function(year, size) {
-      size <<- rbind(size, data.frame(Year=year, Estimated=size))
+    initialize = function(...) {
+      callSuper(sizeData=data.frame(), ...)
+      return(invisible(.self))
+    },
+    
+    addYearSize = function(year, size) {
+      sizeData <<- rbind(sizeData, data.frame(Year=year, Estimated=size))
     }
     
   )

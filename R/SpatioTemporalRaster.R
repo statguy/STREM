@@ -33,7 +33,7 @@ SpatioTemporalRaster <- setRefClass(
         weightedSum <- cellStats(weightedDensity, sum)
         year <- names(rasterStack[[index]])
         if (substr(year, 1, 1) == "X") year <- substr(year, 2, nchar(year))
-        volume$add(year=year, size=weightedSum)
+        volume$addYearSize(year=year, size=weightedSum)
       }
       
       return(volume)

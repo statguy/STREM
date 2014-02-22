@@ -2,12 +2,13 @@ ModelCollection <- setRefClass(
   Class = "ModelCollection",
   fields = list(
     study = "Study",
+    name = "character",
     directory = "character",
     modelsList = "list"
   ),
   methods = list(
     initialize = function(...) {
-      callSuper(...)
+      callSuper(name="Model", ...)
       return(invisible(.self))
     },
     
@@ -34,7 +35,7 @@ ModelCollection <- setRefClass(
       if (inherits(study, "uninitializedField") | length(directory) == 0)
         stop("Set directory and study fields.")
 
-      fileName <- study$context$getLongFileName(dir=directory, name="Model", response=study$response, tag=iteration, region=study$studyArea$region)
+      fileName <- study$context$getLongFileName(dir=directory, name=name, response=study$response, tag=iteration, region=study$studyArea$region)
       return(fileName)
     },
     
@@ -42,7 +43,7 @@ ModelCollection <- setRefClass(
       if (inherits(study, "uninitializedField") | length(directory) == 0)
         stop("Set directory and study fields.")
       
-      modelFiles <- study$context$listLongFiles(dir=directory, name="Model", response=study$response, tag="\\d+", region=study$studyArea$region)
+      modelFiles <- study$context$listLongFiles(dir=directory, name=name, response=study$response, tag="\\d+", region=study$studyArea$region)
       if (length(modelFiles) == 0)
         stop("Cannot find any model files in ", directory)
       return(modelFiles)
@@ -55,11 +56,16 @@ ModelCollection <- setRefClass(
 )
 
 SmoothModelCollection <- setRefClass(
-  Class = "FinlandSmoothModelCollection",
+  Class = "SmoothModelCollection",
   contains = "ModelCollection",
   fields = list(
   ),
   methods = list(
+    initialize = function(...) {
+      callSuper(name="SmoothModel", ...)
+      return(invisible(.self))
+    },
+    
     loadModels = function() {
       modelFiles <- getModelFileNames()
       for (iteration in 1:length(modelFiles)) {
@@ -67,6 +73,12 @@ SmoothModelCollection <- setRefClass(
         model$loadResult(fileName=modelFiles[iteration])
         addModel(model)
       }
+      return(invisible(.self))
+    },
+    
+    collectResults = function(quick=TRUE) {
+      applyModels(function(x, quick) x$collectResults(quick=quick), quick=quick)
+      return(invisible(.self))
     }
   )
 )
