@@ -1,18 +1,18 @@
 library(devtools)
 install_github("R-Cluster", "statguy")
 install_github("Winter-Track-Counts", "statguy")
+library(devtools)
+source_gist("b7507c36efada51bbda5") # TODO: remove
 
 library(CNPCluster)
 library(WTC)
 
 cnpClusterStartLocal()
 
-library(devtools)
-source_gist("b7507c36efada51bbda5")
-install_github("Winter-Track-Counts", username="statguy") # TODO: remove
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-#nAgents <- as.integer(2)
-mssIntensive <- MovementSimulationScenarioIntensive$new(stepIntervalHours=4, nAgents=nAgents)$newInstance(context=context)
+stepIntervalHours <- 1 # 60 minutes step length
+nAgents <- as.integer(400)
+mssIntensive <- MovementSimulationScenarioIntensive$new(stepIntervalHours=stepIntervalHours, nAgents=nAgents)$newInstance(context=context)
 tracks <- mssIntensive$simulate(save=TRUE)
 
 study <- mssIntensive$study

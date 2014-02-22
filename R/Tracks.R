@@ -81,7 +81,7 @@ Tracks <- setRefClass(
         s <- sum(x$dt, na.rm=T) / 3600
         if (s < 23 | s > 25) return(NA)
         return(sum(x$dist) / sum(x$dt) * 24 * 3600)
-      })$V1
+      }, parallel=TRUE)$V1
       
       if (all(is.na(distances)))
         stop("Unable to determine movement distance.")
@@ -151,7 +151,7 @@ SimulatedTracks <- setRefClass(
         if (n==1) return(NULL)
         retainIndex <- seq(1, n, by=by) 
         return(x[retainIndex,])
-      }, by=by)
+      }, by=by, .parallel=TRUE)
       
       if (nrow(tracksDFThinned) == 0) return(NULL)
       

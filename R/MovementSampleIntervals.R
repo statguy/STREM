@@ -35,9 +35,10 @@ MovementSampleIntervals <- setRefClass(
           return(x[1, c("id","date","intervalH","intervalMin","intervalSec","distanceKm","thinid")])
         else
           return(x[1, c("id","date","intervalH","intervalMin","intervalSec","distanceKm")])
-      })
+      }, .parallel=TRUE)
       
       if (nrow(intervals) == 0) warning("Unable to determine sampling intervals.")
+      return(invisible(.self))
     },
     
     getThinnedTracksSampleIntervals = function(tracks) {
