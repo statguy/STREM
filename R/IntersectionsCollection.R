@@ -9,14 +9,14 @@ IntersectionsCollection <- setRefClass(
       callSuper(...)
     },
     
-    getNumberOfIntersections = function() return(length(intersectionsList)),
+    getNumberOfIterations = function() return(length(intersectionsList)),
     
     addIntersections = function(intersections) {
-      intersectionsList[[getNumberOfIntersections() + 1]] <<- intersections
+      intersectionsList[[getNumberOfIterations() + 1]] <<- intersections
     },
     
     getIntersections = function(index) {
-      if (getNumberOfIntersections() < index) stop("Invalid index = ", index, ".")
+      if (getNumberOfIterations() < index) stop("Invalid index = ", index, ".")
       return(intersectionsList[[index]])
     },
     
@@ -48,10 +48,18 @@ SimulatedIntersectionsCollection <- setRefClass(
       }
     },
     
+    combineIntersections = function(intersections) {
+      for (i in 1:intersections$getNumberOfIterations()) {
+        intersectionsList[[i]]$intersectionsMatrix <<- intersectionsList[[i]]$intersectionsMatrix + intersections$intersectionsList[[i]]$intersectionsMatrix
+        intersectionsList[[i]]$intersections$intersections <<- intersectionsList[[i]]$intersections$intersections + intersections$intersectionsList[[i]]$intersections$intersections
+        intersectionsList[[i]]$intersections$distance <<- mean(c(intersectionsList[[i]]$intersections$distance, intersections$intersectionsList[[i]]$intersections$distance))
+      }
+    },
+    
     estimate = function(meshParams, save=FALSE) {
       models <- ModelCollection$new(study=study, directory=study$context$scratchDirectory)
       
-      for (iteration in 1:getNumberOfIntersections()) {
+      for (iteration in 1:getNumberOfIterations()) {
         model <- SmoothModel$new(study=study)$setup(intersections=intersectionsList[[iteration]], meshParams=meshParams)
         #model$plotMesh(surveyRoutes=surveyRoutes)
         model$estimate(save=save, fileName=models$getModelFileName(iteration))

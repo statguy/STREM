@@ -12,15 +12,15 @@ ModelCollection <- setRefClass(
       return(invisible(.self))
     },
     
-    getNumberOfModels = function() return(length(modelsList)),
+    getNumberOfIterations = function() return(length(modelsList)),
     
     addModel = function(model) {
-      modelsList[[getNumberOfModels() + 1]] <<- model
+      modelsList[[getNumberOfIterations() + 1]] <<- model
       return(invisible(.self))
     },
     
     getModel = function(index) {
-      if (getNumberOfModels() < index)
+      if (getNumberOfIterations() < index)
         stop("Invalid index = ", index, ".")
       return(modelsList[[index]])
     },

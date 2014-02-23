@@ -104,8 +104,8 @@ SmoothModel <- setRefClass(
       library(sp)
       meshUnscaled <- mesh
       meshUnscaled$loc <- mesh$loc / coordsScale
-      plot(meshUnscaled, asp=1, main="")
-      plot(study$studyArea$boundary, border="darkgray", add=T)
+      plot(meshUnscaled, asp=1, main="", col="darkgray")
+      plot(study$studyArea$boundary, border="black", add=T)
       
       if (missing(surveyRoutes)) {}
         # TODO: plot intersection coordinates

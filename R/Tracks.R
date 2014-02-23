@@ -81,7 +81,7 @@ Tracks <- setRefClass(
         s <- sum(x$dt, na.rm=T) / 3600
         if (s < 23 | s > 25) return(NA)
         return(sum(x$dist) / sum(x$dt) * 24 * 3600)
-      }, parallel=TRUE)$V1
+      }, .parallel=TRUE)$V1
       
       if (all(is.na(distances)))
         stop("Unable to determine movement distance.")

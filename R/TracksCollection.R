@@ -10,15 +10,15 @@ TracksCollection <- setRefClass(
       return(invisible(.self))
     },
   
-    getNumberOfTracks = function() return(length(tracksList)),
+    getNumberOfIterations = function() return(length(tracksList)),
     
     addTracks = function(tracks) {
-      tracksList[[getNumberOfTracks() + 1]] <<- tracks
+      tracksList[[getNumberOfIterations() + 1]] <<- tracks
       return(invisible(.self))
     },
     
     getTracks = function(index) {
-      if (getNumberOfTracks() < index) stop("Invalid index = ", index, ".")
+      if (getNumberOfIterations() < index) stop("Invalid index = ", index, ".")
       return(tracksList[[index]])
     },
         
