@@ -78,10 +78,10 @@ FinlandWTCStudy <- setRefClass(
       cnpClusterStopLocal()
     },
     
-    preprocess = function() {
-      preprocessResponse("canis.lupus")
-      preprocessResponse("lynx.lynx")
-      preprocessResponse("rangifer.tarandus.fennicus")
+    preprocess = function(fmiApiKey) {
+      preprocessResponse("canis.lupus", fmiApiKey)
+      preprocessResponse("lynx.lynx", fmiApiKey)
+      preprocessResponse("rangifer.tarandus.fennicus", fmiApiKey)
       return(invisible(.self))
     },
     
