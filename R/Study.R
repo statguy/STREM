@@ -54,7 +54,11 @@ FinlandWTCStudy <- setRefClass(
       studyArea <<- FinlandStudyArea$new(context=context)$newInstance()
     },
     
-    preprocessResponse = function(response) {
+    preprocessResponse = function(response, fmiApiKey) {
+      library(CNPCluster)
+      
+      cnpClusterStartLocal()
+      
       response <<- response
       
       intersections <- FinlandWTCIntersections$new(study=.self)
@@ -62,13 +66,15 @@ FinlandWTCStudy <- setRefClass(
       habitatWeights <- CORINEHabitatWeights$new(study=.self)
 
       intersections$saveIntersections()
-      intersections$saveCovariates()
+      intersections$saveCovariates(fmiApiKey=fmiApiKey)
       
       tracks$saveTracks()
       
       habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=T)
       habitatWeights <- CORINEHabitatWeights$new(study=study)$setHabitatSelectionWeights(habitatSelection)
       habitatWeights$getWeightsRaster(aggregationScale=100, save=T)
+      
+      cnpClusterStopLocal()
     },
     
     preprocess = function() {
@@ -83,6 +89,12 @@ FinlandWTCStudy <- setRefClass(
     
     loadSurveyRoutes = function() {
       return(FinlandWTCSurveyRoutes$new(study=.self)$newInstance())
+    },
+    
+    loadIntersections = function() {
+      intersections <- FinlandWTCIntersections$new(study=.self)$loadIntersections()
+      intersections$loadCovariates()
+      return(intersections)
     }
   )
 )
