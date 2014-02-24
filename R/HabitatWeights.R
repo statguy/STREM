@@ -115,11 +115,11 @@ CORINEHabitatWeights <- setRefClass(
       if (save) {
         fileName <- getWeightsRasterFileName()
         message("Saving habitat weights raster to ", fileName, ".grd...")
-        weightsRaster <- aggregate(study$studyArea$habitat, aggregationScale, filename=fileName,
+        weightsRaster <- aggregate(study$studyArea$habitat, aggregationScale, filename=fileName, overwrite=TRUE,
                                    fun=function(habitatValue, na.rm) mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
       }
       else {
-        weightsRaster <- aggregate(habitat, aggregationScale,
+        weightsRaster <- aggregate(habitat, aggregationScale, overwrite=TRUE,
                                    fun=function(habitatValue, na.rm) mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
       }
       
