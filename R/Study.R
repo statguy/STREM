@@ -15,14 +15,14 @@ SimulationStudy <- setRefClass(
   methods = list(
     initialize = function(...) {
       callSuper(...)
-      return(.self)
+      return(invisible(.self))
     },
     
     newInstance = function(context, isTest=F) {
       context <<- context
       studyArea <<- if (isTest) TestStudyArea$new(context=context)$newInstance()
       else FinlandStudyArea$new(context=context)$newInstance()
-      return(.self)
+      return(invisible(.self))
     },
     
     loadTracksCollection = function() {
@@ -52,6 +52,7 @@ FinlandWTCStudy <- setRefClass(
     initialize = function(context, ...) {
       callSuper(context=context, ...)
       studyArea <<- FinlandStudyArea$new(context=context)$newInstance()
+      return(invisible(.self))
     },
     
     preprocessResponse = function(response, fmiApiKey) {
@@ -81,6 +82,7 @@ FinlandWTCStudy <- setRefClass(
       preprocessResponse("canis.lupus")
       preprocessResponse("lynx.lynx")
       preprocessResponse("rangifer.tarandus.fennicus")
+      return(invisible(.self))
     },
     
     loadTracks = function() {
@@ -95,6 +97,14 @@ FinlandWTCStudy <- setRefClass(
       intersections <- FinlandWTCIntersections$new(study=.self)$loadIntersections()
       intersections$loadCovariates()
       return(intersections)
+    },
+    
+    estimate = function() {
+      # TODO
+    },
+    
+    postprocess = function() {
+      # TODO
     }
   )
 )
