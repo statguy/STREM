@@ -35,6 +35,10 @@ SimulationStudy <- setRefClass(
       intersections <- SimulatedIntersectionsCollection$new(study=.self)
       intersections$loadIntersections()
       return(intersections)      
+    },
+    
+    loadSurveyRoutes = function(n=800) {
+      return(FinlandRandomWTCSurveyRoutes$new(study=study)$newInstance(n=800))
     }
   )
 )
@@ -50,16 +54,18 @@ FinlandWTCStudy <- setRefClass(
       studyArea <<- FinlandStudyArea$new(context=context)$newInstance()
     },
     
-    
     preprocessResponse = function(response) {
       response <<- response
       
       intersections <- FinlandWTCIntersections$new(study=.self)
-      tracks <- FinlandWTCTracks$new(study=.self)      
+      tracks <- FinlandWTCTracks$new(study=.self)
       habitatWeights <- CORINEHabitatWeights$new(study=.self)
 
       intersections$saveIntersections()
+      intersections$saveCovariates()
+      
       tracks$saveTracks()
+      
       habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=T)
       habitatWeights <- CORINEHabitatWeights$new(study=study)$setHabitatSelectionWeights(habitatSelection)
       habitatWeights$getWeightsRaster(aggregationScale=100, save=T)
@@ -69,6 +75,14 @@ FinlandWTCStudy <- setRefClass(
       preprocessResponse("canis.lupus")
       preprocessResponse("lynx.lynx")
       preprocessResponse("rangifer.tarandus.fennicus")
+    },
+    
+    loadTracks = function() {
+      return(FinlandWTCTracks$new(study=.self)$loadTracks())
+    },
+    
+    loadSurveyRoutes = function() {
+      return(FinlandWTCSurveyRoutes$new(study=.self)$newInstance())
     }
   )
 )

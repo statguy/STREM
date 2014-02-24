@@ -3,7 +3,8 @@ MovementSampleIntervals <- setRefClass(
   fields = list(
     study = "Study",
     intervals = "data.frame",
-    predictions = "data.frame"
+    predictions = "data.frame",
+    estimatedParameters = "list"
   ),
   methods = list(
     initialize = function(...) {
@@ -77,10 +78,11 @@ MovementSampleIntervals <- setRefClass(
     
     fit = function() {
       library(lme4)
-      result <- lmer(log(distanceKm) ~ log(intervalH) + (1|id) + (1|thinid), data=intervals)
-      print(result)
+      result <- lmer(log(distanceKm) ~ log(intervalH) + (1|id) + (1|thinid), data=intervals)    
+      estimatedParameters <<- list(C=exp(fixef(result)["(Intercept)"])[1], alpha=-fixef(result)["log(intervalH)"][1])
       predictions <<- data.frame(intervalH=seq(0, 24, by=0.1))
       predictions$distanceKm <<- exp(predict(object=result, newdata=predictions, REform=NA))
+      return(invisible(result))
     },    
     
     plotIntervalDistance = function() {
@@ -90,6 +92,16 @@ MovementSampleIntervals <- setRefClass(
         ylab("Distance / day (km)") + xlab("Sampling interval (h)") + theme_bw(18)      
       if (nrow(predictions) > 0) p <- p + geom_line(data=predictions, aes(intervalH, distanceKm), color="red")
       print(p)
+    },
+    
+    applyDistanceCorrection = function(surveyRoutes) {
+      # TODO
+      intervals$distanceKmCorrected <<- estimatedParameters$C * intervals$intervalH ^ -estimatedParameters$alpha
+      return(invisible(.self))
+    },
+    
+    getMeanDistance = function() {
+      return(mean(intervals$distanceKm))
     }
   )
 )

@@ -56,6 +56,10 @@ SimulatedIntersectionsCollection <- setRefClass(
       }
     },
     
+    saveIntersections = function() {
+      applyIntersections(function(x) x$saveIntersections())
+    },
+    
     estimate = function(meshParams, save=FALSE) {
       models <- ModelCollection$new(study=study, directory=study$context$scratchDirectory)
       

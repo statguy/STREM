@@ -9,7 +9,7 @@ Intersections <- setRefClass(
   methods = list(
     initialize = function(...) {
       callSuper(...)
-      return(.self)
+      return(invisible(.self))
     },
         
     getIntersectionsFileName = function() {
@@ -24,7 +24,7 @@ Intersections <- setRefClass(
         
     loadIntersections = function() {
       load(getIntersectionsFileName(), envir=as.environment(.self))
-      return(.self)
+      return(invisible(.self))
     },
     
     getSurveyLocations = function() {
@@ -166,8 +166,7 @@ FinlandWTCIntersections <- setRefClass(
   methods = list(
     newInstance = function(...) {
       callSuper(...)
-      #studyArea <<- FinlandStudyArea(context=context)$newInstance()
-      return(.self)
+      return(invisible(.self))
     },
     
     saveIntersections = function() {
@@ -199,6 +198,91 @@ FinlandWTCIntersections <- setRefClass(
       intersections <<- SpatialPointsDataFrame(cbind(wtc$x, wtc$y), data=wtc, proj4string=CRS("+init=epsg:2393"))
 
       save(intersections, file=getIntersectionsFileName())
+    },
+    
+    getPopulationDensityCovariates = function() {
+      library(plyr)
+      library(ST)
+      
+      x <- as.data.frame(intersections)
+      populationDensity <- ddply(x, .(year), function(x) {
+        year <- x$year[1]
+        message("Processing year ", year, "...")
+        xy <- SpatialPoints(cbind(x$x, x$y), proj4string=study$studyArea$proj4string)
+        populationDensity <- getStatFiPopulationDensity(xy=xy, year=year)
+        return(data.frame(id=x$id, year=year, populationDensity=populationDensity))
+      }, .parallel=TRUE)
+      
+      return(populationDensity)
+    },
+    
+    getWeather = function(year, apiKey) {
+      library(ST)
+      library(plyr)
+      
+      queryPredefined <- "fmi::observations::weather::daily::multipointcoverage"
+      startTime <- paste(year, "-01-01T00:00:00Z", sep="")
+      endTime <- paste(year, "-03-31T23:59:59Z", sep="")
+      parameters <- list(startTime=startTime, endTime=endTime, bbox="19.0900,59.3000,31.5900,70.130", crs="EPSG::4326")
+      weatherStationFile <- queryFMIWeatherStationData(apiKey, queryPredefined, parameters)
+      weather <- parseFMIWeatherStationMultipointCoverage(weatherStationFile, study$studyArea$proj4string)
+      weather <- as.data.frame(weather)
+      weather$year <- as.POSIXlt(weather$date)$year + 1900
+      weather$month <- as.POSIXlt(weather$date)$mon + 1
+      weather$day <- as.POSIXlt(weather$date)$mday
+      
+      weatherAggregated <- ddply(weather, .(x, y, month), function(x) {
+        data.frame(x=x$x[1], y=x$y[1], year=x$year[1], month=x$month[1], rrday=mean(x$rrday, na.rm=T), tday=mean(x$tday, na.rm=T), snow=mean(x$snow, na.rm=T), tmin=mean(x$tmin, na.rm=T), tmax=mean(x$tmax, na.rm=T))
+      })
+                 
+      return(weather)
+    },
+    
+    getWeatherCovariates = function(apiKey) {
+      getWeatherValues = function(weather, variable, x, transform=identity, inverseTransform=identity) {
+        weatherRaster <- multiRasterInterpolate(xyz=weather[,c("x","y",variable,"month")],
+          variables=.(month),
+          templateRaster=raster(extent(study$studyArea$habitat), nrows=1300, ncols=800),
+          transform=transform,
+          inverseTransform=inverseTransform)        
+        
+        x$month <- as.POSIXlt(x$date)$mon + 1
+        weatherValues <- ddply(x, .(month), function(x, weatherRaster) {
+          if (x$month[1] < 1 | x$month[1] > 3) {
+            warning("Invalid month ", x$month[1], ", using February.")
+            x$month <- 2
+          }
+          weatherValues <- extract(weatherRaster[[x$month[1]]], x[,c("x","y")])
+          return(data.frame(weatherValues=weatherValues))
+        }, weatherRaster=weatherRaster)
+        
+        return(weatherValues$weatherValues)
+      }
+      
+      x <- intersections
+      x$date <- as.POSIXct(x$date) # QUICKFIX
+      weatherCovariates <- ddply(x, .(year), function(x, apiKey) {
+        year <- x$year[1]
+        message("Processing year ", year, "...")
+        
+        weather <- getWeather(year, apiKey)
+        snow <- getWeatherValues(weather=weather, variable="snow", x=x, transform=sqrt, inverseTransform=function(x) x^2)
+        
+        return(data.frame(id=x$id, year=year, snow=snow))
+      }, apiKey=apiKey)
+      
+      return(weatherCovariates)
+    },
+    
+    saveCovariates = function(fmiApiKey) {
+      populationDensityCovariates <- getPopulationDensity()
+      weatherCovariates <- getWeatherCovariates(fmiApiKey)
+      
+      
+    },
+    
+    loadCovariates = function() {
+      
     },
     
     # TODO

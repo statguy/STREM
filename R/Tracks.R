@@ -6,11 +6,14 @@ Tracks <- setRefClass(
   fields = list(
     study = "Study",
     tracks = "ltraj",
-    distance = "numeric"
+    distance = "numeric",
+    thinId = "integer"
   ),
   methods = list(
-    initialize = function(preprocessData=FALSE, ...) {
+    initialize = function(thinId, preprocessData=FALSE, ...) {
       callSuper(...)
+      if (missing(thinId)) thinId <<- as.integer(1)
+      else thinId <<- thinId
       if (preprocessData) saveTracks()
       return(.self)
     },
@@ -92,50 +95,6 @@ Tracks <- setRefClass(
       return(invisible(distances))
     },
     
-    getHabitatPreferences = function(habitatWeightsTemplate, nSamples=30, save=FALSE) {
-      habitatPreferences <- HabitatSelection$new(study=study)
-      habitatPreferences$getHabitatPreferences(tracks=.self, habitatWeightsTemplate=habitatWeightsTemplate, nSamples=nSamples, save=save)
-      return(habitatPreferences)
-    }
-  )
-)
-
-SimulatedTracks <- setRefClass(
-  Class = "SimulatedTracks",
-  contains = "Tracks",
-  fields = list(
-    iteration = "integer",
-    thinId = "integer"
-  ),
-  methods = list(
-    initialize = function(xy, id, date, thinId, preprocessData=FALSE, ...) {
-      if (!missing(xy) && !missing(id) && !missing(date)) setTracks(xy=xy, id=id, date=date)
-      if (missing(thinId)) thinId <<- as.integer(1)
-      else thinId <<- thinId
-      callSuper(preprocessData=preprocessData, ...)
-    },
-    
-    setTracks = function(xy, id, date) {
-      library(adehabitatLT)
-      d <- as.POSIXlt(date)
-      burst <- paste(id, d$year, sep=".")
-      tracks <<- as.ltraj(xy=xy, date=date, id=id, burst=burst)
-    },
-    
-    getTracksFileName = function() {
-      if (inherits(study, "undefinedField") | length(iteration) == 0)
-        stop("Provide study and iteration parameters.")
-      return(study$context$getLongFileName(dir=getTracksDirectory(), name="Tracks", response=study$response, region=study$studyArea$region, tag=iteration))
-    },
-    
-    saveTracks = function() {
-      fileName <- getTracksFileName()
-      message("Saving tracks to ", fileName)
-      if (thinId != 1)
-        stop("Saving thinned tracks unsupported.")
-      save(tracks, iteration, thinId, file=fileName)
-    },
-
     .internal.thin = function(by) {
       library(plyr)
       
@@ -161,6 +120,47 @@ SimulatedTracks <- setRefClass(
       newDt <- mean(tracksDFThinned$dt, na.rm=T)
       message("Thinned movements from dt = ", oldDt, " to dt = ", newDt, " (note: these values can be misleading)")      
       return(tracksThinned)
+    },
+    
+    getHabitatPreferences = function(habitatWeightsTemplate, nSamples=30, save=FALSE) {
+      habitatPreferences <- HabitatSelection$new(study=study)
+      habitatPreferences$getHabitatPreferences(tracks=.self, habitatWeightsTemplate=habitatWeightsTemplate, nSamples=nSamples, save=save)
+      return(habitatPreferences)
+    }
+  )
+)
+
+SimulatedTracks <- setRefClass(
+  Class = "SimulatedTracks",
+  contains = "Tracks",
+  fields = list(
+    iteration = "integer"
+  ),
+  methods = list(
+    initialize = function(xy, id, date, thinId, preprocessData=FALSE, ...) {
+      if (!missing(xy) && !missing(id) && !missing(date)) setTracks(xy=xy, id=id, date=date)
+      callSuper(preprocessData=preprocessData, ...)
+    },
+    
+    setTracks = function(xy, id, date) {
+      library(adehabitatLT)
+      d <- as.POSIXlt(date)
+      burst <- paste(id, d$year, sep=".")
+      tracks <<- as.ltraj(xy=xy, date=date, id=id, burst=burst)
+    },
+    
+    getTracksFileName = function() {
+      if (inherits(study, "undefinedField") | length(iteration) == 0)
+        stop("Provide study and iteration parameters.")
+      return(study$context$getLongFileName(dir=getTracksDirectory(), name="Tracks", response=study$response, region=study$studyArea$region, tag=iteration))
+    },
+    
+    saveTracks = function() {
+      fileName <- getTracksFileName()
+      message("Saving tracks to ", fileName)
+      if (thinId != 1)
+        stop("Saving thinned tracks unsupported.")
+      save(tracks, iteration, thinId, file=fileName)
     },
     
     thin = function(by) {
@@ -250,6 +250,14 @@ FinlandWTCTracks <- setRefClass(
                         x=gps.raw$X, y=gps.raw$Y)
       
       return(list(gps=gps, fromProj="+init=epsg:4326"))
+    },
+    
+    thin = function(by) {
+      message("Thinning thin = ", thinId)
+      thinnedTracksDF <- .internal.thin(by=by)
+      if (is.null(thinnedTracksDF)) return(NULL)
+      thinnedTracks <- FinlandWTCTracks$new(study=study, tracks=thinnedTracksDF, thinId=as.integer(thinId+1))
+      return(thinnedTracks)
     }
   )
 )
