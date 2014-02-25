@@ -113,7 +113,7 @@ FinlandWTCStudy <- setRefClass(
       
       intersections <- loadIntersections()
       intersections$intersections$distance <- 1
-      model <- SmoothModel(study=.self)
+      model <- SmoothModel$new(study=.self)
       model$setup(intersections=intersections, meshParams=meshParams)
       if (!test) model$estimate(save=T, fileName=model$getModelFileName())
       return(model)
