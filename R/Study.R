@@ -107,13 +107,15 @@ FinlandWTCStudy <- setRefClass(
       return(CORINEHabitatWeights$new(study=.self)$loadWeightsRaster())
     },
     
-    estimate = function() {
+    estimate = function(test=FALSE) {
       meshParams <- list(maxEdge=c(.2e6, .4e6), cutOff=.1e6, coordsScale=1e-6)
       
       intersections <- loadIntersections()
+      intersections$intersections$distance <- 1
       model <- SmoothModel(study=.self)
       model$setup(intersections=intersections, meshParams=meshParams)
-      model$estimate(save=T, fileName=model$getModelFileName())
+      if (!test) model$estimate(save=T, fileName=model$getModelFileName())
+      return(model)
     },
     
     loadEstimates = function() {

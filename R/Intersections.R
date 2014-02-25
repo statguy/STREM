@@ -11,7 +11,10 @@ Intersections <- setRefClass(
       callSuper(...)
       return(invisible(.self))
     },
-        
+    
+    getCoordinates = function() return(coordinates(intersections)),
+    getData = function() return(intersections@data),
+    
     getIntersectionsFileName = function() {
       if (inherits(study, "undefinedField"))
         stop("Provide study parameters.")
@@ -204,6 +207,9 @@ FinlandWTCIntersections <- setRefClass(
       wtc <- subset(wtc, duration<4 & duration>0 & length>0)  
       # Transects 168 and 1496 are at the same location but separate, take average, ignore or something...
       wtc <- subset(wtc, id!=1496)
+      xy <- cbind(wtc$x, wtc$y)
+      wtc$x <- NULL
+      wtc$y <- NULL
       intersections <<- SpatialPointsDataFrame(cbind(wtc$x, wtc$y), data=wtc, proj4string=CRS("+init=epsg:2393"))
 
       save(intersections, file=getIntersectionsFileName())

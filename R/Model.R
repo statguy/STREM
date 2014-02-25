@@ -19,7 +19,7 @@ Model <- setRefClass(
     index = "list",
     A = "Matrix",
     dataStack = "inla.data.stack",
-    offset = "numeric",
+    countOffset = "numeric",
     result = "inla",
     node = "list"
   ),
@@ -39,7 +39,7 @@ Model <- setRefClass(
       #fileName <- getItemFileName(directory, name)
       #fileName <- getResultFileName()
       message("Saving result to ", fileName, "...")
-      save(locations, data, model, coordsScale, years, mesh, spde, index, A, dataStack, offset, result, file=fileName)
+      save(locations, data, model, coordsScale, years, mesh, spde, index, A, dataStack, countOffset, result, file=fileName)
     },
     
     loadEstimates = function(fileName) {
@@ -65,15 +65,13 @@ SmoothModel <- setRefClass(
     setup = function(intersections, meshParams, family="nbinomial") {
       library(INLA)
       
-      family <<- family
-      
       message("Constructing mesh...")
 
       #intersectionsSubset <- subset(intersections$intersections, response == study$response)
-      data <<- intersections@data
+      data <<- intersections$getData()
       coordsScale <<- meshParams$coordsScale
       #locations <<- coordinates(intersectionsSubset) * coordsScale
-      locations <<- coordinates(intersections) * coordsScale
+      locations <<- intersections$getCoordinates() * coordsScale
       mesh <<- inla.mesh.create.helper(points.domain=locations,
                                        min.angle=meshParams$minAngle,
                                        max.edge=meshParams$maxEdge * coordsScale,
@@ -81,13 +79,14 @@ SmoothModel <- setRefClass(
       
       message("Number of nodes in the mesh = ", mesh$n)
       
-      spde <<- inla.spde2.matern(mesh)
+      family <<- family
       model <<- response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))
 
       years <<- as.integer(sort(unique(data$year)))
       nYears <- length(years)
       groupYears <- as.integer(data$year - min(years) + 1)
       
+      spde <<- inla.spde2.matern(mesh)
       index <<- inla.spde.make.index("st", n.spde=mesh$n, n.group=nYears)
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
       dataStack <<- inla.stack(data=list(response=data$intersections),
@@ -95,7 +94,7 @@ SmoothModel <- setRefClass(
                                effects=list(c(index, list(intercept=1))),
                                tag="observed")
       
-      offset <<- 2/pi * data$length * data$duration * data$distance
+      countOffset <<- 2/pi * data$length * data$duration * data$distance
       
       return(invisible(.self))
     },
@@ -105,7 +104,7 @@ SmoothModel <- setRefClass(
       library(sp)
       meshUnscaled <- mesh
       meshUnscaled$loc <- mesh$loc / coordsScale
-      plot(meshUnscaled, asp=1, main="", col="darkgray")
+      plot(meshUnscaled, asp=1, main="", col="gray")
       plot(study$studyArea$boundary, border="black", add=T)
       
       if (missing(surveyRoutes)) {}
@@ -125,7 +124,7 @@ SmoothModel <- setRefClass(
       result <<- inla(model,
                       family=family,
                       data=inla.stack.data(dataStack),
-                      E=.self$offset,
+                      E=countOffset,
                       verbose=TRUE,
                       control.predictor=list(A=inla.stack.A(dataStack), compute=TRUE),
                       control.compute=list(cpo=FALSE, dic=TRUE))

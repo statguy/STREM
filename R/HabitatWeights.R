@@ -119,7 +119,7 @@ CORINEHabitatWeights <- setRefClass(
                                    fun=function(habitatValue, na.rm) mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
       }
       else {
-        weightsRaster <- aggregate(habitat, aggregationScale, overwrite=TRUE,
+        weightsRaster <- aggregate(habitat, aggregationScale,
                                    fun=function(habitatValue, na.rm) mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
       }
       
