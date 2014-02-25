@@ -1,5 +1,5 @@
 library(WTC)
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-study <- FinlandWTCStudy$new(context=context)
+study <- FinlandWTCStudy$new(context=context, response="lynx.lynx")
 study$estimate()

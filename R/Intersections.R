@@ -112,8 +112,8 @@ SimulatedIntersections <- setRefClass(
     },
     
     aggregateIntersectionsMatrix = function(tracks, surveyRoutes) {
-      if (length(tracks$distance) == 0)
-        stop("Did you forgot to run determineDistances() for tracks first?")
+      #if (length(tracks$distance) == 0)
+      #  stop("Did you forgot to run determineDistances() for tracks first?")
       
       tracksDF <- ld(tracks$tracks)
       burstYear <- ddply(tracksDF, .(burst), function(x) {
@@ -136,7 +136,7 @@ SimulatedIntersections <- setRefClass(
                         intersections=rowSums(intersectionsMatrix[,bursts,drop=F]),
                         duration=duration,
                         length=surveyRoutes$lengths,
-                        distance=tracks$distance)
+                        distance=1) # Correct for distance after estimation
         data <- rbind(data, x)
       }
       
@@ -191,6 +191,7 @@ FinlandWTCIntersections <- setRefClass(
       wtc <- wtc[,c(1:9,responseIndex)]
       colnames(wtc)[ncol(wtc)] <- "intersections"
       wtc$response <- study$response
+      wtc <- subset(wtc, response==response)
       
       wtc$date <- strptime(wtc$date, "%Y%m%d")
       date <- as.POSIXlt(wtc$date)
@@ -304,11 +305,6 @@ FinlandWTCIntersections <- setRefClass(
     loadCovariates = function() {
       load(getCovariatesFileName(), envir=as.environment(.self))
       return(invisible(.self))
-    },
-    
-    # TODO
-    addDistances = function() {
-      intersections$distance <<- 1
     }
   )
 )

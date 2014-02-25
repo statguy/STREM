@@ -72,7 +72,7 @@ FinlandWTCStudy <- setRefClass(
       tracks$saveTracks()
       
       habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=T)
-      habitatWeights <- CORINEHabitatWeights$new(study=study)$setHabitatSelectionWeights(habitatSelection)
+      habitatWeights <- CORINEHabitatWeights$new(study=.self)$setHabitatSelectionWeights(habitatSelection)
       habitatWeights$getWeightsRaster(aggregationScale=100, save=T)
       
       cnpClusterStopLocal()
@@ -99,8 +99,25 @@ FinlandWTCStudy <- setRefClass(
       return(intersections)
     },
     
+    loadHabitatWeights = function() {
+      return(HabitatSelection(study=.self)$loadHabitatSelection())
+    },
+    
+    loadHabitatWeightsRaster = function() {
+      return(CORINEHabitatWeights$new(study=.self)$loadWeightsRaster())
+    },
+    
     estimate = function() {
-      # TODO
+      meshParams <- list(maxEdge=c(.2e6, .4e6), cutOff=.1e6, coordsScale=1e-6)
+      
+      intersections <- loadIntersections()
+      model <- SmoothModel(study=.self)
+      model$setup(intersections=intersections, meshParams=meshParams)
+      model$estimate(save=T, fileName=model$getModelFileName())
+    },
+    
+    loadEstimates = function() {
+      return(SmoothModel(study=.self)$loadEstimates(fileName=model$getModelFileName()))
     },
     
     postprocess = function() {

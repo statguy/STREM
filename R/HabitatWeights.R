@@ -28,7 +28,7 @@ HabitatWeights <- setRefClass(
       return(weightsRaster)
     },
 
-    loadWeightsRaster = function(study) {
+    loadWeightsRaster = function() {
       return(raster(getWeightsRasterFileName()))
     },
     

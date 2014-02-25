@@ -6,7 +6,7 @@ Tracks <- setRefClass(
   fields = list(
     study = "Study",
     tracks = "ltraj",
-    distance = "numeric",
+    distance = "ANY",
     thinId = "integer"
   ),
   methods = list(
@@ -18,7 +18,7 @@ Tracks <- setRefClass(
       return(.self)
     },
     
-    getTracksDirectory = function() return(study$context$scratchDirectory),
+    getTracksDirectory = function() return(study$context$processedDataDirectory),
     
     getTracksFileName = function() {
       return(study$context$getFileName(getTracksDirectory(), name="Tracks", response=study$response, region=study$studyArea$region))
@@ -160,7 +160,7 @@ SimulatedTracks <- setRefClass(
       message("Saving tracks to ", fileName)
       if (thinId != 1)
         stop("Saving thinned tracks unsupported.")
-      save(tracks, iteration, thinId, file=fileName)
+      save(tracks, iteration, thinId, distance, file=fileName)
     },
     
     thin = function(by) {
@@ -187,6 +187,8 @@ FinlandWTCTracks <- setRefClass(
       library(rgdal)
       library(adehabitatLT)
       
+      message("Processing ", study$response, "...")
+      
       gps <- if (study$response == "canis.lupus") preprocessWolfData()
       else if (study$response == "lynx.lynx") preprocessLynxData()
       else if (study$response == "rangifer.tarandus.fennicus") preprocessReindeerData()
@@ -208,7 +210,6 @@ FinlandWTCTracks <- setRefClass(
       gpsLT <- cutltraj(gpsLT, "point.in.polygon(x, y, .b[,1], .b[,2])==0") # Remove movements outside the boundary
       rm(".b", envir=.GlobalEnv)
       
-      message("Saving processed data...")
       tracks <<- gpsLT
       save(tracks, file=getTracksFileName())
       return(invisible(.self))
@@ -217,7 +218,6 @@ FinlandWTCTracks <- setRefClass(
     preprocessWolfData = function() {
       library(gdata)
       
-      message("Reading raw data...")
       gps.raw <- read.xls(file.path(study$context$rawDataDirectory, "GPS_Finland_GPS_Finland_RKTL_Wolf_ec_import_tracks.xlsx"), na.strings="")  
       gps <- data.frame(id=substr(gps.raw$UnitID, 11, length(gps.raw$UnitID)),
                         date=as.POSIXct(gps.raw$Time*24*60*60, origin=as.POSIXct(gps.raw$Date, format="%Y-%m-%d")),
@@ -231,7 +231,6 @@ FinlandWTCTracks <- setRefClass(
     preprocessLynxData = function() {
       library(gdata)
       
-      message("Reading raw data...")
       gps.raw <- read.xls(file.path(study$context$rawDataDirectory, "GPS_Finland_GPS_Finland_RKTL_Lynx_ec_import_tracks.xls"))  
       gps <- data.frame(id=gps.raw$UnitID,
                         date=as.POSIXct(paste(gps.raw$Date, gps.raw$Time), format="%m/%d/%Y %I:%M:%S %p"),
@@ -243,7 +242,6 @@ FinlandWTCTracks <- setRefClass(
     preprocessReindeerData = function() {
       library(gdata)
       
-      message("Reading raw data...")
       gps.raw <- read.xls(file.path(study$context$rawDataDirectory, "GPS_Finland_GPS_Finland_RKTL_ForestReindeer_ec_import_tracks.xlsx"))
       gps <- data.frame(id=gps.raw$UnitID,
                         date=as.POSIXct(gps.raw$Date*60*60*24-60*60*2*24-60*60*.3, origin="1900-01-01"),

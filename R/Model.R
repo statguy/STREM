@@ -35,14 +35,14 @@ Model <- setRefClass(
     #  return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Result", response=study$response, region=study$studyArea$region, tag=name))
     #},
     
-    saveResult = function(fileName) {
+    saveEstimates = function(fileName) {
       #fileName <- getItemFileName(directory, name)
       #fileName <- getResultFileName()
       message("Saving result to ", fileName, "...")
       save(locations, data, model, coordsScale, years, mesh, spde, index, A, dataStack, offset, result, file=fileName)
     },
     
-    loadResult = function(fileName) {
+    loadEstimates = function(fileName) {
       load(fileName, envir=as.environment(.self))
       #load(getResultFileName(), envir=as.environment(.self))
       return(invisible(.self))
@@ -69,10 +69,11 @@ SmoothModel <- setRefClass(
       
       message("Constructing mesh...")
 
-      intersectionsSubset <- subset(intersections$intersections, response == study$response)
-      data <<- intersectionsSubset@data
+      #intersectionsSubset <- subset(intersections$intersections, response == study$response)
+      data <<- intersections@data
       coordsScale <<- meshParams$coordsScale
-      locations <<- coordinates(intersectionsSubset) * coordsScale
+      #locations <<- coordinates(intersectionsSubset) * coordsScale
+      locations <<- coordinates(intersections) * coordsScale
       mesh <<- inla.mesh.create.helper(points.domain=locations,
                                        min.angle=meshParams$minAngle,
                                        max.edge=meshParams$maxEdge * coordsScale,
@@ -114,6 +115,10 @@ SmoothModel <- setRefClass(
       return(invisible(.self))
     },
 
+    getModelFileName = function() {
+      return(study$context$getFileName(study$context$resultDataDirectory, name="Model", response=response, region=study$studyArea$region))
+    },
+    
     estimate = function(save=FALSE, fileName) {
       library(INLA)
       
@@ -129,13 +134,13 @@ SmoothModel <- setRefClass(
         warning("INLA failed to run.")
       }
       else {
-        if (save) saveResult(fileName=fileName)
+        if (save) saveEstimates(fileName=fileName)
       }
     },
 
     # TODO: fix this if needed
-    collectResults = function(quick=FALSE) {
-      if (quick) return(collectResultsQuick())
+    collectEstimates = function(quick=FALSE) {
+      if (quick) return(collectEstimatesQuick())
       
       library(INLA)
       library(plyr)
@@ -176,7 +181,7 @@ SmoothModel <- setRefClass(
       return(x)
     },
 
-    collectResultsQuick = function() {
+    collectEstimatesQuick = function() {
       library(INLA)
       
       indexObserved <- inla.stack.index(dataStack, "observed")$data
@@ -222,7 +227,7 @@ SmoothModel <- setRefClass(
     
     getPopulationDensity = function(projectionRaster, maskPolygon=study$studyArea$boundary, getSD=TRUE) {
       if (length(node) == 0)
-        stop("Did you forgot to run collectResults() first?")
+        stop("Did you forgot to run collectEstimates() first?")
       
       library(raster)
 
