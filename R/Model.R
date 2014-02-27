@@ -115,7 +115,7 @@ SmoothModel <- setRefClass(
     },
 
     getModelFileName = function() {
-      return(study$context$getFileName(study$context$resultDataDirectory, name="Model", response=response, region=study$studyArea$region))
+      return(study$context$getFileName(study$context$resultDataDirectory, name="Model", response=study$response, region=study$studyArea$region))
     },
     
     estimate = function(save=FALSE, fileName) {

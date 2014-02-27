@@ -107,9 +107,9 @@ FinlandWTCStudy <- setRefClass(
       return(CORINEHabitatWeights$new(study=.self)$loadWeightsRaster())
     },
     
-    estimate = function(test=FALSE) {
-      #meshParams <- list(maxEdge=c(.2e6, .4e6), cutOff=.1e6, coordsScale=1e-6)
-      meshParams <- list(maxEdge=c(.05e6, .15e6), cutOff=.02e6, coordsScale=1e-6)
+    estimate = function(test=FALSE, quick=FALSE) {
+      meshParames <- if (quick) list(maxEdge=c(.2e6, .4e6), cutOff=.1e6, coordsScale=1e-6)
+      else list(maxEdge=c(.05e6, .15e6), cutOff=.02e6, coordsScale=1e-6)
       
       intersections <- loadIntersections()
       intersections$intersections$distance <- 1

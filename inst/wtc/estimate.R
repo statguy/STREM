@@ -7,3 +7,9 @@ surveyRoutes <- study$loadSurveyRoutes()
 model$plotMesh(surveyRoutes)
 
 model <- study$estimate()
+
+
+study <- FinlandWTCStudy$new(context=context, response="canis.lupus")
+model <- study$estimate()
+study <- FinlandWTCStudy$new(context=context, response="rangifer.tarandus.fennicus")
+model <- study$estimate()
