@@ -108,7 +108,7 @@ FinlandWTCStudy <- setRefClass(
     },
     
     estimate = function(test=FALSE, quick=FALSE) {
-      meshParames <- if (quick) list(maxEdge=c(.2e6, .4e6), cutOff=.1e6, coordsScale=1e-6)
+      meshParams <- if (quick) list(maxEdge=c(.2e6, .4e6), cutOff=.1e6, coordsScale=1e-6)
       else list(maxEdge=c(.05e6, .15e6), cutOff=.02e6, coordsScale=1e-6)
       
       intersections <- loadIntersections()
