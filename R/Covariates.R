@@ -59,6 +59,7 @@ FinlandCovariates <- setRefClass(
     saveWeatherYear = function(year, templateRaster, fmiApiKey) {
       library(ST)
       library(raster)
+      library(plyr)
       
       query <- "fmi::observations::weather::daily::multipointcoverage"
       startTime <- paste(year, "-01-01T00:00:00Z", sep="")
@@ -151,9 +152,9 @@ FinlandCovariates <- setRefClass(
       years <- sort(unique(xyt$year))
       
       cacheWeather(years=years, fmiApiKey=fmiApiKey)
-      weatherCovariates <- getWeatherCovariates(xyt, aggregationFactor=4)
+      weatherCovariates <- getWeatherCovariates(xyt)
       
-      cachePopulationDensity(years=years)
+      cachePopulationDensity(years=years, aggregationFactor=4)
       populationDensityCovariates <- getPopulationDensityCovariates(xyt)
       
       covariates <<- merge(populationDensityCovariates, weatherCovariates, sort=FALSE)
