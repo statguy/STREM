@@ -70,7 +70,7 @@ FinlandWTCStudy <- setRefClass(
       habitatWeights <- CORINEHabitatWeights$new(study=.self)
 
       intersections$saveIntersections()
-      intersections$saveCovariates(fmiApiKey=fmiApiKey)
+      intersections$saveCovariates(intersections$intersections, fmiApiKey=fmiApiKey)
       
       tracks$saveTracks()
       

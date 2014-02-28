@@ -2,9 +2,16 @@ FinlandCovariates <- setRefClass(
   Class = "FinlandCovariates",
   fields = list(
     study = "Study",
-    populationDensityCache = "RasterStack"
+    populationDensityCache = "RasterStack",
+    covariatesName = "character",
+    covariates = "data.frame"
   ),
   methods = list(
+    initialize = function(...) {
+      callSuper(...)
+      return(invisible(.self))
+    },
+    
     cachePopulationDensity = function(years, aggregationFactor=1) {
       library(ST)
       library(raster)
@@ -44,6 +51,8 @@ FinlandCovariates <- setRefClass(
     },
     
     getWeatherFileName = function(year) {
+      if (inherits(study, "uninitializedField"))
+        stop("Provide study parameters.")
       study$context$getFileName(dir=study$context$scratchDirectory, name="WeatherRaster", response=year, region=study$studyArea$region, ext="")
     },
     
@@ -126,6 +135,39 @@ FinlandCovariates <- setRefClass(
       }, proj4string=proj4string(xyt), .parallel=TRUE, .inform=T)
       
       return(weatherCovariates)
+    },
+    
+    getCovariatesFileName = function(name) {
+      if (inherits(study, "uninitializedField"))
+        stop("Provide study parameters.")
+      return(study$context$getFileName(dir=study$context$resultDataDirectory, name=covariatesName, response=study$response, region=study$studyArea$region))
+    },
+    
+    saveCovariates = function(xyt, apiKey) {
+      library(raster)
+      
+      if (!c("id","year","x","y") %in% names(xyt))
+        stop("Missing variables in the data.")
+      years <- sort(unique(xyt$year))
+      
+      cacheWeather(years=years, apiKey=apiKey)
+      weatherCovariates <- getWeatherCovariates(xyt, aggregationFactor=4)
+      
+      cachePopulationDensity(years=years)
+      populationDensityCovariates <- getPopulationDensityCovariates(xyt)
+      
+      covariates <<- merge(populationDensityCovariates, weatherCovariates, sort=FALSE)
+      save(covariates, file=getCovariatesFileName(covariatesName))
+      
+      populationDensityCache <<- stack()
+      gc()
+      
+      return(invisible(.self))
+    },
+    
+    loadCovariates = function() {
+      load(getCovariatesFileName(), envir=as.environment(.self))
+      return(invisible(.self))
     }
   )
 )

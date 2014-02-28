@@ -44,10 +44,9 @@ SimulatedIntersections <- setRefClass(
     iteration = "integer"
   ),
   methods = list(
-    initialize = function(preprocessData=FALSE, ...) {
-      if (preprocessData) stop("Unsupported.")
+    initialize = function(...) {
       callSuper(...)
-      return(.self)
+      return(invisible(.self))
     },
     
     newInstance = function() {
@@ -167,11 +166,10 @@ FinlandWTCIntersections <- setRefClass(
   Class = "FinlandWTCIntersections",
   contains = c("Intersections", "FinlandCovariates"),
   fields = list(
-    covariates = "data.frame"
   ),
   methods = list(
     newInstance = function(...) {
-      callSuper(...)
+      callSuper(covariatesName="FinlandWTCIntersectionsCovariates", ...)
       return(invisible(.self))
     },
     
@@ -213,25 +211,6 @@ FinlandWTCIntersections <- setRefClass(
       intersections <<- SpatialPointsDataFrame(cbind(wtc$x, wtc$y), data=wtc, proj4string=CRS("+init=epsg:2393"))
 
       save(intersections, file=getIntersectionsFileName())
-    },
-
-    getCovariatesFileName = function() {
-      if (inherits(study, "undefinedField"))
-        stop("Provide study parameters.")
-      return(study$context$getFileName(dir=study$context$resultDataDirectory, name="IntersectionsCovariates", response=study$response, region=study$studyArea$region))
-    },
-    
-    saveCovariates = function() {
-      weatherCovariates <- getWeatherCovariates(intersections)
-      populationDensityCovariates <- getPopulationDensityCovariates(intersections)
-      covariates <<- merge(populationDensityCovariates, weatherCovariates, sort=FALSE)
-      save(covariates, file=getCovariatesFileName())
-      return(invisible(.self))
-    },
-    
-    loadCovariates = function() {
-      load(getCovariatesFileName(), envir=as.environment(.self))
-      return(invisible(.self))
     }
   )
 )
