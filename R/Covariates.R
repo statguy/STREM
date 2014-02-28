@@ -98,8 +98,8 @@ FinlandCovariates <- setRefClass(
     },
     
     cacheWeather = function(years, fmiApiKey) {
-      library(foreach)
-      foreach(year=years) %dopar% saveWeatherYear(year, study$getTemplateRaster(), fmiApiKey=fmiApiKey)
+      for (year in years) 
+        saveWeatherYear(year, study$getTemplateRaster(), fmiApiKey=fmiApiKey)
       return(invisible(.self))
     },
     
