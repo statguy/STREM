@@ -208,7 +208,7 @@ FinlandWTCIntersections <- setRefClass(
       xy <- cbind(wtc$x, wtc$y)
       wtc$x <- NULL
       wtc$y <- NULL
-      intersections <<- SpatialPointsDataFrame(cbind(wtc$x, wtc$y), data=wtc, proj4string=CRS("+init=epsg:2393"))
+      intersections <<- SpatialPointsDataFrame(xy, data=wtc, proj4string=CRS("+init=epsg:2393"))
 
       save(intersections, file=getIntersectionsFileName())
     }
