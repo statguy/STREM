@@ -10,12 +10,13 @@ Imports: INLA,sp,CircStats,plyr,maptools,raster,rgdal,parallel,adehabitatLT,gdat
 Suggests: grid,lattice,ggplot2
 License: MIT
 Collate:
-  Utils.R
+  static_global_functions.R
   PopulationSize.R
   SpatioTemporalRaster.R
   Context.R
   StudyArea.R
   Study.R
+  Covariates.R
   HabitatWeights.R
   Tracks.R
   HabitatSelection.R

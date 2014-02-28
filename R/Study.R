@@ -6,6 +6,9 @@ Study <- setRefClass(
     studyArea = "StudyArea"
   ),
   methods = list(
+    getTemplateRaster = function() {
+      return(raster(extent(study$studyArea$habitat), nrows=1300, ncols=800, crs=study$studyArea$proj4string))
+    }
   )
 )
 

@@ -1,11 +1,29 @@
+# Converts ltraj object to SpatialPointsDataFrame object without stripping information.
+# Allows setting projection as well.
+ltraj2spdf2 <- function(ltraj, proj4string="") {
+  library(adehabitatLT)
+  library(sp)
+  df <- ld(ltraj)
+  coordinates(df) <- ~x+y
+  proj4string(df) <- proj4string
+  return(df)
+}
+
+breakDownDate <- function(x) {
+  x <- as.POSIXlt(x)
+  return(data.frame(year=x$year+1900, month=x$mon+1, day=x$mday, yday=x$yday))
+}
+
 euclidean <- function(c1, c2) sqrt((c1[,1] - c2[,1])^2 + (c1[,2] - c2[,2])^2)
 
-getVector <- function(coords, distance, angle) {
-  return(cbind(coords[,1] + distance * cos(angle), coords[,2] + distance * sin(angle)))
-}
+square <- function(x) x^2
 
 rotate <- function(x, y, angle) {
   return(cbind(x * cos(angle) - y * sin(angle), x * sin(angle) + y * cos(angle)))
+}
+
+getVector <- function(coords, distance, angle) {
+  return(cbind(coords[,1] + distance * cos(angle), coords[,2] + distance * sin(angle)))
 }
 
 getTriangles <- function(centroids, angles, sideLength) {
