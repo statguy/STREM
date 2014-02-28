@@ -30,7 +30,7 @@ FinlandCovariates <- setRefClass(
       library(raster)
       library(ST)
 
-      if (!all(c("id", "year", "x", "y","foo") %in% names(xyt)))
+      if (!all(c("id", "year") %in% names(xyt)))
         stop("Missing variables in the data.")
       
       populationDensity <- ddply(as.data.frame(xyt), .(year), function(x, proj4string) {
@@ -108,7 +108,7 @@ FinlandCovariates <- setRefClass(
       library(raster)
       library(plyr)
       
-      if (!all(c("id", "year", "x", "y","foo") %in% names(xyt)))
+      if (!all(c("id", "year") %in% names(xyt)))
         stop("Missing variables in the data.")
       
       x <- data.frame(as.data.frame(xyt), breakDownDate(xyt$date))
@@ -147,7 +147,7 @@ FinlandCovariates <- setRefClass(
     saveCovariates = function(xyt, fmiApiKey) {
       library(raster)
       
-      if (!all(c("id", "year", "x", "y","foo") %in% names(xyt)))
+      if (!all(c("id", "year") %in% names(xyt)))
         stop("Missing variables in the data.")
       years <- sort(unique(xyt$year))
       
