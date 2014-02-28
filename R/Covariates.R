@@ -56,7 +56,7 @@ FinlandCovariates <- setRefClass(
       study$context$getFileName(dir=study$context$scratchDirectory, name="WeatherRaster", response=year, region=study$studyArea$region, ext="")
     },
     
-    saveWeatherYear = function(year, templateRaster, apiKey) {
+    saveWeatherYear = function(year, templateRaster, fmiApiKey) {
       library(ST)
       library(raster)
       
@@ -64,7 +64,7 @@ FinlandCovariates <- setRefClass(
       startTime <- paste(year, "-01-01T00:00:00Z", sep="")
       endTime <- paste(year, "-03-31T23:59:59Z", sep="")
       parameters <- list(startTime=startTime, endTime=endTime, bbox="19.0900,59.3000,31.5900,70.130", crs="EPSG::4326")
-      weatherStationFile <- queryFMIData(apiKey=apiKey, queryStored=query, parameters=parameters)
+      weatherStationFile <- queryFMIData(apiKey=fmiApiKey, queryStored=query, parameters=parameters)
       weather <- parseFMIWeatherStationMultipointCoverage(weatherStationFile, study$studyArea$proj4string)
       weather <- as.data.frame(weather)
       weather <- data.frame(weather, breakDownDate(weather$date))
@@ -97,9 +97,9 @@ FinlandCovariates <- setRefClass(
       return(brick(getWeatherFileName(year)))
     },
     
-    cacheWeather = function(years, apiKey) {
+    cacheWeather = function(years, fmiApiKey) {
       library(foreach)
-      foreach(year=years) %dopar% saveWeatherYear(year, study$getTemplateRaster(), apiKey=apiKey)
+      foreach(year=years) %dopar% saveWeatherYear(year, study$getTemplateRaster(), fmiApiKey=fmiApiKey)
       return(invisible(.self))
     },
     
@@ -143,14 +143,14 @@ FinlandCovariates <- setRefClass(
       return(study$context$getFileName(dir=study$context$resultDataDirectory, name=covariatesName, response=study$response, region=study$studyArea$region))
     },
     
-    saveCovariates = function(xyt, apiKey) {
+    saveCovariates = function(xyt, fmiApiKey) {
       library(raster)
       
       if (!c("id","year","x","y") %in% names(xyt))
         stop("Missing variables in the data.")
       years <- sort(unique(xyt$year))
       
-      cacheWeather(years=years, apiKey=apiKey)
+      cacheWeather(years=years, fmiApiKey=fmiApiKey)
       weatherCovariates <- getWeatherCovariates(xyt, aggregationFactor=4)
       
       cachePopulationDensity(years=years)
