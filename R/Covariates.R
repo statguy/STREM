@@ -111,7 +111,7 @@ FinlandCovariates <- setRefClass(
         year <- x$year[1]
         print(x)
         points <- SpatialPoints(x[,c("x","y")], proj4string=CRS(proj4string))
-      }
+      })
     },
     
     getWeatherCovariates = function(xyt) {
