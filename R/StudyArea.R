@@ -1,3 +1,6 @@
+library(sp)
+library(raster)
+
 StudyArea <- setRefClass(
   Class = "StudyArea",
   fields = list(

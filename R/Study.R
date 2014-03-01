@@ -6,8 +6,17 @@ Study <- setRefClass(
     studyArea = "StudyArea"
   ),
   methods = list(
-    getTemplateRaster = function() {
-      return(raster(extent(study$studyArea$habitat), nrows=1300, ncols=800, crs=study$studyArea$proj4string))
+    getTemplateRaster = function(height=600, ext=extent(studyArea$boundary)) {
+      library(sp)
+      library(raster)
+      
+      dimXY <- dim(studyArea$habitat)[1:2]
+      aspectRatio <- dimXY[2] / dimXY[1]
+      width <- height * aspectRatio
+      #ext <- extent(studyArea$habitat)
+      templateRaster <- raster(ext, nrows=height, ncols=width, crs=studyArea$proj4string)
+      
+      return(templateRaster)
     }
   )
 )

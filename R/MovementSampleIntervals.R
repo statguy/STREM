@@ -128,7 +128,7 @@ MovementSampleIntervals <- setRefClass(
     
     applyDistanceCorrection = function(surveyRoutes) {
       # TODO
-      intervals$distanceKmCorrected <<- estimatedParameters$C * intervals$intervalH ^ -estimatedParameters$alpha
+      #intervals$distanceKmCorrected <<- estimatedParameters$C * intervals$intervalH ^ -estimatedParameters$alpha
       return(invisible(.self))
     },
     

@@ -12,10 +12,10 @@ License: MIT
 Collate:
   static_global_functions.R
   PopulationSize.R
-  SpatioTemporalRaster.R
   Context.R
   StudyArea.R
   Study.R
+  SpatioTemporalRaster.R
   Covariates.R
   HabitatWeights.R
   Tracks.R
