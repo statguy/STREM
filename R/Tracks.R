@@ -250,6 +250,12 @@ FinlandWTCTracks <- setRefClass(
       return(list(gps=gps, fromProj="+init=epsg:4326"))
     },
     
+    getSampleIntervals = function() {
+      intervals <- FinlandMovementSampleIntervals$new(study=study)
+      intervals$getSampleIntervals(tracks=.self)
+      return(intervals)
+    },
+    
     thin = function(by) {
       message("Thinning thin = ", thinId)
       thinnedTracksDF <- .internal.thin(by=by)

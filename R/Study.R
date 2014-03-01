@@ -58,7 +58,7 @@ FinlandWTCStudy <- setRefClass(
       return(invisible(.self))
     },
     
-    preprocessResponse = function(response, fmiApiKey) {
+    preprocessResponse = function(response, cacheCovariates=TRUE, fmiApiKey) {
       library(CNPCluster)
       
       cnpClusterStartLocal()
@@ -70,7 +70,7 @@ FinlandWTCStudy <- setRefClass(
       habitatWeights <- CORINEHabitatWeights$new(study=.self)
 
       intersections$saveIntersections()
-      intersections$saveCovariates(intersections$intersections, fmiApiKey=fmiApiKey)
+      intersections$saveCovariates(intersections$intersections, cache=cacheCovariates, fmiApiKey=fmiApiKey)
       
       tracks$saveTracks()
       

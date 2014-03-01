@@ -17,10 +17,9 @@ MovementSampleIntervals <- setRefClass(
       library(plyr)
       
       tracksDF <- ld(tracks$tracks)
-      tracksDF$row <- 1:nrow(tracksDF)
-      date <- as.POSIXlt(tracksDF$date)
-      tracksDF$yday <- date$yday
-      tracksDF$year <- date$year
+      #tracksDF$row <- 1:nrow(tracksDF)
+      tracksDF <- data.frame(tracksDF, breakDownDate(tracksDF$date))
+
       intervals <<- ddply(tracksDF, .(burst, yday, year), function(x) {
         s <- sum(x$dt, na.rm=T) / 3600
         if (s < 23 | s > 25) return(NULL)
@@ -28,14 +27,19 @@ MovementSampleIntervals <- setRefClass(
         if (is.na(distKm) | distKm > 100) return(NULL)
         intervalMin <- 24 / nrow(x) * 60
         if (intervalMin > 24*60) return(NULL)
-        x$intervalSec <- intervalMin * 60
-        x$intervalMin <- intervalMin
-        x$intervalH <- intervalMin / 60
-        x$distanceKm <- distKm
-        if (any("thinid" %in% colnames(x)))
-          return(x[1, c("id","date","intervalH","intervalMin","intervalSec","distanceKm","thinid")])
-        else
-          return(x[1, c("id","date","intervalH","intervalMin","intervalSec","distanceKm")])
+        
+        y <- data.frame(id=x$id[1],
+                        date=x$date[1],
+                        year=x$year[1],
+                        intervalH=intervalMin / 60,
+                        intervalMin=intervalMin,
+                        intervalSec=intervalMin * 60,
+                        distanceKm=distKm,
+                        x=mean(x$x),
+                        y=mean(x$y))
+        if (any("thinId" %in% colnames(x))) y$thinId <- x$thinId[1]
+        
+        return(y)
       }, .parallel=TRUE)
       
       if (nrow(intervals) == 0) warning("Unable to determine sampling intervals.")
@@ -45,7 +49,7 @@ MovementSampleIntervals <- setRefClass(
     getThinnedTracksSampleIntervals = function(tracks) {
       tracksDF <- ld(tracks$tracks)
       date <- as.POSIXlt(tracksDF$date)
-      tracksDF$thinid <- as.factor(paste(date$year, date$yday, tracksDF$burst))
+      tracksDF$thinId <- as.factor(paste(date$year, date$yday, tracksDF$burst))
       tracks$tracks <- dl(tracksDF)      
       
       thinnedTracksCollection <- SimulatedTracksCollection$new(study=study)
@@ -78,7 +82,7 @@ MovementSampleIntervals <- setRefClass(
     
     fit = function() {
       library(lme4)
-      result <- lmer(log(distanceKm) ~ log(intervalH) + (1|id) + (1|thinid), data=intervals)    
+      result <- lmer(log(distanceKm) ~ log(intervalH) + (1|id) + (1|thinId), data=intervals)    
       estimatedParameters <<- list(C=exp(fixef(result)["(Intercept)"])[1], alpha=-fixef(result)["log(intervalH)"][1])
       predictions <<- data.frame(intervalH=seq(0, 24, by=0.1))
       predictions$distanceKm <<- exp(predict(object=result, newdata=predictions, REform=NA))
@@ -103,5 +107,16 @@ MovementSampleIntervals <- setRefClass(
     getMeanDistance = function() {
       return(mean(intervals$distanceKm))
     }
+  )
+)
+
+FinlandMovementSampleIntervals <- setRefClass(
+  Class = "FinlandMovementSamplingIntervals",
+  contains = c("MovementSampleIntervals", "FinlandCovariates"),
+  methods = list(
+    initialize = function(...) {
+      callSuper(covariatesName="FinlandMovementSampleIntervalsCovariates", ...)
+      return(invisible(.self))
+    }  
   )
 )

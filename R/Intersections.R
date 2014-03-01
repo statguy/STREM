@@ -49,10 +49,6 @@ SimulatedIntersections <- setRefClass(
       return(invisible(.self))
     },
     
-    newInstance = function() {
-      callSuper()
-    },
-    
     findIntersections = function(tracks, surveyRoutes, ...) {
       tracksSP <- tracks$getSpatialLines()      
       findIntersectionsMatrix(tracksSP, surveyRoutes$surveyRoutes, ...)      
@@ -168,7 +164,7 @@ FinlandWTCIntersections <- setRefClass(
   fields = list(
   ),
   methods = list(
-    newInstance = function(...) {
+    initialize = function(...) {
       callSuper(covariatesName="FinlandWTCIntersectionsCovariates", ...)
       return(invisible(.self))
     },

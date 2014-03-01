@@ -2,7 +2,6 @@ FinlandCovariates <- setRefClass(
   Class = "FinlandCovariates",
   fields = list(
     study = "Study",
-    populationDensityCache = "RasterStack",
     covariatesName = "character",
     covariates = "data.frame"
   ),
@@ -12,22 +11,42 @@ FinlandCovariates <- setRefClass(
       return(invisible(.self))
     },
     
-    cachePopulationDensity = function(years, aggregationFactor=1) {
+    # Note: Currently uses the same raster file for all inheriting classes.
+    # Can be changed by adding covariatesName field in the file name.
+    getPopulationDensityFileName = function(year) {
+      if (inherits(study, "uninitializedField"))
+        stop("Provide study parameters.")
+      study$context$getFileName(dir=study$context$scratchDirectory, name="PopulationDensityRaster", response=year, region=study$studyArea$region, ext="")
+    },
+    
+    savePopulationDensityYear = function(year, aggregationFactor=1) {
       library(ST)
       library(raster)
       
+      x <- getStatFiPopulationDensityRaster(year=year, aggregationFactor=aggregationFactor) # The original grid is 1 x 1 km^2
+      names(x) <- paste("year", year, sep="")
+      brick(stack(x), filename=getPopulationDensityFileName(year), overwrite=TRUE)
+      
+      return(invisible(.self))
+    },
+    
+    cachePopulationDensity = function(years, aggregationFactor=1) {      
       for (year in years) {
         message("Caching year ", year, "...")
-        populationDensity <- getStatFiPopulationDensityRaster(year=year, aggregationFactor=aggregationFactor) # The original grid is 1 x 1 km^2
-        names(populationDensity) <- paste("year", year, sep="")
-        populationDensityCache <<- if (inherits(populationDensityCache, "uninitializedField")) stack(populationDensity)
-        else stack(populationDensityCache, populationDensity)
+        savePopulationDensityYear(year=year, aggregationFactor=aggregationFactor)
       }
+      return(invisible(.self))
+    },
+    
+    loadPopulationDensityYear = function(year) {
+      library(raster)
+      return(brick(getPopulationDensityFileName(year)))
     },
     
     getPopulationDensityCovariates = function(xyt) {
       library(plyr)
       library(raster)
+      library(ST)
 
       if (!all(c("id", "year") %in% names(xyt)))
         stop("Missing variables in the data.")
@@ -35,20 +54,19 @@ FinlandCovariates <- setRefClass(
       populationDensity <- ddply(raster::as.data.frame(xyt), .(year), function(x, proj4string) {
         year <- x$year[1]
         message("Processing year ", year, "...")
-        xy <- SpatialPoints(cbind(x$x, x$y), proj4string=CRS(proj4string))
         
-        index <- paste("year", year, sep="")
-        if (!index %in% names(populationDensityCache))
-          stop("No corresponding raster for year ", year)
-
-        populationDensityRaster <- populationDensityCache[[index]]
+        populationDensityRaster <- loadPopulationDensityYear(year=year)
+        xy <- SpatialPoints(cbind(x$x, x$y), proj4string=CRS(proj4string))
         populationDensity <- getStatFiPopulationDensity(xy, populationDensityRaster)
+        
         return(data.frame(id=x$id, populationDensity=populationDensity))
       }, proj4string=proj4string(xyt))
       
       return(populationDensity)
     },
     
+    # Note: Currently uses the same raster file for all inheriting classes.
+    # Can be changed by adding covariatesName field in the file name.
     getWeatherFileName = function(year) {
       if (inherits(study, "uninitializedField"))
         stop("Provide study parameters.")
@@ -144,25 +162,22 @@ FinlandCovariates <- setRefClass(
       return(study$context$getFileName(dir=study$context$resultDataDirectory, name=covariatesName, response=study$response, region=study$studyArea$region))
     },
     
-    saveCovariates = function(xyt, fmiApiKey) {
+    saveCovariates = function(xyt, cache=FALSE, fmiApiKey) {
       library(raster)
       
       if (!all(c("id", "year") %in% names(xyt)))
         stop("Missing variables in the data.")
       years <- sort(unique(xyt$year))
       
-      cacheWeather(years=years, fmiApiKey=fmiApiKey)
+      if (cache) cacheWeather(years=years, fmiApiKey=fmiApiKey)
       weatherCovariates <- getWeatherCovariates(xyt)
       
-      cachePopulationDensity(years=years, aggregationFactor=4)
+      if (cache) cachePopulationDensity(years=years, aggregationFactor=4)
       populationDensityCovariates <- getPopulationDensityCovariates(xyt)
       
       covariates <<- merge(populationDensityCovariates, weatherCovariates, sort=FALSE)
       save(covariates, file=getCovariatesFileName(covariatesName))
-      
-      populationDensityCache <<- stack()
-      gc()
-      
+
       return(invisible(.self))
     },
     
