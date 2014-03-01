@@ -81,8 +81,8 @@ FinlandWTCStudy <- setRefClass(
       cnpClusterStopLocal()
     },
     
-    preprocess = function(fmiApiKey) {
-      preprocessResponse(response="canis.lupus", cacheCovariates=TRUE, fmiApiKey=fmiApiKey)
+    preprocess = function(cacheCovariates=TRUE, fmiApiKey) {
+      preprocessResponse(response="canis.lupus", cacheCovariates=cacheCovariates, fmiApiKey=fmiApiKey)
       preprocessResponse(response="lynx.lynx", cacheCovariates=FALSE, fmiApiKey=fmiApiKey)
       preprocessResponse(response="rangifer.tarandus.fennicus", cacheCovariates=FALSE, fmiApiKey=fmiApiKey)
       return(invisible(.self))

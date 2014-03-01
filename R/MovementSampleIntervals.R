@@ -28,7 +28,7 @@ MovementSampleIntervals <- setRefClass(
         intervalMin <- 24 / nrow(x) * 60
         if (intervalMin > 24*60) return(NULL)
         
-        y <- data.frame(id=x$id[1],
+        y <- data.frame(id=paste(x$burst[1], x$year[1], x$yday[1]),
                         date=x$date[1],
                         year=x$year[1],
                         intervalH=intervalMin / 60,
@@ -80,12 +80,29 @@ MovementSampleIntervals <- setRefClass(
       return(invisible(thinnedTracksCollection))
     },
     
+    getDailyDistanceData = function() {
+      if (nrow(intervals) == 0)
+        stop("Run get getSampleIntervals() first.")
+      return(intervals)      
+      
+      intervalsSP <- intervals
+      coordinates(intervalsSP) <- ~ x+y
+      proj4string(intervalsSP) <- study$studyArea$proj4string
+      saveCovariates(intervalsSP, save=FALSE)
+      dailyDistanceData <- merge(intervals, covariates, sort=F)
+      
+    },
+    
     fit = function() {
-      library(lme4)
-      result <- lmer(log(distanceKm) ~ log(intervalH) + (1|id) + (1|thinId), data=intervals)    
+      library(lme4)  
+      
+      dailyDistanceData <- getDailyDistanceData()
+      
+      result <- lmer(log(distanceKm) ~ log(intervalH) + (1|id) + (1|thinId), data=dailyDistanceData)    
       estimatedParameters <<- list(C=exp(fixef(result)["(Intercept)"])[1], alpha=-fixef(result)["log(intervalH)"][1])
       predictions <<- data.frame(intervalH=seq(0, 24, by=0.1))
       predictions$distanceKm <<- exp(predict(object=result, newdata=predictions, REform=NA))
+      
       return(invisible(result))
     },    
     
@@ -117,6 +134,38 @@ FinlandMovementSampleIntervals <- setRefClass(
     initialize = function(...) {
       callSuper(covariatesName="FinlandMovementSampleIntervalsCovariates", ...)
       return(invisible(.self))
-    }  
+    },
+    
+    getDailyDistanceData = function() {
+      if (nrow(intervals) == 0)
+        stop("Run get getSampleIntervals() first.")     
+      if (nrow(covariates) == 0) {
+        p <- intervals
+        coordinates(p) <- ~ x+y
+        proj4string(p) <- study$studyArea$proj4string
+        saveCovariates(p, save=FALSE)
+      }
+      
+      intervalsSP <- intervals
+      coordinates(intervalsSP) <- ~ x+y
+      proj4string(intervalsSP) <- study$studyArea$proj4string
+      saveCovariates(intervalsSP, save=FALSE)
+      dailyDistanceData <- merge(intervals, covariates, sort=F)
+      
+      return(dailyDistanceData)
+    },
+    
+    fit = function() {
+      library(lme4)  
+      
+      dailyDistanceData <- getDailyDistanceData()
+      
+      result <- lmer(log(distanceKm) ~ log(intervalH) + (1|id) + (1|thinId), data=dailyDistanceData)    
+      estimatedParameters <<- list(C=exp(fixef(result)["(Intercept)"])[1], alpha=-fixef(result)["log(intervalH)"][1])
+      predictions <<- data.frame(intervalH=seq(0, 24, by=0.1))
+      predictions$distanceKm <<- exp(predict(object=result, newdata=predictions, REform=NA))
+      
+      return(invisible(result))
+    }
   )
 )
