@@ -106,6 +106,7 @@ FinlandCovariates <- setRefClass(
     
     test = function(xyt) {
       x <- data.frame(as.data.frame(xyt), breakDownDate(xyt$date))
+      print(head(x))
       SpatialPoints(x[,c("x","y")], proj4string=CRS(proj4string(xyt)))
       weatherCovariates <- ddply(x, .(year), function(x, proj4string) {
         year <- x$year[1]
