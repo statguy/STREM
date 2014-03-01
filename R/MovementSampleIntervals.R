@@ -1,5 +1,11 @@
 setOldClass("lmerMod")
 
+MovementSampleIntervalsPredict <- function(estimationResult, predictionData) {
+  library(lme4)
+  distanceKm <- exp(predict(object=estimationResult, newdata=predictionData, REform=NA))
+  return(distanceKm)
+}
+
 MovementSampleIntervals <- setRefClass(
   Class = "MovementSampleIntervals",
   fields = list(
@@ -105,10 +111,9 @@ MovementSampleIntervals <- setRefClass(
       
       return(invisible(.self))
     },
-    
+        
     predict = function(predictionData=data.frame(intervalH=seq(0, 24, by=0.1))) {
-      library(lme4)
-      distanceKm <- exp(predict(object=result, newdata=predictionData, REform=NA))
+      distanceKm <- MovementSampleIntervalsPredict(estimationResult=estimationResult, predictionData=predictionData)
       return(invisible(distanceKm))
     },
     
