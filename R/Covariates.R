@@ -33,7 +33,7 @@ FinlandCovariates <- setRefClass(
       if (!all(c("id", "year") %in% names(xyt)))
         stop("Missing variables in the data.")
       
-      populationDensity <- ddply(as.data.frame(xyt), .(year), function(x, proj4string) {
+      populationDensity <- ddply(raster::as.data.frame(xyt), .(year), function(x, proj4string) {
         year <- x$year[1]
         message("Processing year ", year, "...")
         xy <- SpatialPoints(cbind(x$x, x$y), proj4string=CRS(proj4string))
@@ -104,17 +104,6 @@ FinlandCovariates <- setRefClass(
       return(invisible(.self))
     },
     
-    test = function(xyt) {
-      x <- data.frame(as.data.frame(xyt), breakDownDate(xyt$date))
-      print(head(x))
-      SpatialPoints(x[,c("x","y")], proj4string=CRS(proj4string(xyt)))
-      weatherCovariates <- ddply(x, .(year), function(x, proj4string) {
-        year <- x$year[1]
-        print(x)
-        points <- SpatialPoints(x[,c("x","y")], proj4string=CRS(proj4string))
-      })
-    },
-    
     getWeatherCovariates = function(xyt) {
       library(raster)
       library(plyr)
@@ -123,7 +112,7 @@ FinlandCovariates <- setRefClass(
       if (!all(c("id", "year") %in% names(xyt)))
         stop("Missing variables in the data.")
       
-      x <- data.frame(as.data.frame(xyt), breakDownDate(xyt$date))
+      x <- data.frame(raster::as.data.frame(xyt), breakDownDate(xyt$date))
       weatherCovariates <- ddply(x, .(year), function(x, proj4string) {
         year <- x$year[1]
         message("Processing year ", year, "...")        
