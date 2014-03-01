@@ -77,7 +77,7 @@ CORINEHabitatWeights <- setRefClass(
         )
       )
       
-      habitatTypes <<- unique(weights$type[2:lastIndex])
+      habitatTypes <<- unique(weights$type[weights$type != 0])
       
       return(invisible(.self))
     },
