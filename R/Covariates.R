@@ -28,7 +28,6 @@ FinlandCovariates <- setRefClass(
     getPopulationDensityCovariates = function(xyt) {
       library(plyr)
       library(raster)
-      library(ST)
 
       if (!all(c("id", "year") %in% names(xyt)))
         stop("Missing variables in the data.")
@@ -45,7 +44,7 @@ FinlandCovariates <- setRefClass(
         populationDensityRaster <- populationDensityCache[[index]]
         populationDensity <- getStatFiPopulationDensity(xy, populationDensityRaster)
         return(data.frame(id=x$id, populationDensity=populationDensity))
-      }, proj4string=proj4string(xyt), .parallel=TRUE)
+      }, proj4string=proj4string(xyt))
       
       return(populationDensity)
     },
@@ -115,7 +114,7 @@ FinlandCovariates <- setRefClass(
       x <- data.frame(raster::as.data.frame(xyt), breakDownDate(xyt$date))
       weatherCovariates <- ddply(x, .(year), function(x, proj4string) {
         year <- x$year[1]
-        message("Processing year ", year, "...")        
+        message("Processing year ", year, "...")     
         weather <- loadWeatherYear(year=year)
         
         points <- SpatialPoints(x[,c("x","y")], proj4string=CRS(proj4string))
