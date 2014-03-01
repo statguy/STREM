@@ -104,9 +104,20 @@ FinlandCovariates <- setRefClass(
       return(invisible(.self))
     },
     
+    test = function(xyt) {
+      x <- data.frame(as.data.frame(xyt), breakDownDate(xyt$date))
+      SpatialPoints(x[,c("x","y")], proj4string=CRS(proj4string(xyt)))
+      weatherCovariates <- ddply(x, .(year), function(x, proj4string) {
+        year <- x$year[1]
+        print(x)
+        points <- SpatialPoints(x[,c("x","y")], proj4string=CRS(proj4string))
+      }
+    },
+    
     getWeatherCovariates = function(xyt) {
       library(raster)
       library(plyr)
+      library(sp)
       
       if (!all(c("id", "year") %in% names(xyt)))
         stop("Missing variables in the data.")
@@ -133,7 +144,7 @@ FinlandCovariates <- setRefClass(
         y$tday <- getColumn("tday")
         
         return(y)
-      }, proj4string=proj4string(xyt), .parallel=TRUE, .inform=T)
+      }, proj4string=proj4string(xyt), .parallel=TRUE)
       
       return(weatherCovariates)
     },
