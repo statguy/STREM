@@ -169,12 +169,12 @@ FinlandCovariates <- setRefClass(
         stop("Missing variables in the data.")
       years <- sort(unique(xyt$year))
       
-      if (cache) cacheWeather(years=years, fmiApiKey=fmiApiKey)
-      weatherCovariates <- getWeatherCovariates(xyt)
-      
       if (cache) cachePopulationDensity(years=years, aggregationFactor=4)
       populationDensityCovariates <- getPopulationDensityCovariates(xyt)
       
+      if (cache) cacheWeather(years=years, fmiApiKey=fmiApiKey)
+      weatherCovariates <- getWeatherCovariates(xyt)
+            
       covariates <<- merge(populationDensityCovariates, weatherCovariates, sort=FALSE)
       save(covariates, file=getCovariatesFileName(covariatesName))
 

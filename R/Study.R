@@ -82,9 +82,9 @@ FinlandWTCStudy <- setRefClass(
     },
     
     preprocess = function(fmiApiKey) {
-      preprocessResponse("canis.lupus", fmiApiKey)
-      preprocessResponse("lynx.lynx", fmiApiKey)
-      preprocessResponse("rangifer.tarandus.fennicus", fmiApiKey)
+      preprocessResponse(response="canis.lupus", fmiApiKey=fmiApiKey)
+      preprocessResponse(response="lynx.lynx", fmiApiKey=fmiApiKey)
+      preprocessResponse(response="rangifer.tarandus.fennicus", fmiApiKey=fmiApiKey)
       return(invisible(.self))
     },
     
