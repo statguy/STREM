@@ -1,10 +1,11 @@
+setOldClass("lmerMod")
+
 MovementSampleIntervals <- setRefClass(
   Class = "MovementSampleIntervals",
   fields = list(
     study = "Study",
     intervals = "data.frame",
-    predictions = "data.frame",
-    estimatedParameters = "list"
+    estimationResult = "lmerMod"
   ),
   methods = list(
     initialize = function(...) {
@@ -29,6 +30,7 @@ MovementSampleIntervals <- setRefClass(
         if (intervalMin > 24*60) return(NULL)
         
         y <- data.frame(id=paste(x$burst[1], x$year[1], x$yday[1]),
+                        individualId = x$id[1],
                         date=x$date[1],
                         year=x$year[1],
                         intervalH=intervalMin / 60,
@@ -91,20 +93,24 @@ MovementSampleIntervals <- setRefClass(
       saveCovariates(intervalsSP, save=FALSE)
       dailyDistanceData <- merge(intervals, covariates, sort=F)
       
+      return(dailyDistanceData)
     },
     
-    fit = function() {
+    fit = function(model=log(distanceKm) ~ log(intervalH) + (1|individualId) + (1|thinId)) {
       library(lme4)  
       
       dailyDistanceData <- getDailyDistanceData()
+      estimationResult <<- lmer(model, data=dailyDistanceData)    
+      #estimationResult <<- list(C=exp(fixef(result)["(Intercept)"])[1], alpha=-fixef(result)["log(intervalH)"][1])
       
-      result <- lmer(log(distanceKm) ~ log(intervalH) + (1|id) + (1|thinId), data=dailyDistanceData)    
-      estimatedParameters <<- list(C=exp(fixef(result)["(Intercept)"])[1], alpha=-fixef(result)["log(intervalH)"][1])
-      predictions <<- data.frame(intervalH=seq(0, 24, by=0.1))
-      predictions$distanceKm <<- exp(predict(object=result, newdata=predictions, REform=NA))
-      
-      return(invisible(result))
-    },    
+      return(invisible(.self))
+    },
+    
+    predict = function(predictionData=data.frame(intervalH=seq(0, 24, by=0.1))) {
+      library(lme4)
+      distanceKm <- exp(predict(object=result, newdata=predictionData, REform=NA))
+      return(invisible(distanceKm))
+    },
     
     plotIntervalDistance = function() {
       library(ggplot2)
@@ -155,17 +161,8 @@ FinlandMovementSampleIntervals <- setRefClass(
       return(dailyDistanceData)
     },
     
-    fit = function() {
-      library(lme4)  
-      
-      dailyDistanceData <- getDailyDistanceData()
-      
-      result <- lmer(log(distanceKm) ~ log(intervalH) + (1|id) + (1|thinId), data=dailyDistanceData)    
-      estimatedParameters <<- list(C=exp(fixef(result)["(Intercept)"])[1], alpha=-fixef(result)["log(intervalH)"][1])
-      predictions <<- data.frame(intervalH=seq(0, 24, by=0.1))
-      predictions$distanceKm <<- exp(predict(object=result, newdata=predictions, REform=NA))
-      
-      return(invisible(result))
+    fit = function(model=log(distanceKm) ~ populationDensity + rrday + snow + tday + log(intervalH) + (1|individualId) + (1|thinId)) {
+      return(invisible(callSuper(model=model)))
     }
   )
 )
