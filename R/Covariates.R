@@ -57,7 +57,7 @@ FinlandCovariates <- setRefClass(
         
         populationDensityRaster <- loadPopulationDensityYear(year=year)
         xy <- SpatialPoints(cbind(x$x, x$y), proj4string=CRS(proj4string))
-        populationDensity <- getStatFiPopulationDensity(xy, populationDensityRaster)
+        populationDensity <- as.vector(getStatFiPopulationDensity(xy, populationDensityRaster))
         
         return(data.frame(id=x$id, populationDensity=populationDensity))
       }, proj4string=proj4string(xyt))
@@ -162,7 +162,7 @@ FinlandCovariates <- setRefClass(
       return(study$context$getFileName(dir=study$context$resultDataDirectory, name=covariatesName, response=study$response, region=study$studyArea$region))
     },
     
-    saveCovariates = function(xyt, cache=FALSE, fmiApiKey) {
+    saveCovariates = function(xyt, cache=FALSE, fmiApiKey, save=TRUE) {
       library(raster)
       
       if (!all(c("id", "year") %in% names(xyt)))
@@ -176,7 +176,7 @@ FinlandCovariates <- setRefClass(
       weatherCovariates <- getWeatherCovariates(xyt)
             
       covariates <<- merge(populationDensityCovariates, weatherCovariates, sort=FALSE)
-      save(covariates, file=getCovariatesFileName(covariatesName))
+      if (save) save(covariates, file=getCovariatesFileName(covariatesName))
 
       return(invisible(.self))
     },
