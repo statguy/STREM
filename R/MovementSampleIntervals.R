@@ -1,4 +1,4 @@
-setOldClass("lmerMod")
+#setOldClass("lmerMod")
 
 MovementSampleIntervalsPredict <- function(estimationResult, predictionData) {
   library(lme4)
@@ -11,7 +11,7 @@ MovementSampleIntervals <- setRefClass(
   fields = list(
     study = "Study",
     intervals = "data.frame",
-    estimationResult = "lmerMod"
+    estimationResult = "ANY"
   ),
   methods = list(
     initialize = function(...) {
@@ -72,11 +72,13 @@ MovementSampleIntervals <- setRefClass(
         if (is.null(thinnedTracks)) break
         thinnedIntervals <- thinnedTracks$getSampleIntervals()
         
-        retainIndex <- thinnedIntervals$intervals$intervalSec <= 60*60*12
-        retainIdBurst <- unique(thinnedIntervals$intervals[retainIndex,c("id","burst")])
+        retainIndex <- thinnedIntervals$intervals$intervalH <= 12
         if (sum(retainIndex) == 0) break
-        thinnedTracks$tracks <- thinnedTracks$tracks[id = retainIdBurst$id][burst = retainIdBurst$burst]
         thinnedIntervals$intervals <- thinnedIntervals$intervals[retainIndex,]
+        retainBurst <- unique(thinnedIntervals$intervals[retainIndex, "burst"])
+        thinnedTracks$tracks <- thinnedTracks$tracks[burst = retainBurst]
+        
+        #thinnedTracks$tracks <- thinnedTracks$tracks[id = retainIdBurst$id][burst = retainIdBurst$burst]
         
         intervalsList[[i]] <- thinnedIntervals         
         thinnedTracksCollection$addTracks(thinnedTracks)
@@ -139,7 +141,7 @@ MovementSampleIntervals <- setRefClass(
 )
 
 FinlandMovementSampleIntervals <- setRefClass(
-  Class = "FinlandMovementSamplingIntervals",
+  Class = "FinlandMovementSampleIntervals",
   contains = c("MovementSampleIntervals", "FinlandCovariates"),
   methods = list(
     initialize = function(...) {

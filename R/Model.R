@@ -136,8 +136,8 @@ SmoothModel <- setRefClass(
     },
 
     # TODO: fix this if needed
-    collectEstimates = function(quick=FALSE) {
-      if (quick) return(collectEstimatesQuick())
+    collectEstimates = function(weights=1, quick=FALSE) {
+      if (quick) return(collectEstimatesQuick(weights=weights))
       
       library(INLA)
       library(plyr)
@@ -178,13 +178,13 @@ SmoothModel <- setRefClass(
       return(x)
     },
 
-    collectEstimatesQuick = function() {
+    collectEstimatesQuick = function(weights=1) {
       library(INLA)
       
       indexObserved <- inla.stack.index(dataStack, "observed")$data
-      data$eta <<- result$summary.linear.predictor$mean[indexObserved]
-      data$fittedMean <<- result$summary.fitted.values$mean[indexObserved]
-      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved]
+      data$eta <<- result$summary.linear.predictor$mean[indexObserved] - log(weights)
+      data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] / weights
+      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] / weights^2
       
       st <- result$summary.random$st
       node <<- list()

@@ -99,10 +99,7 @@ Tracks <- setRefClass(
       library(plyr)
       
       tracksDF <- ld(tracks)
-      d <- as.POSIXlt(tracksDF$date)
-      tracksDF$yday <- d$yday
-      tracksDF$year <- d$year
-      
+      tracksDF <- data.frame(tracksDF, breakDownDate(tracksDF$date))
       oldDt <- mean(tracksDF$dt, na.rm=T)
       
       tracksDFThinned <- ddply(tracksDF, .variables=.(id, burst, year, yday), .fun=function(x, by) {

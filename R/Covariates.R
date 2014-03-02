@@ -159,16 +159,19 @@ FinlandCovariates <- setRefClass(
     getCovariatesFileName = function(name) {
       if (inherits(study, "uninitializedField"))
         stop("Provide study parameters.")
-      return(study$context$getFileName(dir=study$context$resultDataDirectory, name=covariatesName, response=study$response, region=study$studyArea$region))
+      return(study$context$getFileName(dir=study$context$processedDataDirectory, name=covariatesName, response=study$response, region=study$studyArea$region))
     },
     
     saveCovariates = function(xyt, cache=FALSE, fmiApiKey, save=TRUE) {
       library(raster)
       
+      if (!inherits(xyt, "SpatialPoints"))
+        stop("xyt must be a class of SpatialPointsDataFrame")
+      
       if (!all(c("id", "year") %in% names(xyt)))
         stop("Missing variables in the data.")
-      years <- sort(unique(xyt$year))
       
+      years <- sort(unique(xyt$year))
       if (cache) cachePopulationDensity(years=years, aggregationFactor=4)
       populationDensityCovariates <- getPopulationDensityCovariates(xyt)
       
