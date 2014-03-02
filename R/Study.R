@@ -6,15 +6,18 @@ Study <- setRefClass(
     studyArea = "StudyArea"
   ),
   methods = list(
-    getTemplateRaster = function(height=600, ext=extent(studyArea$boundary)) {
-      library(sp)
-      library(raster)
+    getTemplateRaster = function() {#height=600, ext=extent(studyArea$habitat)) {
+      #library(sp)
+      #library(raster)
       
-      dimXY <- dim(studyArea$habitat)[1:2]
-      aspectRatio <- dimXY[2] / dimXY[1]
-      width <- height * aspectRatio
-      #ext <- extent(studyArea$habitat)
-      templateRaster <- raster(ext, nrows=height, ncols=width, crs=studyArea$proj4string)
+      #dimXY <- dim(studyArea$habitat)[1:2]
+      #aspectRatio <- dimXY[2] / dimXY[1]
+      #width <- height * aspectRatio
+      #templateRaster <- raster(ext, nrows=height, ncols=width, crs=studyArea$proj4string)
+      
+      height <- dim(studyArea$habitat)[1] / 100 # Determine scaling automatically
+      width <- dim(studyArea$habitat)[2] / 100
+      templateRaster <- raster(ext(studyArea$habitat), nrows=height, ncols=width, crs=studyArea$proj4string)
       
       return(templateRaster)
     }
@@ -125,18 +128,34 @@ FinlandWTCStudy <- setRefClass(
       
       intersections <- loadIntersections()
       intersections$intersections$distance <- 1
+      
+      # Remove duration > 1
+      b <- nrow(intersections$getData())
+      intersections$intersections <- subset(intersections$intersections, duration == 1)
+      a <- nrow(intersections$getData())
+      message("Removed ", round((1-a/b)*100), "% of intersections with duration > 1.")
+      
       model <- SmoothModel$new(study=.self)
       model$setup(intersections=intersections, meshParams=meshParams)
       if (!test) model$estimate(save=T, fileName=model$getModelFileName())
+      
       return(model)
     },
     
     loadEstimates = function() {
-      return(SmoothModel(study=.self)$loadEstimates(fileName=model$getModelFileName()))
+      return(SmoothModel(study=.self)$loadEstimates())
     },
     
     postprocess = function() {
-      # TODO
+      estimates <- loadEstimates()
+      estimates$collectEstimates(quick=T)
+      # TODO: distance
+      #estimates$collectEstimates(weights=distance, quick=T)
+      
+      habitatWeights <- loadHabitatWeightsRaster()
+      populationDensity <- estimates$getPopulationDensity(templateRaster=habitatWeights, getSD=FALSE)
+      populationSize <- populationDensity$mean$integrate(weights=habitatWeights)
+      return(populationSize)
     }
   )
 )

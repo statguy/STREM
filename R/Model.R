@@ -21,7 +21,8 @@ Model <- setRefClass(
     dataStack = "inla.data.stack",
     countOffset = "numeric",
     result = "inla",
-    node = "list"
+    node = "list",
+    modelName = "character"
   ),
   methods = list(
     initialize = function(...) {
@@ -29,23 +30,24 @@ Model <- setRefClass(
       return(invisible(.self))
     },
     
-    #getResultFileName = function() {
-    #  if (inherits(study, "undefinedField") | length(name) == 0)
-    #    stop("Provide study and name parameters.")
-    #  return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Result", response=study$response, region=study$studyArea$region, tag=name))
-    #},
+    getEstimatesFileName = function() {
+      if (inherits(study, "undefinedField") | length(modelName) == 0)
+        stop("Provide study and modelName parameters.")
+      return(study$context$getFileName(study$context$resultDataDirectory, name=modelName, response=study$response, region=study$studyArea$region))
+    },
     
-    saveEstimates = function(fileName) {
-      #fileName <- getItemFileName(directory, name)
-      #fileName <- getResultFileName()
+    saveEstimates = function(fileName=getEstimatesFileName()) {
       message("Saving result to ", fileName, "...")
       save(locations, data, model, coordsScale, years, mesh, spde, index, A, dataStack, countOffset, result, file=fileName)
     },
     
-    loadEstimates = function(fileName) {
+    loadEstimates = function(fileName=getEstimatesFileName()) {
       load(fileName, envir=as.environment(.self))
-      #load(getResultFileName(), envir=as.environment(.self))
       return(invisible(.self))
+    },
+    
+    estimate = function(save=FALSE, fileName=getEstimatesFileName()) {
+      stop("Unimplemented method.")
     }
   )
 )
@@ -58,7 +60,7 @@ SmoothModel <- setRefClass(
   ),
   methods = list(
     initialize = function(...) {
-      callSuper(...)
+      callSuper(modelName="SmoothModel", ...)
       return(invisible(.self))
     },
     
@@ -113,12 +115,8 @@ SmoothModel <- setRefClass(
       
       return(invisible(.self))
     },
-
-    getModelFileName = function() {
-      return(study$context$getFileName(study$context$resultDataDirectory, name="Model", response=study$response, region=study$studyArea$region))
-    },
     
-    estimate = function(save=FALSE, fileName) {
+    estimate = function(save=FALSE, fileName=getEstimatesFileName()) {
       library(INLA)
       
       result <<- inla(model,
@@ -188,6 +186,7 @@ SmoothModel <- setRefClass(
       data$fittedMean <<- result$summary.fitted.values$mean[indexObserved]
       data$fittedSD <<- result$summary.fitted.values$sd[indexObserved]
       
+      st <- result$summary.random$st
       node <<- list()
       node$mean <<- matrix(data=st$mean, nrow=length(years), ncol=mesh$n)
       node$sd <<- matrix(data=st$sd, nrow=length(years), ncol=mesh$n)
@@ -196,7 +195,7 @@ SmoothModel <- setRefClass(
       logKappa <- spdeResult$summary.log.kappa
       logTau <- spdeResult$summary.log.tau
       sd <- sqrt(exp(spdeResult$summary.log.variance.nominal))
-      range <- exp(spdeResult$summary.log.range.nominal) * coordsScale
+      range <- exp(spdeResult$summary.log.range.nominal) / coordsScale
       x <- rbind(logKappa=logKappa,
                  logTau=logTau,
                  sd=sd,
@@ -210,13 +209,17 @@ SmoothModel <- setRefClass(
       library(INLA)
       library(raster)
       
-      projector <- inla.mesh.projector(mesh,
+      mesh.scaled <- mesh
+      mesh.scaled$loc <- mesh.scaled$loc / coordsScale
+      projector <- inla.mesh.projector(mesh.scaled,
                                        dims=c(ncol(projectionRaster), nrow(projectionRaster)),
                                        xlim=c(xmin(projectionRaster), xmax(projectionRaster)),
                                        ylim=c(ymin(projectionRaster), ymax(projectionRaster)))
+      #projectedEstimates <- inla.mesh.project(projector, node$mean[1,])
       projectedEstimates <- inla.mesh.project(projector, estimates)
-      area <- prod(res(projectionRaster))
-      values(projectionRaster) <- t(projectedEstimates[,ncol(projectedEstimates):1]) * area
+      
+      cellArea <- prod(res(projectionRaster))
+      values(projectionRaster) <- t(projectedEstimates[,ncol(projectedEstimates):1]) * cellArea
       
       if (!missing(maskPolygon) & !is.null(maskPolygon))
         projectionRaster <- mask(projectionRaster, maskPolygon)
@@ -224,7 +227,7 @@ SmoothModel <- setRefClass(
       return(invisible(projectionRaster))
     },
     
-    getPopulationDensity = function(projectionRaster, maskPolygon=study$studyArea$boundary, getSD=TRUE) {
+    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
       if (length(node) == 0)
         stop("Did you forgot to run collectEstimates() first?")
       
@@ -232,17 +235,22 @@ SmoothModel <- setRefClass(
 
       meanPopulationDensityRaster <- SpatioTemporalRaster$new()
       sdPopulationDensityRaster <- SpatioTemporalRaster$new()      
+
+      xyzMean <- data.frame(Year=data$year, locations / coordsScale, z=data$fittedMean)
+      xyzSD <- data.frame(Year=data$year, locations / coordsScale, z=data$fittedSD)
+      cellArea <- prod(res(projectionRaster)) # m^2
       
-      for (yearIndex in 1:nrow(node$mean)) {
-        year <- as.character(yearIndex + years[1] - 1)
+      for (year in sort(unique(xyzMean$Year))) {
         message("Processing year ", year, "...")
         
-        meanRaster <- project(estimates=node$mean[yearIndex,], projectionRaster=projectionRaster, maskPolygon=maskPolygon)
+        #meanRaster <- project(estimates=node$mean[yearIndex,], projectionRaster=templateRaster, maskPolygon=maskPolygon)
+        meanRaster <- interpolateRaster(subset(xyzMean, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea
         names(meanRaster) <- year
         meanPopulationDensityRaster$addLayer(meanRaster)
         
         if (getSD) {
-          sdRaster <- project(estimates=node$sd[yearIndex,], projectionRaster=projectionRaster, maskPolygon=maskPolygon)
+          #sdRaster <- project(estimates=node$sd[yearIndex,], projectionRaster=templateRaster, maskPolygon=maskPolygon)
+          sdRaster <- interpolateRaster(subset(xyzSD, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea
           names(sdRaster) <- year
           sdPopulationDensityRaster$addLayer(sdRaster)
         }
