@@ -7,6 +7,7 @@ study <- FinlandWTCStudy$new(context=context, response="lynx.lynx")
 model <- study$estimate(quick=TRUE)
 surveyRoutes <- study$loadSurveyRoutes()
 model$plotMesh(surveyRoutes)
+model <- study$estimate(test=TRUE)
 model <- study$estimate(quick=TRUE)
 
 # For full estimation
