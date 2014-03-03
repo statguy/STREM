@@ -70,7 +70,7 @@ FinlandWTCStudy <- setRefClass(
       return(invisible(.self))
     },
     
-    preprocessResponse = function(response, maxDuration=1, cacheCovariates=TRUE, fmiApiKey) {
+    preprocessResponse = function(response, maxDuration=1, cacheCovariates=TRUE, findHabitatWeights=TRUE, fmiApiKey) {
       library(CNPCluster)
       
       cnpClusterStartLocal()
@@ -86,9 +86,11 @@ FinlandWTCStudy <- setRefClass(
       
       tracks$saveTracks()
       
-      habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=T)
-      habitatWeights <- CORINEHabitatWeights$new(study=.self)$setHabitatSelectionWeights(habitatSelection)
-      habitatWeights$getWeightsRaster(save=TRUE)
+      if (findHabitatWeights) {
+        habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=T)
+        habitatWeights <- CORINEHabitatWeights$new(study=.self)$setHabitatSelectionWeights(habitatSelection)
+        habitatWeights$getWeightsRaster(save=TRUE)
+      }
       
       cnpClusterStopLocal()
     },
