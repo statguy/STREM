@@ -21,10 +21,11 @@ HabitatWeights <- setRefClass(
       study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeightsRaster", response=study$response, region=study$studyArea$region, ext="")
     },
 
-    getWeightsRaster = function(aggregationScale=100, save=FALSE) { # TODO: determine aggregation scale automatically
+    getWeightsRaster = function(save=FALSE) { # TODO: determine aggregation scale automatically
+      if (save) stop("Saving unsupported.")
       library(raster)
-      weightsRaster <- raster(study$studyArea$habitat)
-      dim(weightsRaster) <- dim(weightsRaster) / aggregationScale
+      weightsRaster <- study$getTemplateRaster()
+      weightsRaster[] <- 1
       return(weightsRaster)
     },
 
@@ -109,7 +110,7 @@ CORINEHabitatWeights <- setRefClass(
       return(p)
     },
     
-    getWeightsRaster = function(aggregationScale=100, save=FALSE) { # TODO: determine aggregation scale automatically
+    getWeightsRaster = function(save=FALSE) { # TODO: determine aggregation scale automatically
       library(raster)
       
       if (save) {

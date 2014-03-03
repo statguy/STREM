@@ -70,14 +70,14 @@ FinlandWTCStudy <- setRefClass(
       return(invisible(.self))
     },
     
-    preprocessResponse = function(response, cacheCovariates=TRUE, fmiApiKey) {
+    preprocessResponse = function(response, maxDuration=1, cacheCovariates=TRUE, fmiApiKey) {
       library(CNPCluster)
       
       cnpClusterStartLocal()
       
       response <<- response
       
-      intersections <- FinlandWTCIntersections$new(study=.self)
+      intersections <- FinlandWTCIntersections$new(study=.self, maxDuration=maxDuration)
       tracks <- FinlandWTCTracks$new(study=.self)
       habitatWeights <- CORINEHabitatWeights$new(study=.self)
 
@@ -88,7 +88,7 @@ FinlandWTCStudy <- setRefClass(
       
       habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=T)
       habitatWeights <- CORINEHabitatWeights$new(study=.self)$setHabitatSelectionWeights(habitatSelection)
-      habitatWeights$getWeightsRaster(aggregationScale=100, save=T)
+      habitatWeights$getWeightsRaster(save=TRUE)
       
       cnpClusterStopLocal()
     },
@@ -128,13 +128,7 @@ FinlandWTCStudy <- setRefClass(
       
       intersections <- loadIntersections()
       intersections$intersections$distance <- 1
-      
-      # Remove duration > 1
-      b <- nrow(intersections$getData())
-      intersections$intersections <- subset(intersections$intersections, duration == 1)
-      a <- nrow(intersections$getData())
-      message("Removed ", round((1-a/b)*100), "% of intersections with duration > 1.")
-      
+            
       model <- SmoothModel$new(study=.self)
       model$setup(intersections=intersections, meshParams=meshParams)
       if (!test) model$estimate(save=T, fileName=model$getModelFileName())

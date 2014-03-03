@@ -162,10 +162,12 @@ FinlandWTCIntersections <- setRefClass(
   Class = "FinlandWTCIntersections",
   contains = c("Intersections", "FinlandCovariates"),
   fields = list(
+    maxDuration = "numeric"
   ),
   methods = list(
-    initialize = function(...) {
+    initialize = function(maxDuration=Inf, ...) {
       callSuper(covariatesName="FinlandWTCIntersectionsCovariates", ...)
+      maxDuration <<- maxDuration
       return(invisible(.self))
     },
     
@@ -205,7 +207,17 @@ FinlandWTCIntersections <- setRefClass(
       wtc$x <- NULL
       wtc$y <- NULL
       wtc$length <- wtc$length * 1000
-      intersections <<- SpatialPointsDataFrame(xy, data=wtc, proj4string=CRS("+init=epsg:2393"))
+      
+      b <- nrow(wtc)
+      nonZero <- wtc[wtc$duration > maxDuration,]$intersections
+      nonZero <- sum(nonZero != 0) / length(nonZero)
+      retainIndex <- wtc$duration <= maxDuration
+      wtc <- wtc[retainIndex,]
+      a <- nrow(wtc)
+      message("Removed ", round((1-a/b)*100), "% of intersections with duration > ",
+              maxDuration, " of which ", round(nonZero*100), "% are non-zero.")
+      
+      intersections <<- SpatialPointsDataFrame(xy[retainIndex,], data=wtc, proj4string=CRS("+init=epsg:2393"))
 
       save(intersections, file=getIntersectionsFileName())
     }
