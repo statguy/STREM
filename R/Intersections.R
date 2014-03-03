@@ -111,7 +111,7 @@ SimulatedIntersections <- setRefClass(
     
     aggregateIntersectionsMatrix = function(tracks, surveyRoutes) {
       #if (length(tracks$distance) == 0)
-      #  stop("Did you forgot to run determineDistances() for tracks first?")
+      #  stop("Did you forgot to run getDistances() for tracks first?")
       
       tracksDF <- ld(tracks$tracks)
       burstYear <- ddply(tracksDF, .(burst), function(x) {

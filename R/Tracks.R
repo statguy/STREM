@@ -73,7 +73,7 @@ Tracks <- setRefClass(
     },
     
     # Note! Call this before randomizing observation days. Otherwise you'll lose details of the last movements.
-    determineDistances = function() {
+    getDistances = function() {
       warning("Spatial variation in distances not considered in vicinity of the survey routes.")
       
       tracksDF <- ld(tracks)

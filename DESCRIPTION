@@ -7,14 +7,14 @@ Author: Jussi Jousimo
 Maintainer: Jussi Jousimo <jvj@iki.fi>
 Description: Winter track counts
 Imports: INLA,sp,CircStats,plyr,maptools,raster,rgdal,parallel,adehabitatLT,gdata,methods,lme4,ST,CNPCluster
-Suggests: grid,lattice,ggplot2
+Suggests: grid,lattice,ggplot2,reshape2
 License: MIT
 Collate:
   static_global_functions.R
-  PopulationSize.R
   Context.R
   StudyArea.R
   Study.R
+  PopulationSize.R
   SpatioTemporalRaster.R
   Covariates.R
   HabitatWeights.R

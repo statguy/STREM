@@ -1,8 +1,8 @@
 #setOldClass("lmerMod")
 
-MovementSampleIntervalsPredict <- function(estimationResult, predictionData) {
+MovementSampleIntervalsPredict <- function(estimationResult, predictionData, randomEffectsFormula=NA) {
   library(lme4)
-  distanceKm <- exp(predict(object=estimationResult, newdata=predictionData, REform=NA))
+  distanceKm <- predict(object=estimationResult, newdata=predictionData, REform=randomEffectsFormula)
   return(distanceKm)
 }
 
@@ -24,7 +24,6 @@ MovementSampleIntervals <- setRefClass(
       library(plyr)
       
       tracksDF <- ld(tracks$tracks)
-      #tracksDF$row <- 1:nrow(tracksDF)
       tracksDF <- data.frame(tracksDF, breakDownDate(tracksDF$date))
 
       intervals <<- ddply(tracksDF, .(burst, yday, year), function(x) {
@@ -44,22 +43,17 @@ MovementSampleIntervals <- setRefClass(
                         intervalSec=intervalMin * 60,
                         distanceKm=distKm,
                         x=mean(x$x),
-                        y=mean(x$y))
-        if (any("thinId" %in% colnames(x))) y$thinId <- x$thinId[1]
-        
+                        y=mean(x$y))        
         return(y)
       }, .parallel=TRUE)
-      
+            
       if (nrow(intervals) == 0) warning("Unable to determine sampling intervals.")
+      intervals$thinId <<- tracks$thinId
+      
       return(invisible(.self))
     },
     
     getThinnedTracksSampleIntervals = function(tracks) {
-      tracksDF <- ld(tracks$tracks)
-      date <- as.POSIXlt(tracksDF$date)
-      tracksDF$thinId <- as.factor(paste(date$year, date$yday, tracksDF$burst))
-      tracks$tracks <- dl(tracksDF)      
-      
       thinnedTracksCollection <- SimulatedTracksCollection$new(study=study)
       thinnedTracksCollection$addTracks(tracks)
       intervalsList <- list()
@@ -77,9 +71,7 @@ MovementSampleIntervals <- setRefClass(
         thinnedIntervals$intervals <- thinnedIntervals$intervals[retainIndex,]
         retainBurst <- unique(thinnedIntervals$intervals[retainIndex, "burst"])
         thinnedTracks$tracks <- thinnedTracks$tracks[burst = retainBurst]
-        
-        #thinnedTracks$tracks <- thinnedTracks$tracks[id = retainIdBurst$id][burst = retainIdBurst$burst]
-        
+
         intervalsList[[i]] <- thinnedIntervals         
         thinnedTracksCollection$addTracks(thinnedTracks)
       }
@@ -114,28 +106,57 @@ MovementSampleIntervals <- setRefClass(
       return(invisible(.self))
     },
         
-    predict = function(predictionData=data.frame(intervalH=seq(0, 24, by=0.1))) {
-      distanceKm <- MovementSampleIntervalsPredict(estimationResult=estimationResult, predictionData=predictionData)
+    predict = function(predictionData=data.frame(intervalH=seq(0, 24, by=0.1)), randomEffectsFormula=NA) {
+      distanceKm <- MovementSampleIntervalsPredict(estimationResult=estimationResult, predictionData=predictionData, randomEffectsFormula=randomEffectsFormula)
       return(invisible(distanceKm))
+    },
+    
+    predictDistances = function(model=log(distanceKm) ~ log(intervalH) + (1|individualId) + (1|thinId)) {
+      tracks <- study$loadTracks()
+      getThinnedTracksSampleIntervals(tracks=tracks)
+      fit(model)
+      
+      # TODO: remove distances > 1
+      intersections <- study$loadIntersections()
+      dailyDistancePredictions <- intersections$covariates
+      dailyDistancePredictions$intervalH <- 1 # TODO: find this
+      dailyDistancePredictions$thinId <- 1
+      predictedDistances <- 1000 * exp(predict(dailyDistancePredictions))#, ~(1|thinId))
+      
+      observedDistances <- tracks$getDistances()
+      observedDistances <- observedDistances[!is.na(observedDistances)]
+      
+      o <- data.frame(Variable="Observed", Value=observedDistances)
+      p <- data.frame(Variable="Predicted", Value=predictedDistances)
+      distances <- rbind(o, p)
+      
+      return(invisible(distances))
     },
     
     plotIntervalDistance = function() {
       library(ggplot2)
       p <- ggplot(intervals, aes(intervalH, distanceKm)) +
-        geom_point(aes(color=id)) +
+        geom_point(aes(color=individualId)) +
         ylab("Distance / day (km)") + xlab("Sampling interval (h)") + theme_bw(18)      
-      if (nrow(predictions) > 0) p <- p + geom_line(data=predictions, aes(intervalH, distanceKm), color="red")
+      
+      if (!inherits(estimationResult, "uninitializedField")) {
+        #predictionDate <- estimationResult@frame[,names(fixef(estimationResult))[-1]]        
+        #n <- names(fixef(estimationResult))
+        
+        # TODO
+        #predictionData <- data.frame(intervalH=seq(0, 24, by=0.1))
+        #predictionData$distanceKm <- predict(predictionData=predictionData)
+        #p <- p + geom_line(data=predictionData, aes(intervalH, distanceKm), color="red")
+      }
+      
       print(p)
     },
     
-    applyDistanceCorrection = function(surveyRoutes) {
-      # TODO
-      #intervals$distanceKmCorrected <<- estimatedParameters$C * intervals$intervalH ^ -estimatedParameters$alpha
-      return(invisible(.self))
-    },
-    
-    getMeanDistance = function() {
-      return(mean(intervals$distanceKm))
+    plotDistances = function(distances) {
+      library(ggplot2)
+      p <- ggplot(distances, aes(x=Value, colour=Variable, group=Variable)) + geom_density(fill=NA) +
+        xlab("Distance (km)") + ylab("Density")
+      print(p)
     }
   )
 )
@@ -168,8 +189,13 @@ FinlandMovementSampleIntervals <- setRefClass(
       return(dailyDistanceData)
     },
     
-    fit = function(model=log(distanceKm) ~ populationDensity + rrday + snow + tday + log(intervalH) + (1|individualId) + (1|thinId)) {
-      return(invisible(callSuper(model=model)))
-    }
+    #fit = function(model=log(distanceKm) ~ populationDensity + rrday + snow + tday + log(intervalH) + (1|individualId) + (1|thinId)) {
+    #  return(invisible(callSuper(model=model)))
+    #},
+    
+    predictDistances = function(model=log(distanceKm) ~ sqrt(populationDensity) + rrday + snow + tday + log(intervalH) + (1|individualId) + (1|thinId)) {
+      loadCovariates()
+      callSuper(model=model)
+    }      
   )
 )

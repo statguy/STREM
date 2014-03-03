@@ -146,15 +146,20 @@ FinlandWTCStudy <- setRefClass(
       return(SmoothModel(study=.self)$loadEstimates())
     },
     
-    postprocess = function() {
+    predictDistances = function() {
+      intervals <- FinlandMovementSampleIntervals$new(study=.self)
+      distances <- intervals$predictDistances()
+      return(distances)
+    },
+    
+    getPopulationSize = function(weights=1) {
       estimates <- loadEstimates()
-      estimates$collectEstimates(quick=T)
-      # TODO: distance
-      #estimates$collectEstimates(weights=distance, quick=T)
+      estimates$collectEstimates(weights=weights, quick=T)
       
       habitatWeights <- loadHabitatWeightsRaster()
       populationDensity <- estimates$getPopulationDensity(templateRaster=habitatWeights, getSD=FALSE)
       populationSize <- populationDensity$mean$integrate(weights=habitatWeights)
+      
       return(populationSize)
     }
   )
