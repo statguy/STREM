@@ -29,7 +29,7 @@ ModelCollection <- setRefClass(
       return(lapply(X=modelsList, FUN=fun, ...))
     },
     
-    getModelFileName = function(iteration) {
+    getEstimatesFileName = function(iteration) {
       if (missing(iteration))
         stop("Provide iteration argument.")
       if (inherits(study, "uninitializedField") | length(directory) == 0)
@@ -39,7 +39,7 @@ ModelCollection <- setRefClass(
       return(fileName)
     },
     
-    getModelFileNames = function() {
+    getEstimatesFileNames = function() {
       if (inherits(study, "uninitializedField") | length(directory) == 0)
         stop("Set directory and study fields.")
       
@@ -67,7 +67,7 @@ SmoothModelCollection <- setRefClass(
     },
     
     loadModels = function() {
-      modelFiles <- getModelFileNames()
+      modelFiles <- getEstimatesFileNames()
       for (iteration in 1:length(modelFiles)) {
         model <- SmoothModel$new(study=study)
         model$loadResult(fileName=modelFiles[iteration])

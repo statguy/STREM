@@ -66,7 +66,7 @@ SimulatedIntersectionsCollection <- setRefClass(
       for (iteration in 1:getNumberOfIterations()) {
         model <- SmoothModel$new(study=study)$setup(intersections=intersectionsList[[iteration]], meshParams=meshParams)
         #model$plotMesh(surveyRoutes=surveyRoutes)
-        model$estimate(save=save, fileName=models$getModelFileName(iteration))
+        model$estimate(save=save, fileName=models$getEstimatesFileName(iteration))
         models$addModel(model)
       }
       
