@@ -95,10 +95,10 @@ FinlandWTCStudy <- setRefClass(
       cnpClusterStopLocal()
     },
     
-    preprocess = function(cacheCovariates=TRUE, fmiApiKey) {
-      preprocessResponse(response="canis.lupus", cacheCovariates=cacheCovariates, fmiApiKey=fmiApiKey)
-      preprocessResponse(response="lynx.lynx", cacheCovariates=FALSE, fmiApiKey=fmiApiKey)
-      preprocessResponse(response="rangifer.tarandus.fennicus", cacheCovariates=FALSE, fmiApiKey=fmiApiKey)
+    preprocess = function(cacheCovariates=TRUE, findHabitatWeights=TRUE, fmiApiKey) {
+      preprocessResponse(response="canis.lupus", findHabitatWeights=findHabitatWeights, cacheCovariates=cacheCovariates, fmiApiKey=fmiApiKey)
+      preprocessResponse(response="lynx.lynx", findHabitatWeights=findHabitatWeights, cacheCovariates=FALSE, fmiApiKey=fmiApiKey)
+      preprocessResponse(response="rangifer.tarandus.fennicus", findHabitatWeights=findHabitatWeights, cacheCovariates=FALSE, fmiApiKey=fmiApiKey)
       return(invisible(.self))
     },
     
