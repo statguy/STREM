@@ -83,6 +83,15 @@ HabitatSelection <- setRefClass(
     loadHabitatSelection = function() {
       load(file=getHabitatSelectionFileName(), envir=as.environment(.self))
       return(invisible(.self))
+    },
+    
+    show = function() {
+      cat("Habitat null model usage:\n")
+      print(colMeans(habitatSelection$nullModelUsage))
+      cat("Habitat realized usage:\n")
+      print(colMeans(habitatSelection$realizedUsage))
+      cat("Habitat relative usage:\n")
+      print(colMeans(habitatSelection$relativeUsage))
     }
   )
 )

@@ -116,8 +116,15 @@ FinlandWTCStudy <- setRefClass(
       return(intersections)
     },
     
+    loadHabitatSelection = function() {
+      habitatSelection <- HabitatSelection$new(study=.self)$loadHabitatSelection()
+      return(habitatSelection)
+    },
+    
     loadHabitatWeights = function() {
-      return(HabitatSelection(study=.self)$loadHabitatSelection())
+      habitatSelection <- loadHabitatSelection()
+      habitatWeights <- CORINEHabitatWeights$new(study=.self)$setHabitatSelectionWeights(habitatSelection=habitatSelection)
+      return(habitatWeights)
     },
     
     loadHabitatWeightsRaster = function() {
@@ -166,6 +173,14 @@ FinlandWTCStudy <- setRefClass(
       populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study), weights=habitatWeights)
       
       return(populationSize)
+    },
+    
+    show = function() {
+      cat("Response: ", response, "\n")
+      cat("Study region: ", studyArea$region, "\n")
+      loadHabitatSelection()$show()
+      loadHabitatWeights()$show()
+      return(invisible(.self))
     }
   )
 )

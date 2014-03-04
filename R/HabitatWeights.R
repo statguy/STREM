@@ -39,6 +39,11 @@ HabitatWeights <- setRefClass(
     
     setHabitatSelectionWeights = function(relativeHabitatUsage) {
       stop("Implement this method in a subclass.")
+    },
+    
+    show = function() {
+      cat("Habitat weights:\n1\n")
+      return(invisible(.self))
     }
   )
 )
@@ -79,6 +84,7 @@ CORINEHabitatWeights <- setRefClass(
       )
       
       habitatTypes <<- unique(weights$type[weights$type != 0])
+      names(habitatTypes) <<- c("Urban","Agriculture","Forestland","Peatland","Water")
       
       return(invisible(.self))
     },
@@ -132,6 +138,20 @@ CORINEHabitatWeights <- setRefClass(
       }
       
       return(weightsRaster)
+    },
+    
+    show = function() {
+      w <- numeric(length(habitatTypes))
+      names(w) <- names(habitatTypes)
+      
+      for (type in habitatTypes) {
+        w[type] <- weights$weight[weights$type == type][1]
+      }
+      
+      cat("Habitat weights:\n")
+      print(w)
+      
+      return(invisible(.self))
     }
   )
 )
