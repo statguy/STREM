@@ -45,8 +45,19 @@ FinlandPopulationSize <- setRefClass(
   Class = "FinlandPopulationSize",
   contains = "PopulationSize",
   methods = list(
+    getValidationDataFileName = function() {
+      return(context$getFileName(dir=context$processedDataDirectory, name="ValidationPopulationSize", response="", region=study$studyArea$region))
+    },
+    
     saveValidationData = function() {
       # TODO
+      return(invisible(.self))
+    },
+    
+    loadValidationData = function() {
+      load(getValidationDataFileName())
+      sizeData <<- merge(sizeData, validation[,c("Year",study$response)], all=T)
+      colnames(sizeData) <<- c("Year","Estimated","Observed")
       return(invisible(.self))
     }
   )

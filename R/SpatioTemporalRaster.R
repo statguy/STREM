@@ -55,10 +55,8 @@ SpatioTemporalRaster <- setRefClass(
       return(invisible(.self))
     },
     
-    integrate = function(weights=1) {
+    integrate = function(volume=PopulationSize$new(study=study), weights=1) {
       library(raster)
-      
-      volume <- PopulationSize$new()
       
       for (index in 1:nlayers(rasterStack)) {
         weightedDensity <- rasterStack[[index]] * weights
