@@ -1,6 +1,5 @@
 MovementSimulationScenario <- setRefClass(
   Class = "MovementSimulationScenario",
-  #contains = "SimulationStudy",
   fields = list(
     study = "SimulationStudy",
     
@@ -30,7 +29,7 @@ MovementSimulationScenario <- setRefClass(
       distanceScale <<- 1e3
       loadHabitatRasterInMemory <<- FALSE
       callSuper(...)
-      return(.self)
+      return(invisible(.self))
     },
     
     newInstance = function() {
@@ -41,12 +40,12 @@ MovementSimulationScenario <- setRefClass(
       
       #studyArea <<- if (isTest) TestStudyArea$new(context=context)$newInstance()
       #else FinlandStudyArea$new(context=context)$newInstance()
-      return(.self)
+      return(invisible(.self))
     },
     
     finalize = function() {
     },
-        
+    
     randomizeVector = function(locations) {
       library(sp)
       library(raster)
@@ -69,7 +68,7 @@ MovementSimulationScenario <- setRefClass(
         return(list(index=k, coords=locations[k,,drop=F]))
       }
     },
-        
+    
     randomizeBCRWTrack = function(initialLocation, initialAngle, isFirst, nProposal) {
       library(CircStats)
       library(sp)
@@ -190,9 +189,9 @@ MovementSimulationScenario <- setRefClass(
               library(sp)
               
               ## TODO: UNTESTED CODE
-              if (length(habitatWeights) != 0 & loadHabitatRasterInMemory) {
-                study$studyArea$readRasterIntoMemory()                
-              }
+              #if (length(habitatWeights) != 0 & loadHabitatRasterInMemory) {
+              #  study$studyArea$readRasterIntoMemory()                
+              #}
               
               message("Agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgentsCurrent, ", year = ", year,  " / ", years, ", days = ", days, "...")
               track <- randomizeBCRWTrack(initialLocation=initialLocations[agentIndex,,drop=F], initialAngle=initialAngles[agentIndex], isFirst=isFirst, nProposal=nProposal)
@@ -202,7 +201,6 @@ MovementSimulationScenario <- setRefClass(
             initialLocations=initialLocations, initialAngles=initialAngles, isFirst=isFirst, nProposal=nProposal, .parallel=runParallel)
           
           track$year <- year
-          tracks <- rbind(tracks, track)
         }
         
         if (year < years) {
@@ -212,6 +210,14 @@ MovementSimulationScenario <- setRefClass(
           isFirst <- FALSE
           nAgentsCurrent <- length(agents)
         }
+        
+        date <- as.POSIXct(strptime(paste(2000+track$year, track$day, track$hour, track$minute, track$second), format="%Y %j %H %M %S"))
+        month <- as.POSIXlt(date)$mon + 1
+        retainMonths <- c(1,2)
+        retainIndex <- month %in% retainMonths
+        track <- track[retainIndex,]
+        
+        tracks <- rbind(tracks, track)
       }
 
       return(tracks)
@@ -240,39 +246,40 @@ MovementSimulationScenarioIntensive <- setRefClass(
   Class = "MovementSimulationScenarioIntensive",
   contains = "MovementSimulationScenario",
   methods = list(
-    initialize = function(nAgents=as.integer(50), nIterations=as.integer(6*2), years=as.integer(1), days=as.integer(60), stepIntervalHours=1, runParallel=T, isTest=F, ...) {
+    initialize = function(nAgents=as.integer(50), nIterations=as.integer(6*2), years=as.integer(1), days=as.integer(60), stepIntervalHours=1, runParallel=T, ...) {
       callSuper(years=years, nAgents=nAgents, nIterations=nIterations, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=0.8, runParallel=runParallel, ...)
-      return(.self)
+      return(invisible(.self))
     },
     
-    newInstance = function(context, response="Intensive", isTest=F) {
+    newInstance = function(context, response="Intensive") {
       callSuper()
-      study <<- SimulationStudy$new(response=response)$newInstance(context=context, isTest=isTest)
+      study <<- SimulationStudy$new(response=response)$newInstance(context=context)
       initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
-      return(.self)
+      return(invisible(.self))
     }
   )
 )
-
-if (F) {
 
 # Correlated random walk in a homogeneous landscape, random initial locations
 MovementSimulationScenarioA <- setRefClass(
   Class = "MovementSimulationScenarioA",
   contains = "MovementSimulationScenario",
   methods = list(
-    initialize = function(isTest=FALSE, response="A", ...) {
-      callSuper(response=response, isTest=isTest, ...)
-      return(.self)
+    initialize = function(nAgents=as.integer(200), nIterations=as.integer(50), years=as.integer(20), days=as.integer(365), stepIntervalHours=2, runParallel=T, ...) {
+      callSuper(years=years, nAgents=nAgents, nIterations=nIterations, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=0.8, runParallel=runParallel, ...)
+      return(invisible(.self))
     },
-
-    newInstance = function() {
+    
+    newInstance = function(context, response="A") {
       callSuper()
+      study <<- SimulationStudy$new(response=response)$newInstance(context=context)
       initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
-      return(.self)
+      return(invisible(.self))
     }
   )
 )
+
+if (F) {
 
 # Biased correlated random walk in a homogenous landscape, random initial locations
 MovementSimulationScenarioB <- setRefClass(

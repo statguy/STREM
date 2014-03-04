@@ -156,7 +156,7 @@ MovementSampleIntervals <- setRefClass(
     plotDistances = function(distances) {
       library(ggplot2)
       p <- ggplot(distances, aes(x=Value, colour=Variable, group=Variable)) + geom_density(fill=NA) +
-        xlab("Distance (km)") + ylab("Density")
+        xlab("Distance (m)") + ylab("Density")
       print(p)
     }
   )
