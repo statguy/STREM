@@ -17,7 +17,7 @@ Study <- setRefClass(
       
       height <- dim(studyArea$habitat)[1] / 100 # Determine scaling automatically
       width <- dim(studyArea$habitat)[2] / 100
-      templateRaster <- raster(ext(studyArea$habitat), nrows=height, ncols=width, crs=studyArea$proj4string)
+      templateRaster <- raster(extent(studyArea$habitat), nrows=height, ncols=width, crs=studyArea$proj4string)
       
       return(templateRaster)
     }
@@ -148,13 +148,22 @@ FinlandWTCStudy <- setRefClass(
       return(distances)
     },
     
-    getPopulationSize = function(weights=1) {
+    getPopulationSize = function(withHabitatWeights=TRUE, withDistanceWeights=TRUE) {
       estimates <- loadEstimates()
-      estimates$collectEstimates(weights=weights, quick=T)
       
-      habitatWeights <- loadHabitatWeightsRaster()
+      distances <- if (withDistanceWeights) {
+        distances <- predictDistances()
+        subset(distances, Variable=="Predicted", select="Value", drop=TRUE)
+      }
+      else {
+        tracks <- loadTracks()
+        mean(tracks$getDistances(), na.rm=T)
+      }
+      estimates$collectEstimates(weights=distances, quick=T)
+      
+      habitatWeights <- if (withHabitatWeights) loadHabitatWeightsRaster() else HabitatWeights$new(study=study)$getWeightsRaster()
       populationDensity <- estimates$getPopulationDensity(templateRaster=habitatWeights, getSD=FALSE)
-      populationSize <- populationDensity$mean$integrate(weights=habitatWeights)
+      populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study), weights=habitatWeights)
       
       return(populationSize)
     }

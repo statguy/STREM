@@ -125,6 +125,7 @@ MovementSampleIntervals <- setRefClass(
       
       observedDistances <- tracks$getDistances()
       observedDistances <- observedDistances[!is.na(observedDistances)]
+      message("Predicted distances = ", mean(predictedDistances, na.rm=T), " ± ", sd(predictedDistances, na.rm=T))
       
       o <- data.frame(Variable="Observed", Value=observedDistances)
       p <- data.frame(Variable="Predicted", Value=predictedDistances)

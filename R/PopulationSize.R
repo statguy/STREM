@@ -16,7 +16,7 @@ PopulationSize <- setRefClass(
     },
     
     getValidationDataFileName = function() {
-      return(study$context$getFileName(dir=study$context$processedDataDirectory, name="ValidationPopulationSize", response=study$response, region=study$studyArea$region))
+      return(context$getFileName(dir=context$processedDataDirectory, name="ValidationPopulationSize", response="", region=study$studyArea$region))
     },
     
     saveValidationData = function() {
@@ -44,11 +44,7 @@ PopulationSize <- setRefClass(
 FinlandPopulationSize <- setRefClass(
   Class = "FinlandPopulationSize",
   contains = "PopulationSize",
-  methods = list(
-    getValidationDataFileName = function() {
-      return(context$getFileName(dir=context$processedDataDirectory, name="ValidationPopulationSize", response="", region=study$studyArea$region))
-    },
-    
+  methods = list(    
     saveValidationData = function() {
       # TODO
       return(invisible(.self))

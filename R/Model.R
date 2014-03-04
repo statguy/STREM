@@ -238,7 +238,7 @@ SmoothModel <- setRefClass(
 
       xyzMean <- data.frame(Year=data$year, locations / coordsScale, z=data$fittedMean)
       xyzSD <- data.frame(Year=data$year, locations / coordsScale, z=data$fittedSD)
-      cellArea <- prod(res(projectionRaster)) # m^2
+      cellArea <- prod(res(templateRaster)) # m^2
       
       for (year in sort(unique(xyzMean$Year))) {
         message("Processing year ", year, "...")
