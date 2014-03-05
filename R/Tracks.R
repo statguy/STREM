@@ -5,7 +5,8 @@ Tracks <- setRefClass(
   Class = "Tracks",
   fields = list(
     study = "Study",
-    tracks = "ltraj",
+    #tracks = "ltraj",
+    tracks = "ANY",
     distance = "ANY",
     thinId = "integer"
   ),
@@ -140,11 +141,15 @@ SimulatedTracks <- setRefClass(
     },
     
     setTracks = function(xy, id, date) {
-      library(adehabitatLT)
-      d <- as.POSIXlt(date)
-      burst <- paste(id, d$year, sep=".")
-      tracks <<- as.ltraj(xy=xy, date=date, id=id, burst=burst)
+      #library(adehabitatLT)
+      #d <- as.POSIXlt(date)
+      #burst <- paste(id, d$year, sep=".")
+      #tracks <<- as.ltraj(xy=xy, date=date, id=id, burst=burst)
+      
+      tracks <<- data.frame(xy, id=id, date=date)
     },
+    
+    getTracksDirectory = function() return(study$context$scratchDirectory),
     
     getTracksFileName = function() {
       if (inherits(study, "undefinedField") | length(iteration) == 0)
