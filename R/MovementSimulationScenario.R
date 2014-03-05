@@ -113,7 +113,7 @@ randomizeBirthDeath <- function(param=list(mean=1, sd=1.1), agents, newAgentId) 
   return(list(survivedBornIndex=survivedBornIndex, agents=agents, newAgentId=newAgentId))
 }
 
-randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habitat, habitatWeights, nAgents, boundary, CRWCorrelation, BCRWCorrelationBiasTradeoff, homeRangeRadius, days, stepIntervalHours, nSteps, distanceScale, stepSpeedScale) {
+randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habitat, habitatWeights, nAgents, boundary, CRWCorrelation, BCRWCorrelationBiasTradeoff, homeRangeRadius, days, years, stepIntervalHours, nSteps, distanceScale, stepSpeedScale) {
   library(plyr)
   library(maptools)
   
@@ -121,7 +121,7 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
   habitatTypes <- extract(habitat, initialLocations)
   if (any(is.na(habitatTypes))) stop("Invalid initial coordinates.")
   
-  nProposal <- if (inherits(habitatWeights, "uninitializedField")) 1 else 10
+  nProposal <- if (inherits(habitatWeights, "uninitializedField") | is.null(habitatWeights)) 1 else 10
   message("Number of proposals = ", nProposal)
   
   agents <<- 1:nAgents
@@ -157,7 +157,7 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
     
     if (year < years) {
       rdReturn <- randomizeBirthDeath(agents=agents, newAgentId=newAgentId)
-      survivedBornLastStepIndex <- rdReturn$survivedBornLastStepIndex * nSteps
+      survivedBornLastStepIndex <- rdReturn$survivedBornIndex * nSteps
       agents <- rdReturn$agents
       newAgentId <- rdReturn$newAgentId
       initialLocations <- as.matrix(track[survivedBornLastStepIndex, c("x","y"), drop=F])
@@ -417,7 +417,7 @@ MovementSimulationScenario <- setRefClass(
         
         #tracksDF <- randomizeBCRWTracks(iteration=i)
         initialLocations <- initialPopulation$randomize(nAgents)
-        tracksDF <- randomizeBCRWTracks(iteration=i, nIterations=nIterations, initialLocations=initialLocations, habitat=study$studyArea$habitat, habitatWeights=habitatWeights, nAgents=nAgents, boundary=study$studyArea$boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale)
+        tracksDF <- randomizeBCRWTracks(iteration=i, nIterations=nIterations, initialLocations=initialLocations, habitat=study$studyArea$habitat, habitatWeights=habitatWeights, nAgents=nAgents, boundary=study$studyArea$boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, years=years, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale)
 
         date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
         tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=i)
