@@ -150,7 +150,7 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
          track$agent <- agents[agentIndex]
          return(track)
         },
-        initialLocations=initialLocations, initialAngles=initialAngles, isFirst=isFirst, nProposal=nProposal, iteration=iteration, nIterations=nIterations, habitat=habitat, habitatWeights=habitatWeights, boundary=boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale, .parallel=runParallel)
+        initialLocations=initialLocations, initialAngles=initialAngles, isFirst=isFirst, nProposal=nProposal, iteration=iteration, nIterations=nIterations, habitat=habitat, habitatWeights=habitatWeights, boundary=boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale, .parallel=TRUE)
       
       track$year <- year
     }
