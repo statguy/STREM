@@ -17,8 +17,10 @@ Model <- setRefClass(
     mesh = "inla.mesh",
     spde = "inla.spde2",
     index = "list",
-    A = "Matrix",
-    dataStack = "inla.data.stack",
+    obsA = "Matrix",
+    obsStack = "inla.data.stack",
+    predA = "Matrix",
+    predStack = "inla.data.stack",
     countOffset = "numeric",
     result = "inla",
     node = "list",
@@ -38,7 +40,7 @@ Model <- setRefClass(
     
     saveEstimates = function(fileName=getEstimatesFileName()) {
       message("Saving result to ", fileName, "...")
-      save(locations, data, model, coordsScale, years, mesh, spde, index, A, dataStack, countOffset, result, file=fileName)
+      save(locations, data, model, coordsScale, years, mesh, spde, index, obsA, obsStack, predA, predStack, countOffset, result, file=fileName)
     },
     
     loadEstimates = function(fileName=getEstimatesFileName()) {
@@ -90,11 +92,18 @@ SmoothModel <- setRefClass(
       
       spde <<- inla.spde2.matern(mesh)
       index <<- inla.spde.make.index("st", n.spde=mesh$n, n.group=nYears)
-      A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
-      dataStack <<- inla.stack(data=list(response=data$intersections),
-                               A=list(A),
+      
+      obsA <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
+      obsStack <<- inla.stack(data=list(response=data$intersections),
+                               A=list(obsA),
                                effects=list(c(index, list(intercept=1))),
                                tag="observed")
+      
+      predA <<- inla.spde.make.A(mesh, group=groupYears, n.group=nYears)
+      predStack <<- inla.stack(data=list(response=NA),
+                               A=list(predA),
+                               effects=list(c(index, mesh$loc, list(intercept=1))),
+                               tag="predicted")
       
       countOffset <<- 2/pi * data$length * data$duration * data$distance
       
@@ -119,6 +128,7 @@ SmoothModel <- setRefClass(
     estimate = function(save=FALSE, fileName=getEstimatesFileName()) {
       library(INLA)
       
+      dataStack <- inla.stack(dataStack, predStack)
       result <<- inla(model,
                       family=family,
                       data=inla.stack.data(dataStack),
@@ -135,9 +145,9 @@ SmoothModel <- setRefClass(
       }
     },
 
-    # TODO: fix this if needed
+    # TODO: fix this
     collectEstimates = function(weights=1, quick=FALSE) {
-      if (quick) return(collectEstimatesQuick(weights=weights))
+      #if (quick) return(collectEstimatesQuick(weights=weights))
       
       library(INLA)
       library(plyr)
@@ -149,16 +159,23 @@ SmoothModel <- setRefClass(
       data$fittedMean <<- result$summary.fitted.values$mean[indexObserved]
       data$fittedSD <<- result$summary.fitted.values$sd[indexObserved]
       
-      #message("Processing random effects...")
-      ## TODO: this is wrong, fix!
-      #intercept <- result$summary.fixed["intercept","mean"]
-      #st <- ldply(result$marginals.random$st,
-      #            function(st) getINLAEstimates(st, function(st) exp(st + intercept)), .parallel=TRUE)[,-1]
-      #node <<- list()
-      #node$mean <<- matrix(data=st$mean, nrow=length(years), ncol=mesh$n)
-      #node$sd <<- matrix(data=st$sd, nrow=length(years), ncol=mesh$n)
+      message("Processing random effects...")
+      intercept <- result$summary.fixed["intercept","mean"]
+      yearsVector <- sort(unique(data$year))
       
+      e <- numeric(mesh$n * length(yearsVector))
+      for (i in 1:(mesh$n * length(yearsVector)))
+        e[i] <- inla.emarginal(function(x) exp(intercept + x), result$marginals.random$st[[i]])
+        #e[i] <- exp(intercept + result$summary.random$st$mean[i])
+      node$mean <<- matrix(data=e, nrow=mesh$n, ncol=length(yearsVector))
       
+      # By Jensen's inequality:
+      # E(exp(x)) >= exp(E(x))
+      inla.emarginal(function(x) exp(intercept+x), result$marginals.random$st[[1]]) >= exp(intercept + result$summary.random$st$mean[1])
+
+      # TODO: SD
+      
+if (F) {      
       message("Processing hyperparameters...")
       spdeResult <- inla.spde2.result(result, "st", spde)
       logKappa <- getINLAEstimates(spdeResult$marginals.log.kappa[[1]], coordsScale=1)
@@ -176,6 +193,7 @@ SmoothModel <- setRefClass(
         x <- rbind(x, rho=result$summary.hyperpar["GroupRho for st",])
             
       return(x)
+}
     },
 
     collectEstimatesQuick = function(weights=1) {
@@ -205,7 +223,15 @@ SmoothModel <- setRefClass(
       return(x)      
     },
     
-    project = function(estimates, projectionRaster, maskPolygon) {
+    getPredictedIntersections = function() {
+      data$countOffset <<- countOffset
+      intersections <- ddply(data, .(year), function(x) {
+        data.frame(Observed=sum(x$intersections), Predicted=sum(x$fittedMean * x$countOffset))
+      })
+      return(intersections)
+    },
+    
+    project = function(values, projectionRaster, maskPolygon) {
       library(INLA)
       library(raster)
       
@@ -215,8 +241,7 @@ SmoothModel <- setRefClass(
                                        dims=c(ncol(projectionRaster), nrow(projectionRaster)),
                                        xlim=c(xmin(projectionRaster), xmax(projectionRaster)),
                                        ylim=c(ymin(projectionRaster), ymax(projectionRaster)))
-      #projectedEstimates <- inla.mesh.project(projector, node$mean[1,])
-      projectedEstimates <- inla.mesh.project(projector, estimates)
+      projectedEstimates <- inla.mesh.project(projector, values)
       
       cellArea <- prod(res(projectionRaster))
       values(projectionRaster) <- t(projectedEstimates[,ncol(projectedEstimates):1]) * cellArea
@@ -226,31 +251,37 @@ SmoothModel <- setRefClass(
       
       return(invisible(projectionRaster))
     },
-    
+
     getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
       if (length(node) == 0)
         stop("Did you forgot to run collectEstimates() first?")
       
       library(raster)
+      #library(ST)
 
-      meanPopulationDensityRaster <- SpatioTemporalRaster$new()
-      sdPopulationDensityRaster <- SpatioTemporalRaster$new()      
+      meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)
+      sdPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)
 
       xyzMean <- data.frame(Year=data$year, locations / coordsScale, z=data$fittedMean)
       xyzSD <- data.frame(Year=data$year, locations / coordsScale, z=data$fittedSD)
-      cellArea <- prod(res(templateRaster)) # m^2
+      #cellArea <- prod(res(templateRaster)) # m^2
       
       for (year in sort(unique(xyzMean$Year))) {
         message("Processing year ", year, "...")
-        
-        #meanRaster <- project(estimates=node$mean[yearIndex,], projectionRaster=templateRaster, maskPolygon=maskPolygon)
-        meanRaster <- interpolateRaster(subset(xyzMean, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea
+
+        yearIndex <- year - min(xyzMean$Year) + 1
+        meanRaster <- project(values=node$mean[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon)
+        #meanRaster <- rasterInterpolate(subset(xyzMean, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea        
+        #if (!(missing(maskPolygon) | is.null(maskPolygon)))
+          #meanRaster <- mask(meanRaster, maskPolygon)
         names(meanRaster) <- year
         meanPopulationDensityRaster$addLayer(meanRaster)
         
         if (getSD) {
-          #sdRaster <- project(estimates=node$sd[yearIndex,], projectionRaster=templateRaster, maskPolygon=maskPolygon)
-          sdRaster <- interpolateRaster(subset(xyzSD, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea
+          sdRaster <- project(values=node$sd[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon)
+          #sdRaster <- rasterInterpolate(subset(xyzSD, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea
+          #if (!(missing(maskPolygon) | is.null(maskPolygon)))
+            #sdRaster <- mask(sdRaster, maskPolygon)
           names(sdRaster) <- year
           sdPopulationDensityRaster$addLayer(sdRaster)
         }

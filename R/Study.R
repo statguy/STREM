@@ -55,6 +55,11 @@ SimulationStudy <- setRefClass(
     loadSurveyRoutes = function(n=800) {
       return(FinlandRandomWTCSurveyRoutes$new(study=study)$newInstance(n=800))
     }
+    
+    
+    
+    
+    
   )
 )
 
@@ -145,18 +150,8 @@ FinlandWTCStudy <- setRefClass(
       return(model)
     },
     
-    loadEstimates = function() {
-      return(SmoothModel(study=.self)$loadEstimates())
-    },
-    
-    predictDistances = function() {
-      intervals <- FinlandMovementSampleIntervals$new(study=.self)
-      distances <- intervals$predictDistances()
-      return(distances)
-    },
-    
-    getPopulationSize = function(withHabitatWeights=TRUE, withDistanceWeights=TRUE) {
-      estimates <- loadEstimates()
+    loadEstimates = function(withDistanceWeights=TRUE) {
+      estimates <- SmoothModel$new(study=.self)$loadEstimates()
       
       distances <- if (withDistanceWeights) {
         distances <- predictDistances()
@@ -167,11 +162,34 @@ FinlandWTCStudy <- setRefClass(
         mean(tracks$getDistances(), na.rm=T)
       }
       estimates$collectEstimates(weights=distances, quick=T)
+
+      return(estimates)
+    },
+    
+    predictDistances = function() {
+      intervals <- FinlandMovementSampleIntervals$new(study=.self)
+      distances <- intervals$predictDistances()
+      return(distances)
+    },
+    
+    getPopulationDensity = function(withHabitatWeights=TRUE, withDistanceWeights=TRUE, saveDensityPlots=FALSE) {
+      estimates <- loadEstimates(withDistanceWeights=withDistanceWeights)
       
       habitatWeights <- if (withHabitatWeights) loadHabitatWeightsRaster() else HabitatWeights$new(study=study)$getWeightsRaster()
       populationDensity <- estimates$getPopulationDensity(templateRaster=habitatWeights, getSD=FALSE)
-      populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study), weights=habitatWeights)
+      populationDensity$mean$weight(habitatWeights)
       
+      if (saveDensityPlots) {
+        populationDensity$mean$animate(name=estimates$modelName)
+        # TODO: SD
+      }
+      
+      return(populationDensity)
+    },
+    
+    getPopulationSize = function(withHabitatWeights=TRUE, withDistanceWeights=TRUE, saveDensityPlots=FALSE) {
+      populationDensity <- getPopulationDensity(withHabitatWeights=withHabitatWeights, withDistanceWeights=withDistanceWeights, saveDensityPlots=saveDensityPlots)
+      populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study))
       return(populationSize)
     },
     

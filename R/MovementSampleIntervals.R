@@ -69,7 +69,7 @@ MovementSampleIntervals <- setRefClass(
         retainIndex <- thinnedIntervals$intervals$intervalH <= 12
         if (sum(retainIndex) == 0) break
         thinnedIntervals$intervals <- thinnedIntervals$intervals[retainIndex,]
-        retainBurst <- unique(thinnedIntervals$intervals[retainIndex, "burst"])
+        retainBurst <- unique(thinnedIntervals$intervals[, "burst"])
         thinnedTracks$tracks <- thinnedTracks$tracks[burst = retainBurst]
 
         intervalsList[[i]] <- thinnedIntervals         
@@ -87,11 +87,12 @@ MovementSampleIntervals <- setRefClass(
         stop("Run get getSampleIntervals() first.")
       return(intervals)      
       
-      intervalsSP <- intervals
-      coordinates(intervalsSP) <- ~ x+y
-      proj4string(intervalsSP) <- study$studyArea$proj4string
-      saveCovariates(intervalsSP, save=FALSE)
-      dailyDistanceData <- merge(intervals, covariates, sort=F)
+      #intervalsSP <- intervals
+      #coordinates(intervalsSP) <- ~ x+y
+      #proj4string(intervalsSP) <- study$studyArea$proj4string
+      #saveCovariates(intervalsSP, save=FALSE)
+      #dailyDistanceData <- merge(intervals, covariates, sort=F)
+      dailyDistanceData <- intervals
       
       return(dailyDistanceData)
     },
@@ -195,8 +196,34 @@ FinlandMovementSampleIntervals <- setRefClass(
     #},
     
     predictDistances = function(model=log(distanceKm) ~ sqrt(populationDensity) + rrday + snow + tday + log(intervalH) + (1|individualId) + (1|thinId)) {
-      loadCovariates()
-      callSuper(model=model)
+      tracks <- study$loadTracks()
+      getThinnedTracksSampleIntervals(tracks=tracks)
+      
+      intervalsSP <- intervals
+      coordinates(intervalsSP) <- ~ x+y
+      proj4string(intervalsSP) <- study$studyArea$proj4string
+      saveCovariates(intervalsSP, save=FALSE)
+
+      fit(model)
+      
+      # TODO: remove distances > 1
+      intersections <- study$loadIntersections()
+      dailyDistancePredictions <- intersections$covariates
+      dailyDistancePredictions$intervalH <- 1 # TODO: find this
+      dailyDistancePredictions$thinId <- 1
+      predictedDistances <- 1000 * exp(predict(dailyDistancePredictions))#, ~(1|thinId))
+      
+      observedDistances <- tracks$getDistances()
+      observedDistances <- observedDistances[!is.na(observedDistances)]
+      message("Predicted distances = ", mean(predictedDistances, na.rm=T), " ± ", sd(predictedDistances, na.rm=T))
+      
+      o <- data.frame(Variable="Observed", Value=observedDistances)
+      p <- data.frame(Variable="Predicted", Value=predictedDistances)
+      distances <- rbind(o, p)
+      
+      return(invisible(distances))
+      #loadCovariates()
+      #callSuper(model=model)
     }      
   )
 )

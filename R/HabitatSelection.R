@@ -87,11 +87,11 @@ HabitatSelection <- setRefClass(
     
     show = function() {
       cat("Habitat null model usage:\n")
-      print(colMeans(habitatSelection$nullModelUsage))
+      print(colMeans(nullModelUsage))
       cat("Habitat realized usage:\n")
-      print(colMeans(habitatSelection$realizedUsage))
+      print(colMeans(realizedUsage))
       cat("Habitat relative usage:\n")
-      print(colMeans(habitatSelection$relativeUsage))
+      print(colMeans(relativeUsage))
     }
   )
 )

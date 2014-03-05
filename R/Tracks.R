@@ -112,7 +112,8 @@ Tracks <- setRefClass(
       
       if (nrow(tracksDFThinned) == 0) return(NULL)
       
-      tracksThinned <- dl(tracksDFThinned)
+      tracksThinned <- as.ltraj(xy=tracksDFThinned[,c("x","y")], burst=tracksDFThinned$burst, id=tracksDFThinned$id, date=as.POSIXct(tracksDFThinned$date))
+      #tracksThinned <- dl(tracksDFThinned)
       tracksDFThinned <- ld(tracksThinned)
       
       newDt <- mean(tracksDFThinned$dt, na.rm=T)

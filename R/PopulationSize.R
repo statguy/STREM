@@ -37,6 +37,13 @@ PopulationSize <- setRefClass(
       p <- ggplot(melted, aes(x=Year, y=value, colour=variable, group=variable)) + geom_line() +
         xlab("Year") + ylab("Population size")
       print(p)
+      
+      return(invisible(.self))
+    },
+    
+    show = function() {
+      print(sizeData)
+      return(invisible(.self))
     }
   )
 )
