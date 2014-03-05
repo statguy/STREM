@@ -17,10 +17,10 @@ Model <- setRefClass(
     mesh = "inla.mesh",
     spde = "inla.spde2",
     index = "list",
-    obsA = "Matrix",
-    obsStack = "inla.data.stack",
-    predA = "Matrix",
-    predStack = "inla.data.stack",
+    A = "Matrix",
+    dataStack = "inla.data.stack",
+    #predA = "Matrix",
+    #predStack = "inla.data.stack",
     countOffset = "numeric",
     result = "inla",
     node = "list",
@@ -40,7 +40,7 @@ Model <- setRefClass(
     
     saveEstimates = function(fileName=getEstimatesFileName()) {
       message("Saving result to ", fileName, "...")
-      save(locations, data, model, coordsScale, years, mesh, spde, index, obsA, obsStack, predA, predStack, countOffset, result, file=fileName)
+      save(locations, data, model, coordsScale, years, mesh, spde, index, A, dataStack, countOffset, result, file=fileName)
     },
     
     loadEstimates = function(fileName=getEstimatesFileName()) {
@@ -71,10 +71,8 @@ SmoothModel <- setRefClass(
       
       message("Constructing mesh...")
 
-      #intersectionsSubset <- subset(intersections$intersections, response == study$response)
       data <<- intersections$getData()
       coordsScale <<- meshParams$coordsScale
-      #locations <<- coordinates(intersectionsSubset) * coordsScale
       locations <<- intersections$getCoordinates() * coordsScale
       mesh <<- inla.mesh.create.helper(points.domain=locations,
                                        min.angle=meshParams$minAngle,
@@ -93,34 +91,21 @@ SmoothModel <- setRefClass(
       spde <<- inla.spde2.matern(mesh)
       index <<- inla.spde.make.index("st", n.spde=mesh$n, n.group=nYears)
       
-      obsA <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
-      obsStack <<- inla.stack(data=list(response=data$intersections),
-                               A=list(obsA),
+      A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
+      dataStack <<- inla.stack(data=list(response=data$intersections),
+                               A=list(A),
                                effects=list(c(index, list(intercept=1))),
                                tag="observed")
       
-      predA <<- inla.spde.make.A(mesh, group=groupYears, n.group=nYears)
-      predStack <<- inla.stack(data=list(response=NA),
-                               A=list(predA),
-                               effects=list(c(index, mesh$loc, list(intercept=1))),
-                               tag="predicted")
+            
+      #loc <- matrix(rep(t(mesh$loc[,1:2]), nYears), nrow=nYears * nrow(mesh$loc), byrow=T)
+      #predA <<- inla.spde.make.A(mesh=mesh, loc=loc, group=rep(1:nYears, each=mesh$n), n.group=nYears)
+      #predStack <<- inla.stack(data=list(response=NA),
+      #                         A=list(predA),
+      #                         effects=list(c(index, list(intercept=1))),
+      #                         tag="predicted")
       
       countOffset <<- 2/pi * data$length * data$duration * data$distance
-      
-      return(invisible(.self))
-    },
-    
-    plotMesh = function(surveyRoutes) {
-      library(INLA)
-      library(sp)
-      meshUnscaled <- mesh
-      meshUnscaled$loc <- mesh$loc / coordsScale
-      plot(meshUnscaled, asp=1, main="", col="gray")
-      plot(study$studyArea$boundary, border="black", add=T)
-      
-      if (missing(surveyRoutes)) {}
-        # TODO: plot intersection coordinates
-      else plot(surveyRoutes$surveyRoutes, col="blue", add=T)
       
       return(invisible(.self))
     },
@@ -128,7 +113,7 @@ SmoothModel <- setRefClass(
     estimate = function(save=FALSE, fileName=getEstimatesFileName()) {
       library(INLA)
       
-      dataStack <- inla.stack(dataStack, predStack)
+      #dataStack <- inla.stack(obsStack, predStack)
       result <<- inla(model,
                       family=family,
                       data=inla.stack.data(dataStack),
@@ -224,8 +209,9 @@ if (F) {
     },
     
     getPredictedIntersections = function() {
-      data$countOffset <<- countOffset
-      intersections <- ddply(data, .(year), function(x) {
+      x <- data
+      x$countOffset <- countOffset
+      intersections <- ddply(x, .(year), function(x) {
         data.frame(Observed=sum(x$intersections), Predicted=sum(x$fittedMean * x$countOffset))
       })
       return(intersections)
@@ -274,20 +260,33 @@ if (F) {
         #meanRaster <- rasterInterpolate(subset(xyzMean, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea        
         #if (!(missing(maskPolygon) | is.null(maskPolygon)))
           #meanRaster <- mask(meanRaster, maskPolygon)
-        names(meanRaster) <- year
-        meanPopulationDensityRaster$addLayer(meanRaster)
+        meanPopulationDensityRaster$addLayer(meanRaster, year)
         
         if (getSD) {
           sdRaster <- project(values=node$sd[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon)
           #sdRaster <- rasterInterpolate(subset(xyzSD, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea
           #if (!(missing(maskPolygon) | is.null(maskPolygon)))
             #sdRaster <- mask(sdRaster, maskPolygon)
-          names(sdRaster) <- year
-          sdPopulationDensityRaster$addLayer(sdRaster)
+          sdPopulationDensityRaster$addLayer(sdRaster, year)
         }
       }
       
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
-    }    
+    },
+
+    plotMesh = function(surveyRoutes) {
+      library(INLA)
+      library(sp)
+      meshUnscaled <- mesh
+      meshUnscaled$loc <- mesh$loc / coordsScale
+      plot(meshUnscaled, asp=1, main="", col="gray")
+      plot(study$studyArea$boundary, border="black", add=T)
+      
+      if (missing(surveyRoutes)) {}
+      # TODO: plot intersection coordinates
+      else plot(surveyRoutes$surveyRoutes, col="blue", add=T)
+      
+      return(invisible(.self))
+    }
   )
 )

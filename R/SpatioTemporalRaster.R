@@ -18,8 +18,9 @@ SpatioTemporalRaster <- setRefClass(
       return(invisible(.self))
     },
     
-    addLayer = function(layer) {
+    addLayer = function(layer, name) {
       library(raster)
+      if (!missing(name)) names(layer) <- name
       rasterStack <<- raster::addLayer(rasterStack, layer)
       return(invisible(.self))
     },
@@ -49,11 +50,11 @@ SpatioTemporalRaster <- setRefClass(
         
         if (sameScale) {
           plot(layer, main=layerName,
-               col=terrain.colors(99),
+               col=rev(terrain.colors(99)),
                breaks=seq(vmin, vmax, length.out=100))
         }
         else {
-          plot(layer, main=layerName, col=terrain.colors(99))
+          plot(layer, main=layerName, col=rev(terrain.colors(99)))
         }
         
         plot(boundary, add=T)
