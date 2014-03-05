@@ -137,7 +137,7 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
   for (year in 1:years) {
     if (nAgentsCurrent > 0) {
       track <- ldply(1:nAgentsCurrent,
-        function(agentIndex, initialLocations, initialAngles, isFirst, nProposal, iteration, nIterations, habitat, habitatWeights, boundary, CRWCorrelation, BCRWCorrelationBiasTradeoff, homeRangeRadius, days, stepIntervalHours, nSteps, distanceScale, stepSpeedScale) {
+        function(agentIndex, initialLocations, initialAngles, agents, nAgentsCurrent, isFirst, nProposal, iteration, nIterations, habitat, habitatWeights, boundary, CRWCorrelation, BCRWCorrelationBiasTradeoff, homeRangeRadius, days, stepIntervalHours, nSteps, distanceScale, stepSpeedScale) {
          library(sp)
          
          ## TODO: UNTESTED CODE
@@ -150,7 +150,7 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
          track$agent <- agents[agentIndex]
          return(track)
         },
-        initialLocations=initialLocations, initialAngles=initialAngles, isFirst=isFirst, nProposal=nProposal, iteration=iteration, nIterations=nIterations, habitat=habitat, habitatWeights=habitatWeights, boundary=boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale, .parallel=TRUE)
+        initialLocations=initialLocations, initialAngles=initialAngles, agents=agents, nAgentsCurrent=nAgentsCurrent, isFirst=isFirst, nProposal=nProposal, iteration=iteration, nIterations=nIterations, habitat=habitat, habitatWeights=habitatWeights, boundary=boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale, .parallel=TRUE)
       
       track$year <- year
     }
