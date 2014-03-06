@@ -220,6 +220,13 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
   return(tracks)
 }
 
+saveSimulatedTracks <- function(xy, id, date, iteration, tracksDir, response, region) {
+  tracks <- data.frame(xy, id=id, date=date)
+  thinId <- 1
+  fileName <- file.path(tracksDir, paste(paste("Tracks", response, region, iteration, sep="-"), ".RData", sep=""))
+  save(tracks, iteration, thinId, file=fileName)
+}
+
 
 ##################################
 
@@ -270,14 +277,17 @@ MovementSimulationScenario <- setRefClass(
 
         initialLocations <- initialPopulation$randomize(nAgents)
         
+        tracksDir <- study$context$scratchDirectory
+        response <- study$response
+        region <- study$studyArea$region
+        
         cnpClusterStartRemote(hosts=cnpClusterGetHostsUkko(maxNodes=min(nIterations, 50), blacklist=c("ukko057.hpc.cs.helsinki.fi")))
         cnpClusterExportCNPCluster()
-        cnpClusterExport(c("SimulatedTracks", "randomizeBCRWTracks", "randomizeBCRWTrack", "randomizeBirthDeath", "getVector",
-                              "study", "nIterations", "nAgents", "initialLocations", "habitatWeigts",
-                              "CRWCorrelation", "BCRWCorrelationBiasTradeoff", "homeRangeRadius", "days", "years", "stepIntervalHours",
-                              "nSteps", "distanceScale", "stepSpeedScale"))
+        cnpClusterExport(c("saveSimulatedTracks", "randomizeBCRWTracks", "randomizeBCRWTrack", "randomizeBirthDeath", "getVector",
+          "nIterations", "nAgents", "initialLocations", "habitatWeigts", "CRWCorrelation", "BCRWCorrelationBiasTradeoff",
+          "homeRangeRadius", "days", "years", "stepIntervalHours", "nSteps", "distanceScale", "stepSpeedScale",
+          "tracksDir", "response", "region"))
         
-        if (F) {
         cnpClusterListApplyGeneric(1:nIterations, function(i) {
           message("Iteration ", i, " of ", nIterations, "...")
           tracksDF <- randomizeBCRWTracks(iteration=i, nIterations=nIterations, initialLocations=initialLocations,
@@ -287,9 +297,8 @@ MovementSimulationScenario <- setRefClass(
                                           days=days, years=years, stepIntervalHours=stepIntervalHours, nSteps=nSteps,
                                           distanceScale=distanceScale, stepSpeedScale=stepSpeedScale)
           date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
-          tracks <- SimulatedTracks$new(study=study, preprocessData=TRUE, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=i)
+          saveSimulatedTracks(xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=i, tracksDir=tracksDir, response=response, region=region)
         })
-        }
           
         cnpClusterStopRemote()
       }
