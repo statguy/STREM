@@ -2,6 +2,7 @@ randomizeVector = function(locations, habitat, habitatWeights, boundary) {
   library(sp)
   library(raster)
   
+  err <- try({
   if (nrow(locations) < 1 | ncol(locations) != 2) {
     print(locations)
     stop("Invalid locations argument.")
@@ -17,7 +18,9 @@ randomizeVector = function(locations, habitat, habitatWeights, boundary) {
   
   outsideBoundary <- is.na(over(point, boundary))
   if (class(outsideBoundary) == "matrix") outsideBoundary <- outsideBoundary[,1]
+  }); if (inherits(err, "try-error")) { message(err); stop("randomizeVector(); err = 1") }
   
+  err <- try({
   if (inherits(habitatWeights, "uninitializedField") | is.null(habitatWeights)) {
     if (all(outsideBoundary == TRUE)) return(NULL)
     return(list(index=1, coords=locations[1,,drop=F]))
@@ -31,12 +34,14 @@ randomizeVector = function(locations, habitat, habitatWeights, boundary) {
     k <- sample(1:nrow(locations), 1, prob=w)
     return(list(index=k, coords=locations[k,,drop=F]))
   }
+  }); if (inherits(err, "try-error")) { message(err); stop("randomizeVector(); err = 2") }
 }
 
 randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal, habitat, habitatWeights, boundary, CRWCorrelation, BCRWCorrelationBiasTradeoff, homeRangeRadius, days, stepIntervalHours, nSteps, distanceScale, stepSpeedScale) {
   library(CircStats)
   library(sp)
   
+  err <- try({
   maxTry <- 100
   
   coords <- matrix(NA, nrow=nSteps + 1, ncol=2)
@@ -45,8 +50,12 @@ randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal
   angles[1] <- initialAngle
   
   step <- 2
+  }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 1") }
+  
   while (TRUE) {
     for (j in 1:maxTry) {
+      
+      err <- try({
       # Correlated random walk
       newAngles <- rwrpnorm(nProposal, angles[step-1], CRWCorrelation)
       newDistances <- rweibull(nProposal, shape=2, scale=stepSpeedScale * stepIntervalHours * distanceScale)
@@ -62,7 +71,9 @@ randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal
       
       proposedVectors <- getVector(coords[step-1,,drop=F], newDistances, newAngles)
       acceptedVectors <- randomizeVector(locations=proposedVectors, habitat=habitat, habitatWeights=habitatWeights, boundary=boundary)
+      }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 2") }
       
+      err <- try({
       if (!is.null(acceptedVectors)) {
         coords[step,] <- acceptedVectors$coords
         angles[step] <- newAngles[acceptedVectors$index]
@@ -75,27 +86,32 @@ randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal
         if (step < 2) step <- 2
         next
       }
+      }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 3") }
     }
     
     if (j == maxTry) {
+      err <- try({
       track <- SpatialLines(list(Lines(list(Line(coords[1:step-1,])), ID=1)), proj4string=boundary@proj4string)
       plot(track, col="blue")
       plot(study$studyArea$boundary, add=T)
       points(proposedVectors, col="red", pch="+")
       points(acceptedVectors$coords, col="green", pch="+")
       stop("Boundary reflection failed.")
+      }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 4") }
     }
     
     if (step == nSteps + 1) break
     step <- step + 1
   }
   
+  err <- try({
   index <- if (isFirst) 1:nSteps else 1:nSteps+1
   stepDays <- rep(1:days, each=24 / stepIntervalHours)
   stepHours <- rep(seq(0, 24-stepIntervalHours, by=stepIntervalHours), days)
   stepMinutes <- (stepHours - trunc(stepHours)) * 60
   stepSeconds <- (stepMinutes - trunc(stepMinutes)) * 60
   return(data.frame(x=coords[index,1], y=coords[index,2], angle=angles[index], day=stepDays, hour=trunc(stepHours), minute=trunc(stepMinutes), second=round(stepSeconds)))
+  }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 5") }
 }
 
 # Combined birth-death process:
@@ -104,6 +120,7 @@ randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal
 # 2 born = 1 parent survives + 1 offspring/immigration
 # etc.
 randomizeBirthDeath <- function(param=list(mean=1, sd=1.1), agents, newAgentId) {
+  err <- try({
   bdRate <- rlnorm(n=1, meanlog=log(param$mean), sdlog=log(param$sd))
   nTransform <- rpois(length(agents), bdRate)
   
@@ -121,6 +138,7 @@ randomizeBirthDeath <- function(param=list(mean=1, sd=1.1), agents, newAgentId) 
   agents <- agents[survivedIndex]
   if (nBorn > 0) agents <- c(agents, newAgentId:(newAgentId + nBorn - 1))
   newAgentId <- as.integer(newAgentId + nBorn)
+  }); if (inherits(err, "try-error")) { message(err); stop("randomizeBirthDeath(); err = 1") }
   
   return(list(survivedBornIndex=survivedBornIndex, agents=agents, newAgentId=newAgentId))
 }
@@ -129,6 +147,9 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
   library(plyr)
   library(maptools)
   
+  options(error=recover)
+  
+  err <- try({
   #initialLocations <- initialPopulation$randomize(nAgents)
   habitatTypes <- extract(habitat, initialLocations)
   if (any(is.na(habitatTypes))) stop("Invalid initial coordinates.")
@@ -145,22 +166,24 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
   isFirst <- TRUE
   
   nAgentsCurrent <- nAgents
+  }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTracks(); err = 1") }
   
   for (year in 1:years) {
     if (nAgentsCurrent > 0) {
       track <- ldply(1:nAgentsCurrent,
         function(agentIndex, initialLocations, initialAngles, agents, nAgentsCurrent, isFirst, nProposal, iteration, nIterations, habitat, habitatWeights, boundary, CRWCorrelation, BCRWCorrelationBiasTradeoff, homeRangeRadius, days, stepIntervalHours, nSteps, distanceScale, stepSpeedScale) {
-         #library(sp)
-         
-         ## TODO: UNTESTED CODE
-         #if (length(habitatWeights) != 0 & loadHabitatRasterInMemory) {
-         #  study$studyArea$readRasterIntoMemory()                
-         #}
-         
-         message("Iteration = ", iteration, " / ", nIterations, ", agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgentsCurrent, ", year = ", year,  " / ", years, ", days = ", days, "...")
-         track <- randomizeBCRWTrack(initialLocation=initialLocations[agentIndex,,drop=F], initialAngle=initialAngles[agentIndex], isFirst=isFirst, nProposal=nProposal, habitat=habitat, habitatWeights=habitatWeights, boundary=boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale)
-         track$agent <- agents[agentIndex]
-         return(track)
+          ## TODO: UNTESTED CODE
+          #if (length(habitatWeights) != 0 & loadHabitatRasterInMemory) {
+          #  study$studyArea$readRasterIntoMemory()                
+          #}
+          
+          err <- try({
+          message("Iteration = ", iteration, " / ", nIterations, ", agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgentsCurrent, ", year = ", year,  " / ", years, ", days = ", days, "...")
+          track <- randomizeBCRWTrack(initialLocation=initialLocations[agentIndex,,drop=F], initialAngle=initialAngles[agentIndex], isFirst=isFirst, nProposal=nProposal, habitat=habitat, habitatWeights=habitatWeights, boundary=boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale)
+          track$agent <- agents[agentIndex]
+          }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTracks(); err = 2") }
+          
+          return(track)
         },
         initialLocations=initialLocations, initialAngles=initialAngles, agents=agents, nAgentsCurrent=nAgentsCurrent, isFirst=isFirst, nProposal=nProposal, iteration=iteration, nIterations=nIterations, habitat=habitat, habitatWeights=habitatWeights, boundary=boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale, .parallel=TRUE)
       
@@ -168,6 +191,7 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
     }
     
     if (year < years) {
+      err <- try({
       rdReturn <- randomizeBirthDeath(agents=agents, newAgentId=newAgentId)
       survivedBornLastStepIndex <- rdReturn$survivedBornIndex * nSteps
       agents <- rdReturn$agents
@@ -176,8 +200,10 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
       initialAngles <- track[survivedBornLastStepIndex, c("angle")]
       isFirst <- FALSE
       nAgentsCurrent <- length(rdReturn$agents)
+      }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTracks(); err = 3") }
     }
     
+    err <- try({
     date <- as.POSIXct(strptime(paste(2000+track$year, track$day, track$hour, track$minute, track$second), format="%Y %j %H %M %S"))
     month <- as.POSIXlt(date)$mon + 1
     retainMonths <- c(1,2)
@@ -185,6 +211,8 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
     track <- track[retainIndex,]
     
     tracks <- rbind(tracks, track)
+    }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTracks(); err = 4") }
+    
   }
   
   return(tracks)
@@ -289,7 +317,7 @@ MovementSimulationScenarioA <- setRefClass(
   Class = "MovementSimulationScenarioA",
   contains = "MovementSimulationScenario",
   methods = list(
-    initialize = function(nAgents=as.integer(200), nIterations=as.integer(50), years=as.integer(20), days=as.integer(365), stepIntervalHours=2, runParallel=T, ...) {
+    initialize = function(nAgents=as.integer(200), nIterations=as.integer(50), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, runParallel=T, ...) {
       callSuper(years=years, nAgents=nAgents, nIterations=nIterations, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=0.8, runParallel=runParallel, ...)
       return(invisible(.self))
     },
