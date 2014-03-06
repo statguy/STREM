@@ -278,7 +278,7 @@ MovementSimulationScenario <- setRefClass(
                               "nSteps", "distanceScale", "stepSpeedScale"))
         
         if (F) {
-        cnpClusterListApplyGeneric <- function(1:nIterations, function(i) {
+        cnpClusterListApplyGeneric(1:nIterations, function(i) {
           message("Iteration ", i, " of ", nIterations, "...")
           tracksDF <- randomizeBCRWTracks(iteration=i, nIterations=nIterations, initialLocations=initialLocations,
                                           habitat=study$studyArea$habitat, habitatWeights=habitatWeights, nAgents=nAgents,
