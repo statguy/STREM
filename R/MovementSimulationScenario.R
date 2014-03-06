@@ -18,7 +18,7 @@ randomizeVector = function(locations, habitat, habitatWeights, boundary) {
   
   outsideBoundary <- is.na(over(point, boundary))
   if (class(outsideBoundary) == "matrix") outsideBoundary <- outsideBoundary[,1]
-  }); if (inherits(err, "try-error")) { message(err); stop("randomizeVector(); err = 1") }
+  }); if (inherits(err, "try-error")) { message(err); stop("randomizeVector(); err = 1, msg = ", err[1]) }
   
   err <- try({
   if (inherits(habitatWeights, "uninitializedField") | is.null(habitatWeights)) {
@@ -34,7 +34,7 @@ randomizeVector = function(locations, habitat, habitatWeights, boundary) {
     k <- sample(1:nrow(locations), 1, prob=w)
     return(list(index=k, coords=locations[k,,drop=F]))
   }
-  }); if (inherits(err, "try-error")) { message(err); stop("randomizeVector(); err = 2") }
+  }); if (inherits(err, "try-error")) { message(err); stop("randomizeVector(); err = 2, msg = ", err[1]) }
 }
 
 randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal, habitat, habitatWeights, boundary, CRWCorrelation, BCRWCorrelationBiasTradeoff, homeRangeRadius, days, stepIntervalHours, nSteps, distanceScale, stepSpeedScale) {
@@ -50,7 +50,7 @@ randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal
   angles[1] <- initialAngle
   
   step <- 2
-  }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 1") }
+  }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 1, msg = ", err[1]) }
   
   while (TRUE) {
     for (j in 1:maxTry) {
@@ -71,7 +71,7 @@ randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal
       
       proposedVectors <- getVector(coords[step-1,,drop=F], newDistances, newAngles)
       acceptedVectors <- randomizeVector(locations=proposedVectors, habitat=habitat, habitatWeights=habitatWeights, boundary=boundary)
-      }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 2") }
+      }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 2, msg = ", err[1]) }
       
       err <- try({
       if (!is.null(acceptedVectors)) {
@@ -86,7 +86,7 @@ randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal
         if (step < 2) step <- 2
         next
       }
-      }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 3") }
+      }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 3, msg = ", err[1]) }
     }
     
     if (j == maxTry) {
@@ -97,7 +97,7 @@ randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal
       points(proposedVectors, col="red", pch="+")
       points(acceptedVectors$coords, col="green", pch="+")
       stop("Boundary reflection failed.")
-      }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 4") }
+      }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 4, msg = ", err[1]) }
     }
     
     if (step == nSteps + 1) break
@@ -111,7 +111,7 @@ randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal
   stepMinutes <- (stepHours - trunc(stepHours)) * 60
   stepSeconds <- (stepMinutes - trunc(stepMinutes)) * 60
   return(data.frame(x=coords[index,1], y=coords[index,2], angle=angles[index], day=stepDays, hour=trunc(stepHours), minute=trunc(stepMinutes), second=round(stepSeconds)))
-  }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 5") }
+  }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 5, msg = ", err[1]) }
 }
 
 # Combined birth-death process:
@@ -138,7 +138,7 @@ randomizeBirthDeath <- function(param=list(mean=1, sd=1.1), agents, newAgentId) 
   agents <- agents[survivedIndex]
   if (nBorn > 0) agents <- c(agents, newAgentId:(newAgentId + nBorn - 1))
   newAgentId <- as.integer(newAgentId + nBorn)
-  }); if (inherits(err, "try-error")) { message(err); stop("randomizeBirthDeath(); err = 1") }
+  }); if (inherits(err, "try-error")) { message(err); stop("randomizeBirthDeath(); err = 1, msg = ", err[1]) }
   
   return(list(survivedBornIndex=survivedBornIndex, agents=agents, newAgentId=newAgentId))
 }
@@ -166,7 +166,7 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
   isFirst <- TRUE
   
   nAgentsCurrent <- nAgents
-  }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTracks(); err = 1") }
+  }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTracks(); err = 1, msg = ", err[1]) }
   
   for (year in 1:years) {
     if (nAgentsCurrent > 0) {
@@ -181,7 +181,7 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
           message("Iteration = ", iteration, " / ", nIterations, ", agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgentsCurrent, ", year = ", year,  " / ", years, ", days = ", days, "...")
           track <- randomizeBCRWTrack(initialLocation=initialLocations[agentIndex,,drop=F], initialAngle=initialAngles[agentIndex], isFirst=isFirst, nProposal=nProposal, habitat=habitat, habitatWeights=habitatWeights, boundary=boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale)
           track$agent <- agents[agentIndex]
-          }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTracks(); err = 2") }
+          }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTracks(); err = 2, msg = ", err[1]) }
           
           return(track)
         },
@@ -200,7 +200,7 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
       initialAngles <- track[survivedBornLastStepIndex, c("angle")]
       isFirst <- FALSE
       nAgentsCurrent <- length(rdReturn$agents)
-      }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTracks(); err = 3") }
+      }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTracks(); err = 3, msg = ", err[1]) }
     }
     
     err <- try({

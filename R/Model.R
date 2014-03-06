@@ -50,6 +50,12 @@ Model <- setRefClass(
     
     estimate = function(save=FALSE, fileName=getEstimatesFileName()) {
       stop("Unimplemented method.")
+    },
+    
+    getUnscaledMesh = function() {
+      mesh.unscaled <- mesh
+      mesh.unscaled$loc <- mesh.unscaled$loc / coordsScale
+      return(mesh.unscaled)
     }
   )
 )
@@ -138,25 +144,24 @@ SmoothModel <- setRefClass(
       library(plyr)
       
       message("Processing fitted values...")
+      
       indexObserved <- inla.stack.index(dataStack, "observed")$data
-
-      data$eta <<- result$summary.linear.predictor$mean[indexObserved]
-      data$fittedMean <<- result$summary.fitted.values$mean[indexObserved]
-      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved]
+      data$eta <<- result$summary.linear.predictor$mean[indexObserved] - log(weights)
+      data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] / weights
+      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] / weights^2
       
       message("Processing random effects...")
+      
       intercept <- result$summary.fixed["intercept","mean"]
       yearsVector <- sort(unique(data$year))
-      
       e <- numeric(mesh$n * length(yearsVector))
       for (i in 1:(mesh$n * length(yearsVector)))
-        e[i] <- inla.emarginal(function(x) exp(intercept + x), result$marginals.random$st[[i]])
-        #e[i] <- exp(intercept + result$summary.random$st$mean[i])
+        e[i] <- inla.emarginal(function(x) exp(intercept + x) / weights, result$marginals.random$st[[i]])
       node$mean <<- matrix(data=e, nrow=mesh$n, ncol=length(yearsVector))
       
       # By Jensen's inequality:
       # E(exp(x)) >= exp(E(x))
-      inla.emarginal(function(x) exp(intercept+x), result$marginals.random$st[[1]]) >= exp(intercept + result$summary.random$st$mean[1])
+      inla.emarginal(function(x) exp(intercept + x) / weights, result$marginals.random$st[[1]]) >= exp(intercept + result$summary.random$st$mean[1]) / weights
 
       # TODO: SD
       
@@ -220,10 +225,8 @@ if (F) {
     project = function(values, projectionRaster, maskPolygon) {
       library(INLA)
       library(raster)
-      
-      mesh.scaled <- mesh
-      mesh.scaled$loc <- mesh.scaled$loc / coordsScale
-      projector <- inla.mesh.projector(mesh.scaled,
+
+      projector <- inla.mesh.projector(getUnscaledMesh(),
                                        dims=c(ncol(projectionRaster), nrow(projectionRaster)),
                                        xlim=c(xmin(projectionRaster), xmax(projectionRaster)),
                                        ylim=c(ymin(projectionRaster), ymax(projectionRaster)))
@@ -286,6 +289,20 @@ if (F) {
       # TODO: plot intersection coordinates
       else plot(surveyRoutes$surveyRoutes, col="blue", add=T)
       
+      return(invisible(.self))
+    }
+  )
+)
+
+FinlandSmoothModel <- setRefClass(
+  Class = "FinlandSmoothModel",
+  contains = c("SmoothModel", "FinlandCovariates"),
+  fields = list(
+    family = "character"
+  ),
+  methods = list(
+    initialize = function(...) {
+      callSuper(modelName="SmoothModel", ...)
       return(invisible(.self))
     }
   )

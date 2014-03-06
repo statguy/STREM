@@ -126,7 +126,7 @@ FinlandCovariates <- setRefClass(
       library(plyr)
       library(sp)
       
-      if (!all(c("id", "year") %in% names(xyt)))
+      if (!all(c("id", "date") %in% names(xyt)))
         stop("Missing variables in the data.")
       
       x <- data.frame(raster::as.data.frame(xyt), breakDownDate(xyt$date))

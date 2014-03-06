@@ -1,3 +1,5 @@
+repeatMatrix <- function(m, times) do.call("rbind", replicate(times, m, simplify=FALSE))
+
 # Converts ltraj object to SpatialPointsDataFrame object without stripping information.
 # Allows setting projection as well.
 ltraj2spdf2 <- function(ltraj, proj4string="") {
