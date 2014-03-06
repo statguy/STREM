@@ -273,7 +273,7 @@ MovementSimulationScenario <- setRefClass(
     simulate = function(restartIteration=1, save=FALSE, returnTracks=FALSE) {
       stopifnot(restartIteration <= nIterations)
       
-      simulatedTracks <- SimulatedTracksCollection$new(study=study)
+      #simulatedTracks <- SimulatedTracksCollection$new(study=study)
       
       for (i in restartIteration:nIterations) {
         message("Iteration ", i, " of ", nIterations, "...")
@@ -285,10 +285,11 @@ MovementSimulationScenario <- setRefClass(
         date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
         tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=i)
         
-        if (returnTracks) simulatedTracks$addTracks(tracks)
+        #if (returnTracks) simulatedTracks$addTracks(tracks)
       }
       
-      return(invisible(simulatedTracks))
+      #return(invisible(simulatedTracks))
+      return(invisible(.self))
     }        
   )
 )

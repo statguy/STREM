@@ -53,7 +53,7 @@ FinlandCovariates <- setRefClass(
       
       populationDensity <- ddply(raster::as.data.frame(xyt), .(year), function(x, proj4string) {
         year <- x$year[1]
-        message("Processing year ", year, "...")
+        message("Finding population density covariates for year ", year, "...")
         
         populationDensityRaster <- loadPopulationDensityYear(year=year)
         xy <- SpatialPoints(cbind(x$x, x$y), proj4string=CRS(proj4string))
@@ -132,7 +132,7 @@ FinlandCovariates <- setRefClass(
       x <- data.frame(raster::as.data.frame(xyt), breakDownDate(xyt$date))
       weatherCovariates <- ddply(x, .(year), function(x, proj4string) {
         year <- x$year[1]
-        message("Processing year ", year, "...")     
+        message("Finding weather covariates for year ", year, "...")     
         weather <- loadWeatherYear(year=year)
         
         points <- SpatialPoints(x[,c("x","y")], proj4string=CRS(proj4string))
@@ -162,7 +162,7 @@ FinlandCovariates <- setRefClass(
       return(study$context$getFileName(dir=study$context$processedDataDirectory, name=covariatesName, response=study$response, region=study$studyArea$region))
     },
     
-    saveCovariates = function(xyt, cache=FALSE, fmiApiKey, save=TRUE) {
+    saveCovariates = function(xyt, cache=FALSE, fmiApiKey, impute=FALSE, save=TRUE) {
       library(raster)
       
       if (!inherits(xyt, "SpatialPoints"))
@@ -178,7 +178,9 @@ FinlandCovariates <- setRefClass(
       if (cache) cacheWeather(years=years, fmiApiKey=fmiApiKey)
       weatherCovariates <- getWeatherCovariates(xyt)
             
-      covariates <<- merge(populationDensityCovariates, weatherCovariates, sort=FALSE)
+      covariates <<- merge(populationDensityCovariates, weatherCovariates, sort=FALSE)      
+      if (impute) imputeMissingCovariates(coordinates(xyt))
+      
       if (save) save(covariates, file=getCovariatesFileName(covariatesName))
 
       return(invisible(.self))
@@ -186,6 +188,21 @@ FinlandCovariates <- setRefClass(
     
     loadCovariates = function() {
       load(getCovariatesFileName(), envir=as.environment(.self))
+      return(invisible(.self))
+    },
+    
+    imputeMissingCovariates = function(xy) {
+      xyt2 <- data.frame(xy, covariates)
+      xyt2 <- ddply(xyt2, .(year), function(x) {
+        x <- inverseDistanceWeightningImpute(x, "rrday")
+        x <- inverseDistanceWeightningImpute(x, "snow")
+        x <- inverseDistanceWeightningImpute(x, "tday")
+        return(x)        
+      })
+      xyt2 <- arrange(xyt2, year, id)
+      xyt2$x <- NULL
+      xyt2$y <- NULL
+      covariates <<- xyt2
       return(invisible(.self))
     }
   )

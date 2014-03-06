@@ -58,3 +58,14 @@ getINLAEstimates <- function(marginal, fun=identity, coordsScale=1) {
   colnames(x) <- c("mean", "sd", "0.025quant","0.5quant","0.975quant", "mode")
   return(x)
 }
+
+inverseDistanceWeightningImpute <- function(data, varname, formula=as.formula(paste(varname, "~1")), locations=~x+y) {
+  library(gstat)
+  data.full <- data; data.full <- data.full[complete.cases(data.full),]
+  data.na <- data; data.na <- data.na[!complete.cases(data.na),]
+  if (nrow(data.na) == 0) return(data.full)
+  r <- gstat(formula=formula, locations=locations, data=data.full, nmax=7, set=list(idp=.5))
+  p <- predict(r, newdata=data.na)
+  data.na[,varname] <- p$var1.pred
+  return(rbind(data.full, data.na))
+}

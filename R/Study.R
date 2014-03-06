@@ -150,26 +150,27 @@ FinlandWTCStudy <- setRefClass(
       return(model)
     },
     
-    loadEstimates = function(withDistanceWeights=TRUE) {
-      estimates <- SmoothModel$new(study=.self)$loadEstimates()
-      
-      distances <- if (withDistanceWeights) {
-        distances <- predictDistances()
-        subset(distances, Variable=="Predicted", select="Value", drop=TRUE)
-      }
-      else {
-        tracks <- loadTracks()
-        mean(tracks$getDistances(), na.rm=T)
-      }
-      estimates$collectEstimates(weights=distances, quick=T)
-
-      return(estimates)
-    },
-    
     predictDistances = function() {
       intervals <- FinlandMovementSampleIntervals$new(study=.self)
+      
+      
       distances <- intervals$predictDistances()
+      # TODO...
+      
       return(distances)
+    },
+    
+    loadEstimates = function(withDistanceWeights=TRUE) {
+      estimates <- FinlandSmoothModel$new(study=.self)$loadEstimates()
+
+      xyt <- estimates$associateMeshLocationsWithDate()
+      estimates$saveCovariates(xyt, impute=TRUE, save=FALSE)
+      
+      distances <- if (withDistanceWeights) subset(predictDistances(), Variable=="Predicted", select="Value", drop=TRUE)
+      else mean(loadTracks()$getDistances(), na.rm=T)
+      estimates$collectEstimates(weights=distances, quick=TRUE)
+      
+      return(estimates)
     },
     
     getPopulationDensity = function(withHabitatWeights=TRUE, withDistanceWeights=TRUE, saveDensityPlots=FALSE) {

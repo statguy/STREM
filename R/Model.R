@@ -276,6 +276,34 @@ if (F) {
       
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
     },
+    
+    associateMeshLocationsWithDate = function() {
+      library(plyr)
+      library(fields)
+      
+      nYears <- length(years)
+      meshLocations <- getUnscaledMesh()$loc[,1:2]
+      nMeshLocations <- nrow(meshLocations)
+      predictLocations <- repeatMatrix(meshLocations, nYears)      
+      id <- rep(1:nMeshLocations, nYears)
+      year <- rep(estimates$years, each=nMeshLocations)
+      
+      xyt <- ddply(estimates$data, .(year), function(x) {
+        message("Finding closest observations for mesh nodes for year ", x$year[1], "...")
+        xyt <- data.frame()
+        for (i in 1:nMeshLocations) {
+          xy <- meshLocations[i,,drop=F]
+          d <- rdist(xy, x[,1:2] / coordsScale)
+          xyt <- rbind(xyt, data.frame(x=xy[,1], y=xy[,2], date=x[which.min(d),"date"], id=i))
+        }
+        return(xyt)
+      })
+      
+      xyt <- SpatialPointsDataFrame(xyt[,c("x","y")],
+                                    data.frame(id=xyt$id, year=xyt$year, date=xyt$date),
+                                    proj4string=study$studyArea$proj4string)
+      return(xyt)
+    },
 
     plotMesh = function(surveyRoutes) {
       library(INLA)
