@@ -148,6 +148,7 @@ randomizeBirthDeath <- function(param=list(mean=1, sd=1.1), agents, newAgentId) 
 randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habitat, habitatWeights, nAgents, boundary, CRWCorrelation, BCRWCorrelationBiasTradeoff, homeRangeRadius, days, years, stepIntervalHours, nSteps, distanceScale, stepSpeedScale) {
   library(plyr)
   library(maptools)
+  library(rgdal)
   
   options(error=recover)
   
@@ -283,7 +284,7 @@ MovementSimulationScenario <- setRefClass(
         
         cnpClusterStartRemote(hosts=cnpClusterGetHostsUkko(maxNodes=min(nIterations, 50), blacklist=c("ukko057.hpc.cs.helsinki.fi")))
 
-        cnpClusterEval({ library(sp); library(raster); library(CircStats); library(plyr); library(maptools) })
+        cnpClusterEval({ library(sp); library(raster); library(CircStats); library(plyr); library(maptools); library(rgdal) })
         cnpClusterExport(c("saveSimulatedTracks", "randomizeBCRWTracks", "randomizeBCRWTrack", "randomizeBirthDeath", "getVector"))
         cnpClusterExport(varlist=c("tracksDir", "response", "region", "initialLocations"), envir=localEnv)
         cnpClusterExport(varlist=c(
