@@ -58,7 +58,7 @@ SimulatedIntersections <- setRefClass(
     findIntersectionsMatrix = function(tracks, surveyRoutes, dimension=1) {
       library(sp)
       library(CNPCluster)
-
+      
       nSurveyRoutes <- length(surveyRoutes)
       nTracks <- length(tracks)
       #intersectionsMatrix <- matrix(0, nrow=nSurveyRoutes, ncol=nTracks)
@@ -113,7 +113,8 @@ SimulatedIntersections <- setRefClass(
       #if (length(tracks$distance) == 0)
       #  stop("Did you forgot to run getDistances() for tracks first?")
       
-      tracksDF <- ld(tracks$tracks)
+      tracksDF <- if (is.ltraj(tracks$tracks)) ld(tracks$tracks) else tracks$tracks
+      
       burstYear <- ddply(tracksDF, .(burst), function(x) {
         date <- as.POSIXlt(x$date)
         data.frame(burst=x$burst[1],

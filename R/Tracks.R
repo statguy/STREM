@@ -33,18 +33,34 @@ Tracks <- setRefClass(
     loadTracks = function() {
       library(adehabitatLT)
       load(getTracksFileName(), envir=as.environment(.self))
-      
-      #if (is.data.frame(tracks)) {
-      #  tracks <<- as.ltraj(xy=tracks[,c("x","y")], id=tracks$id, date=tracks$date)
-      #}
-      
+      if (is.data.frame(tracks)) {
+        tracks$year <- as.POSIXlt(tracks$date)$year + 1900
+        tracks$burst <- paste(tracks$id, tracks$year)
+      }
       return(invisible(.self))
+    },
+    
+    getPopulationSize = function() {
+      if (is.ltraj(tracks)) stop("Unsupported.")
+      library(plyr)
+      populationSize <- ddply(tracks, .(year), function(x) return(data.frame(Total=length(unique(x$id)))))
+      names(populationSize) <- c("Year","Total")
+      return(populationSize)
     },
     
     getSpatialLines = function() {
       library(sp)
-      tracksSP <- ltraj2sldf(tracks, byid=FALSE)
-      proj4string(tracksSP) <- study$studyArea$proj4string
+      if (is.data.frame(tracks)) {
+        library(plyr)
+        lines <- dlply(tracks, .(id, year), function(x) {
+          return(Lines(Line(x[,c("x","y")]), ID=paste(x$id[1], x$year[1])))
+        })
+        tracksSP <- SpatialLines(lines, proj4string=study$studyArea$proj4string)
+      }
+      else if (is.ltraj(tracks)) {
+        tracksSP <- ltraj2sldf(tracks, byid=FALSE)
+        proj4string(tracksSP) <- study$studyArea$proj4string
+      }
       return(tracksSP)
     },
     
