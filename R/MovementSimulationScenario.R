@@ -225,6 +225,7 @@ saveSimulatedTracks <- function(xy, id, date, iteration, tracksDir, response, re
   tracks <- data.frame(xy, id=id, date=date)
   thinId <- 1
   fileName <- file.path(tracksDir, paste(paste("Tracks", response, region, iteration, sep="-"), ".RData", sep=""))
+  message("Saving simulated tracks to ", fileName, "...")
   save(tracks, iteration, thinId, file=fileName)
 }
 
