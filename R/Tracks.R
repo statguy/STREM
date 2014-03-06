@@ -8,7 +8,8 @@ Tracks <- setRefClass(
     #tracks = "ltraj",
     tracks = "ANY",
     distance = "ANY",
-    thinId = "integer"
+    #thinId = "integer"
+    thinId = "numeric"
   ),
   methods = list(
     initialize = function(thinId, preprocessData=FALSE, ...) {
@@ -32,6 +33,11 @@ Tracks <- setRefClass(
     loadTracks = function() {
       library(adehabitatLT)
       load(getTracksFileName(), envir=as.environment(.self))
+      
+      #if (is.data.frame(tracks)) {
+      #  tracks <<- as.ltraj(xy=tracks[,c("x","y")], id=tracks$id, date=tracks$date)
+      #}
+      
       return(invisible(.self))
     },
     
