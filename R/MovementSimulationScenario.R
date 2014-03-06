@@ -282,12 +282,10 @@ MovementSimulationScenario <- setRefClass(
         localEnv$initialLocations <- initialPopulation$randomize(nAgents)
         
         cnpClusterStartRemote(hosts=cnpClusterGetHostsUkko(maxNodes=min(nIterations, 50), blacklist=c("ukko057.hpc.cs.helsinki.fi")))
-        cnpClusterExportCNPCluster()
 
         cnpClusterExport(c("saveSimulatedTracks", "randomizeBCRWTracks", "randomizeBCRWTrack", "randomizeBirthDeath", "getVector"))
-        cluster <- cnpClusterGetRemoteCluster()
-        clusterExport(cl=cluster, varlist=c("tracksDir", "response", "region", "initialLocations"), envir=localEnv)
-        clusterExport(cl=cluster, varlist=c(
+        cnpClusterExport(varlist=c("tracksDir", "response", "region", "initialLocations"), envir=localEnv)
+        cnpClusterExport(varlist=c(
             "nIterations", "nAgents", "habitatWeights", "CRWCorrelation", "BCRWCorrelationBiasTradeoff",
             "homeRangeRadius", "days", "years", "stepIntervalHours", "nSteps", "distanceScale", "stepSpeedScale"),
           envir=as.environment(.self))
