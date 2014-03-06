@@ -271,7 +271,7 @@ MovementSimulationScenario <- setRefClass(
       return(invisible(.self))
     },
 
-    simulate = function(restartIteration=1, save=FALSE, useCluster=FALSE, blacklist=NULL) {
+    simulate = function(restartIteration=1, save=FALSE, useCluster=FALSE, maxNodes=50, blacklist=NULL) {
       stopifnot(restartIteration <= nIterations)
       
       if (useCluster) {
@@ -283,7 +283,7 @@ MovementSimulationScenario <- setRefClass(
         localEnv$region <- study$studyArea$region
         localEnv$initialLocations <- initialPopulation$randomize(nAgents)
         
-        cnpClusterStartRemote(hosts=cnpClusterGetHostsUkko(maxNodes=min(nIterations, 50), blacklist=blacklist))
+        cnpClusterStartRemote(hosts=cnpClusterGetHostsUkko(maxNodes=min(nIterations, maxNodes), blacklist=blacklist))
 
         cnpClusterEval({ library(sp); library(raster); library(CircStats); library(plyr); library(maptools); library(rgdal) })
         cnpClusterExport(c("saveSimulatedTracks", "randomizeBCRWTracks", "randomizeBCRWTrack", "randomizeBirthDeath", "getVector"))
