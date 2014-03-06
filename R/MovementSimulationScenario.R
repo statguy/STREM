@@ -283,6 +283,7 @@ MovementSimulationScenario <- setRefClass(
         
         cnpClusterStartRemote(hosts=cnpClusterGetHostsUkko(maxNodes=min(nIterations, 50), blacklist=c("ukko057.hpc.cs.helsinki.fi")))
 
+        cnpClusterEval({ library(sp); library(raster); library(CircStats); library(plyr); library(maptools) })
         cnpClusterExport(c("saveSimulatedTracks", "randomizeBCRWTracks", "randomizeBCRWTrack", "randomizeBirthDeath", "getVector"))
         cnpClusterExport(varlist=c("tracksDir", "response", "region", "initialLocations"), envir=localEnv)
         cnpClusterExport(varlist=c(
