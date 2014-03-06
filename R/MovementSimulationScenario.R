@@ -42,7 +42,7 @@ randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal
   library(sp)
   
   err <- try({
-  maxTry <- 100
+  maxTry <- 1000
   
   coords <- matrix(NA, nrow=nSteps + 1, ncol=2)
   coords[1,] <- initialLocation
@@ -91,12 +91,14 @@ randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal
     
     if (j == maxTry) {
       err <- try({
-      track <- SpatialLines(list(Lines(list(Line(coords[1:step-1,])), ID=1)), proj4string=boundary@proj4string)
-      plot(track, col="blue")
-      plot(study$studyArea$boundary, add=T)
-      points(proposedVectors, col="red", pch="+")
-      points(acceptedVectors$coords, col="green", pch="+")
-      stop("Boundary reflection failed.")
+      #track <- SpatialLines(list(Lines(list(Line(coords[1:step-1,])), ID=1)), proj4string=boundary@proj4string)
+      #plot(track, col="blue")
+      #plot(study$studyArea$boundary, add=T)
+      #points(proposedVectors, col="red", pch="+")
+      #points(acceptedVectors$coords, col="green", pch="+")
+      fileName <- file.path(getwd(), "boundary_reflection_failed_points.RData")
+      save(coords, proposedVectors, acceptedVectors, step, file=fileName)
+      stop("Boundary reflection failed. File saved to ", fileName)
       }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTrack(); err = 4, msg = ", err[1]) }
     }
     

@@ -137,7 +137,7 @@ SmoothModel <- setRefClass(
     },
 
     # TODO: fix this
-    collectEstimates = function(weights=1, quick=FALSE) {
+    collectEstimates = function(weightsAtSurveyRoutes=1, weightsAtNodes=1, quick=FALSE) {
       #if (quick) return(collectEstimatesQuick(weights=weights))
       
       library(INLA)
@@ -146,9 +146,9 @@ SmoothModel <- setRefClass(
       message("Processing fitted values...")
       
       indexObserved <- inla.stack.index(dataStack, "observed")$data
-      data$eta <<- result$summary.linear.predictor$mean[indexObserved] - log(weights)
-      data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] / weights
-      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] / weights^2
+      data$eta <<- result$summary.linear.predictor$mean[indexObserved] - log(weightsAtSurveyRoutes)
+      data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] / weightsAtSurveyRoutes
+      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] / weightsAtSurveyRoutes^2
       
       message("Processing random effects...")
       
@@ -156,12 +156,12 @@ SmoothModel <- setRefClass(
       yearsVector <- sort(unique(data$year))
       e <- numeric(mesh$n * length(yearsVector))
       for (i in 1:(mesh$n * length(yearsVector)))
-        e[i] <- inla.emarginal(function(x) exp(intercept + x) / weights, result$marginals.random$st[[i]])
+        e[i] <- inla.emarginal(function(x) exp(intercept + x) / weightsAtNodes[i], result$marginals.random$st[[i]])
       node$mean <<- matrix(data=e, nrow=mesh$n, ncol=length(yearsVector))
       
       # By Jensen's inequality:
       # E(exp(x)) >= exp(E(x))
-      inla.emarginal(function(x) exp(intercept + x) / weights, result$marginals.random$st[[1]]) >= exp(intercept + result$summary.random$st$mean[1]) / weights
+      inla.emarginal(function(x) exp(intercept + x) / weightsAtNodes[1], result$marginals.random$st[[1]]) >= exp(intercept + result$summary.random$st$mean[1]) / weightsAtNodes[1]
 
       # TODO: SD
       

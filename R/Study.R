@@ -146,6 +146,7 @@ FinlandWTCStudy <- setRefClass(
       model <- FinlandSmoothModel$new(study=.self)
       model$setup(intersections=intersections, meshParams=meshParams)
       xyt <- model$associateMeshLocationsWithDate()
+      #model$saveCovariates(xyt, impute=FALSE, save=FALSE)
       model$saveCovariates(xyt, impute=TRUE, save=TRUE)
       
       if (!test) model$estimate(save=T, fileName=model$getEstimatesFileName())
@@ -159,17 +160,32 @@ FinlandWTCStudy <- setRefClass(
       return(estimates)
     },
 
-    predictDistances = function() {
+    #predictDistances = function(predictCovariates) {
+    #  intervals <- FinlandMovementSampleIntervals$new(study=.self)
+    #  distances <- intervals$predictDistances(predictCovariates=predictCovariates)
+    #  return(distances)
+    #},
+    
+    getSampleIntervals = function() {
       intervals <- FinlandMovementSampleIntervals$new(study=.self)
-      distances <- intervals$predictDistances()
-      return(distances)
+      return(intervals)
     },
     
     collectEstimates = function(withDistanceWeights=TRUE) {
-      estimates <- loadEstimates()
-      distances <- if (withDistanceWeights) subset(predictDistances(), Variable=="Predicted", select="Value", drop=TRUE)
+      intervals <- getSampleIntervals()
+      
+      message("Predictions for survey routes...")
+      intersections <- loadIntersections()
+      distancesAtSurveyRoutes <- if (withDistanceWeights) subset(intervals$predictDistances(predictCovariates=intersections$covariates), Variable=="Predicted", select="Value", drop=TRUE)
       else mean(loadTracks()$getDistances(), na.rm=T)
-      estimates$collectEstimates(weights=distances, quick=TRUE)
+      
+      message("Predictions for mesh nodes...")
+      estimates <- loadEstimates()
+      distancesAtNodes <- if (withDistanceWeights) subset(intervals$predictDistances(predictCovariates=estimates$covariates), Variable=="Predicted", select="Value", drop=TRUE)
+      else mean(loadTracks()$getDistances(), na.rm=T)
+      
+      estimates$collectEstimates(weightsAtSurveyRoutes=distancesAtSurveyRoutes, weightsAtNodes=distancesAtNodes, quick=TRUE)
+      
       return(estimates)
     },
     

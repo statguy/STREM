@@ -194,17 +194,31 @@ FinlandCovariates <- setRefClass(
     },
     
     imputeMissingCovariates = function(xy) {
-      xyt2 <- data.frame(xy, covariates)
-      xyt2 <- ddply(xyt2, .(year), function(x) {
+      xyt <- data.frame(xy, covariates)
+      xyt <- ddply(xyt, .(year), function(x) {
         x <- inverseDistanceWeightningImpute(x, "rrday")
         x <- inverseDistanceWeightningImpute(x, "snow")
         x <- inverseDistanceWeightningImpute(x, "tday")
         return(x)        
       })
-      xyt2 <- arrange(xyt2, year, id)
-      xyt2$x <- NULL
-      xyt2$y <- NULL
-      covariates <<- xyt2
+      xyt <- arrange(xyt, year, id)
+      
+      if (sum(xyt$rrday < 0 | xyt$rrday > 250) != 0) {
+        message("Invalid rrday:")
+        print(xyt[xyt$rrday < 0 | xyt$rrday > 250,])
+      }
+      if (sum(xyt$snow < 0 | xyt$snow > 220) != 0) {
+        message("Invalid snow:")
+        print(xyt[xyt$snow < 0 | xyt$snow > 220,])
+      }
+      if (sum(xyt$tday < -55 | xyt$tday > 40)) {
+        message("Invalid tday:")
+        print(xyt[xyt$tday < -55 | xyt$tday > 40,])
+      }
+      
+      xyt$x <- NULL
+      xyt$y <- NULL
+      covariates <<- xyt
       return(invisible(.self))
     }
   )

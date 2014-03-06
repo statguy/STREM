@@ -112,7 +112,7 @@ MovementSampleIntervals <- setRefClass(
       return(invisible(distanceKm))
     },
     
-    predictDistances = function(model=log(distanceKm) ~ log(intervalH) + (1|individualId) + (1|thinId)) {
+    OLD_FIX_THIS_IF_NEEDED.predictDistances = function(model=log(distanceKm) ~ log(intervalH) + (1|individualId) + (1|thinId), covariates) {
       tracks <- study$loadTracks()
       getThinnedTracksSampleIntervals(tracks=tracks)
       fit(model)
@@ -172,49 +172,48 @@ FinlandMovementSampleIntervals <- setRefClass(
       return(invisible(.self))
     },
     
+    saveIntervalCovariates = function() {
+      intervalsSP <- intervals
+      coordinates(intervalsSP) <- ~ x+y
+      proj4string(intervalsSP) <- study$studyArea$proj4string
+      saveCovariates(intervalsSP, save=FALSE)
+      return(invisible(.self))
+    },
+    
     getDailyDistanceData = function() {
       if (nrow(intervals) == 0)
         stop("Run get getSampleIntervals() first.")     
-      if (nrow(covariates) == 0) {
-        p <- intervals
-        coordinates(p) <- ~ x+y
-        proj4string(p) <- study$studyArea$proj4string
-        saveCovariates(p, save=FALSE)
-      }
-      
-      intervalsSP <- intervals
-      coordinates(intervalsSP) <- ~ x+y
-      proj4string(intervalsSP) <- study$studyArea$proj4string
-      saveCovariates(intervalsSP, save=FALSE)
+      if (nrow(covariates) == 0) saveIntervalCovariates()
       dailyDistanceData <- merge(intervals, covariates, sort=F)
-      
       return(dailyDistanceData)
     },
-    
-    #fit = function(model=log(distanceKm) ~ populationDensity + rrday + snow + tday + log(intervalH) + (1|individualId) + (1|thinId)) {
-    #  return(invisible(callSuper(model=model)))
-    #},
-    
-    predictDistances = function(model=log(distanceKm) ~ sqrt(populationDensity) + rrday + snow + tday + log(intervalH) + (1|individualId) + (1|thinId)) {
+        
+    predictDistances = function(model=log(distanceKm) ~ sqrt(populationDensity) + rrday + snow + tday + log(intervalH) + (1|individualId) + (1|thinId), predictCovariates) {
       tracks <- study$loadTracks()
       getThinnedTracksSampleIntervals(tracks=tracks)
-      
-      intervalsSP <- intervals
-      coordinates(intervalsSP) <- ~ x+y
-      proj4string(intervalsSP) <- study$studyArea$proj4string
-      saveCovariates(intervalsSP, save=FALSE)
-
       fit(model)
       
       # TODO: remove distances > 1
       #intersections <- study$loadIntersections()
-      #dailyDistancePredictions <- intersections$covariates
-      estimates <- study$loadEstimates()
-      dailyDistancePredictions <- estimates$covariates
+      #predictCovariates <- intersections$covariates
+      #estimates <- study$loadEstimates()
+      #predictCovariates <- estimates$covariates
       
-      dailyDistancePredictions$intervalH <- 1 # TODO: find this
-      dailyDistancePredictions$thinId <- 1
-      predictedDistances <- 1000 * exp(predict(dailyDistancePredictions))#, ~(1|thinId))      
+      predictCovariates$intervalH <- 4 # TODO: find this
+      #predictCovariates$thinId <- 1
+      predictedDistances <- 1000 * exp(predict(predictCovariates))#, ~(1|thinId))      
+      
+      message("Estimation results:")
+      print(summary(estimationResult))
+      
+      if (sum(predictedDistances > 40000) != 0) {
+        message("Invalid predicted distances:")
+        predictCovariates$predictedDistances <- predictedDistances
+        print(predictCovariates[predictedDistances > 30000,])
+        
+        # TODO: Extreme predicted distances are truncated for now. Find better prediction model...
+        predictedDistances[predictedDistances > 30000] <- 30000
+      }      
       
       observedDistances <- tracks$getDistances()
       observedDistances <- observedDistances[!is.na(observedDistances)]
