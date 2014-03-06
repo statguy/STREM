@@ -207,11 +207,14 @@ FinlandMovementSampleIntervals <- setRefClass(
       fit(model)
       
       # TODO: remove distances > 1
-      intersections <- study$loadIntersections()
-      dailyDistancePredictions <- intersections$covariates
+      #intersections <- study$loadIntersections()
+      #dailyDistancePredictions <- intersections$covariates
+      estimates <- study$loadEstimates()
+      dailyDistancePredictions <- estimates$covariates
+      
       dailyDistancePredictions$intervalH <- 1 # TODO: find this
       dailyDistancePredictions$thinId <- 1
-      predictedDistances <- 1000 * exp(predict(dailyDistancePredictions))#, ~(1|thinId))
+      predictedDistances <- 1000 * exp(predict(dailyDistancePredictions))#, ~(1|thinId))      
       
       observedDistances <- tracks$getDistances()
       observedDistances <- observedDistances[!is.na(observedDistances)]

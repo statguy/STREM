@@ -143,38 +143,38 @@ FinlandWTCStudy <- setRefClass(
       intersections <- loadIntersections()
       intersections$intersections$distance <- 1
             
-      model <- SmoothModel$new(study=.self)
+      model <- FinlandSmoothModel$new(study=.self)
       model$setup(intersections=intersections, meshParams=meshParams)
+      xyt <- model$associateMeshLocationsWithDate()
+      model$saveCovariates(xyt, impute=TRUE, save=TRUE)
+      
       if (!test) model$estimate(save=T, fileName=model$getEstimatesFileName())
       
       return(model)
     },
-    
+        
+    loadEstimates = function() {
+      estimates <- FinlandSmoothModel$new(study=.self)$loadEstimates()
+      estimates$loadCovariates()   
+      return(estimates)
+    },
+
     predictDistances = function() {
       intervals <- FinlandMovementSampleIntervals$new(study=.self)
-      
-      
       distances <- intervals$predictDistances()
-      # TODO...
-      
       return(distances)
     },
     
-    loadEstimates = function(withDistanceWeights=TRUE) {
-      estimates <- FinlandSmoothModel$new(study=.self)$loadEstimates()
-
-      xyt <- estimates$associateMeshLocationsWithDate()
-      estimates$saveCovariates(xyt, impute=TRUE, save=FALSE)
-      
+    collectEstimates = function(withDistanceWeights=TRUE) {
+      estimates <- loadEstimates()
       distances <- if (withDistanceWeights) subset(predictDistances(), Variable=="Predicted", select="Value", drop=TRUE)
       else mean(loadTracks()$getDistances(), na.rm=T)
       estimates$collectEstimates(weights=distances, quick=TRUE)
-      
       return(estimates)
     },
     
     getPopulationDensity = function(withHabitatWeights=TRUE, withDistanceWeights=TRUE, saveDensityPlots=FALSE) {
-      estimates <- loadEstimates(withDistanceWeights=withDistanceWeights)
+      estimates <- collectEstimates(withDistanceWeights=withDistanceWeights)
       
       habitatWeights <- if (withHabitatWeights) loadHabitatWeightsRaster() else HabitatWeights$new(study=study)$getWeightsRaster()
       populationDensity <- estimates$getPopulationDensity(templateRaster=habitatWeights, getSD=FALSE)

@@ -330,7 +330,7 @@ FinlandSmoothModel <- setRefClass(
   ),
   methods = list(
     initialize = function(...) {
-      callSuper(modelName="SmoothModel", ...)
+      callSuper(modelName="SmoothModel", covariatesName="FinlandSmoothModelCovariates", ...)
       return(invisible(.self))
     }
   )

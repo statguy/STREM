@@ -158,7 +158,9 @@ FinlandCovariates <- setRefClass(
     
     getCovariatesFileName = function(name) {
       if (inherits(study, "uninitializedField"))
-        stop("Provide study parameters.")
+        stop("Provide study parameter.")
+      if (length(covariatesName) == 0)
+        stop("Provide covariatesName parameter.")
       return(study$context$getFileName(dir=study$context$processedDataDirectory, name=covariatesName, response=study$response, region=study$studyArea$region))
     },
     
