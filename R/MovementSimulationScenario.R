@@ -42,7 +42,7 @@ randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal
   library(sp)
   
   err <- try({
-  maxTry <- 1000
+  maxTry <- 10000
   
   coords <- matrix(NA, nrow=nSteps + 1, ncol=2)
   coords[1,] <- initialLocation
