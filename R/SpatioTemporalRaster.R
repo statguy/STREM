@@ -50,11 +50,11 @@ SpatioTemporalRaster <- setRefClass(
         
         if (sameScale) {
           plot(layer, main=layerName,
-               col=rev(terrain.colors(99)),
+               col=(terrain.colors(99)),
                breaks=seq(vmin, vmax, length.out=100))
         }
         else {
-          plot(layer, main=layerName, col=rev(terrain.colors(99)))
+          plot(layer, main=layerName, col=(terrain.colors(99)))
         }
         
         plot(boundary, add=T)
@@ -74,8 +74,11 @@ SpatioTemporalRaster <- setRefClass(
     },
     
     weight = function(weights) {
-      for (i in 1:nlayers(rasterStack))
+      for (i in 1:nlayers(rasterStack)) {
+        name <- names(rasterStack[[i]])
         rasterStack[[i]] <<- rasterStack[[i]] * weights
+        names(rasterStack[[i]]) <<- name
+      }
       return(invisible(.self))
     },
     
@@ -91,6 +94,11 @@ SpatioTemporalRaster <- setRefClass(
       }
       
       return(volume)
+    },
+    
+    show = function() {
+      print(rasterStack)
+      return(invisible(.self))
     }
   )
 )

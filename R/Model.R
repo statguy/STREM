@@ -247,7 +247,7 @@ if (F) {
 
       meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)
       sdPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)
-
+      
       xyzMean <- data.frame(Year=data$year, locations / coordsScale, z=data$fittedMean)
       xyzSD <- data.frame(Year=data$year, locations / coordsScale, z=data$fittedSD)
       #cellArea <- prod(res(templateRaster)) # m^2
