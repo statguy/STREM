@@ -49,17 +49,12 @@ SimulationStudy <- setRefClass(
     loadIntersectionsCollection = function() {
       intersections <- SimulatedIntersectionsCollection$new(study=.self)
       intersections$loadIntersections()
-      return(intersections)      
+      return(intersections)
     },
     
     loadSurveyRoutes = function(n=800) {
       return(FinlandRandomWTCSurveyRoutes$new(study=study)$newInstance(n=800))
     }
-    
-    
-    
-    
-    
   )
 )
 

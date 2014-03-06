@@ -34,8 +34,8 @@ Tracks <- setRefClass(
       library(adehabitatLT)
       load(getTracksFileName(), envir=as.environment(.self))
       if (is.data.frame(tracks)) {
-        tracks$year <- as.POSIXlt(tracks$date)$year + 1900
-        tracks$burst <- paste(tracks$id, tracks$year)
+        tracks$year <<- as.POSIXlt(tracks$date)$year + 1900
+        tracks$burst <<- paste(tracks$id, tracks$year)
       }
       return(invisible(.self))
     },
