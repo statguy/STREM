@@ -29,6 +29,6 @@ err <- try({
 })
 
 if (inherits(err, "try-error")) {
-   traceback()
-   message(err); stop("simulation.R; err = 1, msg = ", err[1])
+  traceback()
+  message(err); stop("simulate.R; err = 1, msg = ", err[1])
 }
