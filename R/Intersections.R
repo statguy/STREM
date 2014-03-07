@@ -113,7 +113,8 @@ SimulatedIntersections <- setRefClass(
       #if (length(tracks$distance) == 0)
       #  stop("Did you forgot to run getDistances() for tracks first?")
       
-      tracksDF <- if (is.ltraj(tracks$tracks)) ld(tracks$tracks) else tracks$tracks
+      tracksObj <- tracks$getTracks()
+      tracksDF <- if (inherits(tracksObj, "ltraj")) ld(tracksObj) else tracksObj
       
       burstYear <- ddply(tracksDF, .(burst), function(x) {
         date <- as.POSIXlt(x$date)

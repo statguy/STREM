@@ -29,7 +29,7 @@ Tracks <- setRefClass(
     saveTracks = function() {
       stop("Override saveData() method.")
     },
-    
+       
     loadTracks = function() {
       library(adehabitatLT)
       load(getTracksFileName(), envir=as.environment(.self))
@@ -38,6 +38,11 @@ Tracks <- setRefClass(
         tracks$burst <<- paste(tracks$id, tracks$year)
       }
       return(invisible(.self))
+    },
+    
+    getTracks = function() {
+      if (nrow(tracks) == 0) loadTracks()
+      return(tracks)
     },
     
     getPopulationSize = function() {
