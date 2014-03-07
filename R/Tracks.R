@@ -5,9 +5,11 @@ Tracks <- setRefClass(
   Class = "Tracks",
   fields = list(
     study = "Study",
-    tracks = "ltraj",
-    distance = "numeric",
-    thinId = "integer"
+    #tracks = "ltraj",
+    tracks = "ANY",
+    distance = "ANY",
+    #thinId = "integer"
+    thinId = "numeric"
   ),
   methods = list(
     initialize = function(thinId, preprocessData=FALSE, ...) {
@@ -18,7 +20,7 @@ Tracks <- setRefClass(
       return(.self)
     },
     
-    getTracksDirectory = function() return(study$context$scratchDirectory),
+    getTracksDirectory = function() return(study$context$processedDataDirectory),
     
     getTracksFileName = function() {
       return(study$context$getFileName(getTracksDirectory(), name="Tracks", response=study$response, region=study$studyArea$region))
@@ -27,17 +29,43 @@ Tracks <- setRefClass(
     saveTracks = function() {
       stop("Override saveData() method.")
     },
-    
+       
     loadTracks = function() {
       library(adehabitatLT)
       load(getTracksFileName(), envir=as.environment(.self))
+      if (is.data.frame(tracks)) {
+        tracks$year <<- as.POSIXlt(tracks$date)$year + 1900
+        tracks$burst <<- paste(tracks$id, tracks$year)
+      }
       return(invisible(.self))
+    },
+    
+    getTracks = function() {
+      if (nrow(tracks) == 0) loadTracks()
+      return(tracks)
+    },
+    
+    getPopulationSize = function() {
+      if (is.ltraj(tracks)) stop("Unsupported.")
+      library(plyr)
+      populationSize <- ddply(tracks, .(year), function(x) return(data.frame(Total=length(unique(x$id)))))
+      names(populationSize) <- c("Year","Total")
+      return(populationSize)
     },
     
     getSpatialLines = function() {
       library(sp)
-      tracksSP <- ltraj2sldf(tracks, byid=FALSE)
-      proj4string(tracksSP) <- study$studyArea$proj4string
+      if (is.data.frame(tracks)) {
+        library(plyr)
+        lines <- dlply(tracks, .(id, year), function(x) {
+          return(Lines(Line(x[,c("x","y")]), ID=paste(x$id[1], x$year[1])))
+        })
+        tracksSP <- SpatialLines(lines, proj4string=study$studyArea$proj4string)
+      }
+      else if (is.ltraj(tracks)) {
+        tracksSP <- ltraj2sldf(tracks, byid=FALSE)
+        proj4string(tracksSP) <- study$studyArea$proj4string
+      }
       return(tracksSP)
     },
     
@@ -73,7 +101,7 @@ Tracks <- setRefClass(
     },
     
     # Note! Call this before randomizing observation days. Otherwise you'll lose details of the last movements.
-    determineDistances = function() {
+    getDistances = function() {
       warning("Spatial variation in distances not considered in vicinity of the survey routes.")
       
       tracksDF <- ld(tracks)
@@ -99,10 +127,7 @@ Tracks <- setRefClass(
       library(plyr)
       
       tracksDF <- ld(tracks)
-      d <- as.POSIXlt(tracksDF$date)
-      tracksDF$yday <- d$yday
-      tracksDF$year <- d$year
-      
+      tracksDF <- data.frame(tracksDF, breakDownDate(tracksDF$date))
       oldDt <- mean(tracksDF$dt, na.rm=T)
       
       tracksDFThinned <- ddply(tracksDF, .variables=.(id, burst, year, yday), .fun=function(x, by) {
@@ -114,7 +139,8 @@ Tracks <- setRefClass(
       
       if (nrow(tracksDFThinned) == 0) return(NULL)
       
-      tracksThinned <- dl(tracksDFThinned)
+      tracksThinned <- as.ltraj(xy=tracksDFThinned[,c("x","y")], burst=tracksDFThinned$burst, id=tracksDFThinned$id, date=as.POSIXct(tracksDFThinned$date))
+      #tracksThinned <- dl(tracksDFThinned)
       tracksDFThinned <- ld(tracksThinned)
       
       newDt <- mean(tracksDFThinned$dt, na.rm=T)
@@ -143,11 +169,15 @@ SimulatedTracks <- setRefClass(
     },
     
     setTracks = function(xy, id, date) {
-      library(adehabitatLT)
-      d <- as.POSIXlt(date)
-      burst <- paste(id, d$year, sep=".")
-      tracks <<- as.ltraj(xy=xy, date=date, id=id, burst=burst)
+      #library(adehabitatLT)
+      #d <- as.POSIXlt(date)
+      #burst <- paste(id, d$year, sep=".")
+      #tracks <<- as.ltraj(xy=xy, date=date, id=id, burst=burst)
+      
+      tracks <<- data.frame(xy, id=id, date=date)
     },
+    
+    getTracksDirectory = function() return(study$context$scratchDirectory),
     
     getTracksFileName = function() {
       if (inherits(study, "undefinedField") | length(iteration) == 0)
@@ -160,7 +190,7 @@ SimulatedTracks <- setRefClass(
       message("Saving tracks to ", fileName)
       if (thinId != 1)
         stop("Saving thinned tracks unsupported.")
-      save(tracks, iteration, thinId, file=fileName)
+      save(tracks, iteration, thinId, distance, file=fileName)
     },
     
     thin = function(by) {
@@ -187,6 +217,8 @@ FinlandWTCTracks <- setRefClass(
       library(rgdal)
       library(adehabitatLT)
       
+      message("Processing ", study$response, "...")
+      
       gps <- if (study$response == "canis.lupus") preprocessWolfData()
       else if (study$response == "lynx.lynx") preprocessLynxData()
       else if (study$response == "rangifer.tarandus.fennicus") preprocessReindeerData()
@@ -208,7 +240,6 @@ FinlandWTCTracks <- setRefClass(
       gpsLT <- cutltraj(gpsLT, "point.in.polygon(x, y, .b[,1], .b[,2])==0") # Remove movements outside the boundary
       rm(".b", envir=.GlobalEnv)
       
-      message("Saving processed data...")
       tracks <<- gpsLT
       save(tracks, file=getTracksFileName())
       return(invisible(.self))
@@ -217,7 +248,6 @@ FinlandWTCTracks <- setRefClass(
     preprocessWolfData = function() {
       library(gdata)
       
-      message("Reading raw data...")
       gps.raw <- read.xls(file.path(study$context$rawDataDirectory, "GPS_Finland_GPS_Finland_RKTL_Wolf_ec_import_tracks.xlsx"), na.strings="")  
       gps <- data.frame(id=substr(gps.raw$UnitID, 11, length(gps.raw$UnitID)),
                         date=as.POSIXct(gps.raw$Time*24*60*60, origin=as.POSIXct(gps.raw$Date, format="%Y-%m-%d")),
@@ -231,7 +261,6 @@ FinlandWTCTracks <- setRefClass(
     preprocessLynxData = function() {
       library(gdata)
       
-      message("Reading raw data...")
       gps.raw <- read.xls(file.path(study$context$rawDataDirectory, "GPS_Finland_GPS_Finland_RKTL_Lynx_ec_import_tracks.xls"))  
       gps <- data.frame(id=gps.raw$UnitID,
                         date=as.POSIXct(paste(gps.raw$Date, gps.raw$Time), format="%m/%d/%Y %I:%M:%S %p"),
@@ -243,13 +272,18 @@ FinlandWTCTracks <- setRefClass(
     preprocessReindeerData = function() {
       library(gdata)
       
-      message("Reading raw data...")
       gps.raw <- read.xls(file.path(study$context$rawDataDirectory, "GPS_Finland_GPS_Finland_RKTL_ForestReindeer_ec_import_tracks.xlsx"))
       gps <- data.frame(id=gps.raw$UnitID,
                         date=as.POSIXct(gps.raw$Date*60*60*24-60*60*2*24-60*60*.3, origin="1900-01-01"),
                         x=gps.raw$X, y=gps.raw$Y)
       
       return(list(gps=gps, fromProj="+init=epsg:4326"))
+    },
+    
+    getSampleIntervals = function() {
+      intervals <- FinlandMovementSampleIntervals$new(study=study)
+      intervals$getSampleIntervals(tracks=.self)
+      return(intervals)
     },
     
     thin = function(by) {

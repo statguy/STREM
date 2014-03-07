@@ -34,8 +34,8 @@ TracksCollection <- setRefClass(
       stop("Unimplemented method.")
     },
     
-    determineDistances = function() {
-      applyTracks(function(tracks) return(tracks$determineDistances()))
+    getDistances = function() {
+      applyTracks(function(tracks) return(tracks$getDistances()))
       return(invisible(.self))
     }
   )
@@ -94,6 +94,22 @@ SimulatedTracksCollection <- setRefClass(
 
       intersectionsCollection <- SimulatedIntersectionsCollection$new(study=study, intersectionsList=intersectionsList)
       return(intersectionsCollection)
-    }
+    }#,
+    
+    # Divide-and-conquer approach to avoid taking up all memory
+#    thinTracksAndCombineIntersections = function(surveyRoutes, dimension=1, save=FALSE) {
+#      sampleIntervals <- MovementSampleIntervals$new(study=study)
+#      nIterations <- getNumberOfIterations()
+#      intersections <- NULL
+#      for (i in 1:nIterations) {
+#        message("Processing iteration ", i, " / ", nIterations, "...")
+#        thinnedTracks <- sampleIntervals$getThinnedTracksSampleIntervals(getTracks(i))
+#        thinnedTracks$getDistances()  
+#        x <- thinnedTracks$findIntersections(surveyRoutes=surveyRoutes, dimension=dimension, save=FALSE)  
+#        if (is.null(intersections)) intersections <- x else intersections$combineIntersections(x)
+#      }
+#      if (save) intersections$saveIntersections()
+#      return(invisible(intersections))
+#    }
   )
 )

@@ -11,7 +11,10 @@ Intersections <- setRefClass(
       callSuper(...)
       return(invisible(.self))
     },
-        
+    
+    getCoordinates = function() return(coordinates(intersections)),
+    getData = function() return(intersections@data),
+    
     getIntersectionsFileName = function() {
       if (inherits(study, "undefinedField"))
         stop("Provide study parameters.")
@@ -41,14 +44,9 @@ SimulatedIntersections <- setRefClass(
     iteration = "integer"
   ),
   methods = list(
-    initialize = function(preprocessData=FALSE, ...) {
-      if (preprocessData) stop("Unsupported.")
+    initialize = function(...) {
       callSuper(...)
-      return(.self)
-    },
-    
-    newInstance = function() {
-      callSuper()
+      return(invisible(.self))
     },
     
     findIntersections = function(tracks, surveyRoutes, ...) {
@@ -60,7 +58,7 @@ SimulatedIntersections <- setRefClass(
     findIntersectionsMatrix = function(tracks, surveyRoutes, dimension=1) {
       library(sp)
       library(CNPCluster)
-
+      
       nSurveyRoutes <- length(surveyRoutes)
       nTracks <- length(tracks)
       #intersectionsMatrix <- matrix(0, nrow=nSurveyRoutes, ncol=nTracks)
@@ -112,10 +110,12 @@ SimulatedIntersections <- setRefClass(
     },
     
     aggregateIntersectionsMatrix = function(tracks, surveyRoutes) {
-      if (length(tracks$distance) == 0)
-        stop("Did you forgot to run determineDistances() for tracks first?")
+      #if (length(tracks$distance) == 0)
+      #  stop("Did you forgot to run getDistances() for tracks first?")
       
-      tracksDF <- ld(tracks$tracks)
+      tracksObj <- tracks$getTracks()
+      tracksDF <- if (inherits(tracksObj, "ltraj")) ld(tracksObj) else tracksObj
+      
       burstYear <- ddply(tracksDF, .(burst), function(x) {
         date <- as.POSIXlt(x$date)
         data.frame(burst=x$burst[1],
@@ -136,7 +136,7 @@ SimulatedIntersections <- setRefClass(
                         intersections=rowSums(intersectionsMatrix[,bursts,drop=F]),
                         duration=duration,
                         length=surveyRoutes$lengths,
-                        distance=tracks$distance)
+                        distance=1) # Correct for distance after estimation
         data <- rbind(data, x)
       }
       
@@ -162,13 +162,14 @@ SimulatedIntersections <- setRefClass(
 
 FinlandWTCIntersections <- setRefClass(
   Class = "FinlandWTCIntersections",
-  contains = "Intersections",
+  contains = c("Intersections", "FinlandCovariates"),
   fields = list(
-    covariates = "data.frame"
+    maxDuration = "numeric"
   ),
   methods = list(
-    newInstance = function(...) {
-      callSuper(...)
+    initialize = function(maxDuration=Inf, ...) {
+      callSuper(covariatesName="FinlandWTCIntersectionsCovariates", ...)
+      maxDuration <<- maxDuration
       return(invisible(.self))
     },
     
@@ -191,6 +192,7 @@ FinlandWTCIntersections <- setRefClass(
       wtc <- wtc[,c(1:9,responseIndex)]
       colnames(wtc)[ncol(wtc)] <- "intersections"
       wtc$response <- study$response
+      wtc <- subset(wtc, response==response)
       
       wtc$date <- strptime(wtc$date, "%Y%m%d")
       date <- as.POSIXlt(wtc$date)
@@ -203,112 +205,23 @@ FinlandWTCIntersections <- setRefClass(
       wtc <- subset(wtc, duration<4 & duration>0 & length>0)  
       # Transects 168 and 1496 are at the same location but separate, take average, ignore or something...
       wtc <- subset(wtc, id!=1496)
-      intersections <<- SpatialPointsDataFrame(cbind(wtc$x, wtc$y), data=wtc, proj4string=CRS("+init=epsg:2393"))
+      xy <- cbind(wtc$x, wtc$y)
+      wtc$x <- NULL
+      wtc$y <- NULL
+      wtc$length <- wtc$length * 1000
+      
+      b <- nrow(wtc)
+      nonZero <- wtc[wtc$duration > maxDuration,]$intersections
+      nonZero <- sum(nonZero != 0) / length(nonZero)
+      retainIndex <- wtc$duration <= maxDuration
+      wtc <- wtc[retainIndex,]
+      a <- nrow(wtc)
+      message("Removed ", round((1-a/b)*100), "% of intersections with duration > ",
+              maxDuration, " of which ", round(nonZero*100), "% are non-zero.")
+      
+      intersections <<- SpatialPointsDataFrame(xy[retainIndex,], data=wtc, proj4string=CRS("+init=epsg:2393"))
 
       save(intersections, file=getIntersectionsFileName())
-    },
-    
-    getPopulationDensityCovariates = function() {
-      library(plyr)
-      library(ST)
-      
-      x <- as.data.frame(intersections)
-      populationDensity <- ddply(x, .(year), function(x) {
-        year <- x$year[1]
-        message("Processing year ", year, "...")
-        xy <- SpatialPoints(cbind(x$x, x$y), proj4string=study$studyArea$proj4string)
-        populationDensity <- getStatFiPopulationDensity(xy=xy, year=year, aggregationFactor=4) # Grid is 1 x 1 km^2 => aggregate to the scale of the survey routes
-        return(data.frame(id=x$id, year=year, populationDensity=populationDensity))
-      }, .parallel=FALSE) # Parallel and file caching may cause problems
-      
-      return(populationDensity)
-    },
-    
-    getWeather = function(year, apiKey) {
-      library(ST)
-      library(plyr)
-      
-      query <- "fmi::observations::weather::daily::multipointcoverage"
-      startTime <- paste(year, "-01-01T00:00:00Z", sep="")
-      endTime <- paste(year, "-03-31T23:59:59Z", sep="")
-      parameters <- list(startTime=startTime, endTime=endTime, bbox="19.0900,59.3000,31.5900,70.130", crs="EPSG::4326")
-      weatherStationFile <- queryFMIData(apiKey=apiKey, queryStored=query, parameters=parameters)
-      weather <- parseFMIWeatherStationMultipointCoverage(weatherStationFile, study$studyArea$proj4string)
-      weather <- as.data.frame(weather)
-      weather$year <- as.POSIXlt(weather$date)$year + 1900
-      weather$month <- as.POSIXlt(weather$date)$mon + 1
-      weather$day <- as.POSIXlt(weather$date)$mday
-      
-      weatherAggregated <- ddply(weather, .(x, y, month), function(x) {
-        data.frame(x=x$x[1], y=x$y[1], year=x$year[1], month=x$month[1], rrday=mean(x$rrday, na.rm=T), tday=mean(x$tday, na.rm=T), snow=mean(x$snow, na.rm=T), tmin=mean(x$tmin, na.rm=T), tmax=mean(x$tmax, na.rm=T))
-      })
-                 
-      return(weather)
-    },
-    
-    getWeatherCovariates = function(fmiApiKey) {
-      library(plyr)
-      
-      getWeatherValues = function(weather, variable, x, templateRaster, transform=identity, inverseTransform=identity) {
-        weatherRaster <- multiRasterInterpolate(xyz=weather[,c("x","y",variable,"month")],
-          variables=.(month),
-          templateRaster=templateRaster,
-          transform=transform,
-          inverseTransform=inverseTransform)        
-        
-        x$month <- as.POSIXlt(x$date)$mon + 1
-        weatherValues <- ddply(x, .(month), function(x, weatherRaster) {
-          if (x$month[1] < 1 | x$month[1] > 3) {
-            warning("Invalid month ", x$month[1], ", will use February.")
-            x$month <- 2
-          }
-          weatherValues <- extract(weatherRaster[[x$month[1]]], x[,c("x","y")])
-          return(data.frame(weatherValues=weatherValues))
-        }, weatherRaster=weatherRaster)
-        
-        return(weatherValues$weatherValues)
-      }
-      
-      templateRaster <- raster(extent(study$studyArea$habitat), nrows=1300, ncols=800)
-      x <- as.data.frame(intersections)
-      
-      weatherCovariates <- ddply(x, .(year), function(x, templateRaster, fmiApiKey) {
-        year <- x$year[1]
-        message("Processing year ", year, "...")
-        
-        weather <- getWeather(year=year, apiKey=fmiApiKey)
-        snow <- getWeatherValues(weather=weather, variable="snow", x=x, templateRaster=templateRaster, transform=sqrt, inverseTransform=function(x) x^2)
-        
-        return(data.frame(id=x$id, year=year, snow=snow))
-      }, templateRaster=templateRaster, fmiApiKey=fmiApiKey, .parallel=TRUE)
-      
-      return(weatherCovariates)
-    },
-    
-    getCovariatesFileName = function() {
-      if (inherits(study, "undefinedField"))
-        stop("Provide study parameters.")
-      return(study$context$getFileName(dir=study$context$resultDataDirectory, name="IntersectionsCovariates", response=study$response, region=study$studyArea$region))
-    },
-    
-    saveCovariates = function(fmiApiKey) {
-      if (missing(fmiApiKey))
-        stop("Provide fmiApiKey argument.")      
-      weatherCovariates <- getWeatherCovariates(fmiApiKey=fmiApiKey)
-      populationDensityCovariates <- getPopulationDensityCovariates()
-      covariates <<- merge(populationDensityCovariates, weatherCovariates, sort=FALSE)
-      save(covariates, file=getCovariatesFileName())
-      return(invisible(.self))
-    },
-    
-    loadCovariates = function() {
-      load(getCovariatesFileName(), envir=as.environment(.self))
-      return(invisible(.self))
-    },
-    
-    # TODO
-    addDistances = function() {
-      intersections$distance <<- 1
     }
   )
 )

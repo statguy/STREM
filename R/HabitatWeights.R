@@ -21,14 +21,15 @@ HabitatWeights <- setRefClass(
       study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeightsRaster", response=study$response, region=study$studyArea$region, ext="")
     },
 
-    getWeightsRaster = function(aggregationScale=100, save=FALSE) { # TODO: determine aggregation scale automatically
+    getWeightsRaster = function(save=FALSE) { # TODO: determine aggregation scale automatically
+      if (save) stop("Saving unsupported.")
       library(raster)
-      weightsRaster <- raster(study$studyArea$habitat)
-      dim(weightsRaster) <- dim(weightsRaster) / aggregationScale
+      weightsRaster <- study$getTemplateRaster()
+      weightsRaster[] <- 1
       return(weightsRaster)
     },
 
-    loadWeightsRaster = function(study) {
+    loadWeightsRaster = function() {
       return(raster(getWeightsRasterFileName()))
     },
     
@@ -38,6 +39,11 @@ HabitatWeights <- setRefClass(
     
     setHabitatSelectionWeights = function(relativeHabitatUsage) {
       stop("Implement this method in a subclass.")
+    },
+    
+    show = function() {
+      cat("Habitat weights:\n1\n")
+      return(invisible(.self))
     }
   )
 )
@@ -77,7 +83,8 @@ CORINEHabitatWeights <- setRefClass(
         )
       )
       
-      habitatTypes <<- unique(weights$type[2:lastIndex])
+      habitatTypes <<- unique(weights$type[weights$type != 0])
+      names(habitatTypes) <<- c("Urban","Agriculture","Forestland","Peatland","Water")
       
       return(invisible(.self))
     },
@@ -109,21 +116,42 @@ CORINEHabitatWeights <- setRefClass(
       return(p)
     },
     
-    getWeightsRaster = function(aggregationScale=100, save=FALSE) { # TODO: determine aggregation scale automatically
+    getWeightsRaster = function(save=FALSE) { # TODO: determine aggregation scale automatically
       library(raster)
       
       if (save) {
         fileName <- getWeightsRasterFileName()
+        
         message("Saving habitat weights raster to ", fileName, ".grd...")
-        weightsRaster <- aggregate(study$studyArea$habitat, aggregationScale, filename=fileName, overwrite=TRUE,
-                                   fun=function(habitatValue, na.rm) mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
+        weightsRaster <- aggregate(study$studyArea$habitat,
+                                   aggregationScale=100, # TODO: get this from template raster
+                                   filename=fileName, overwrite=TRUE,
+                                   fun=function(habitatValue, na.rm)
+                                     mean(getWeights(habitatValue), na.rm=na.rm),
+                                   na.rm=T)
       }
       else {
-        weightsRaster <- aggregate(habitat, aggregationScale, overwrite=TRUE,
-                                   fun=function(habitatValue, na.rm) mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
+        weightsRaster <- aggregate(study$studyArea$habitat,
+                                   aggregationScale=100,
+                                   fun=function(habitatValue, na.rm)
+                                     mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
       }
       
       return(weightsRaster)
+    },
+    
+    show = function() {
+      w <- numeric(length(habitatTypes))
+      names(w) <- names(habitatTypes)
+      
+      for (type in habitatTypes) {
+        w[type] <- weights$weight[weights$type == type][1]
+      }
+      
+      cat("Habitat weights:\n")
+      print(w)
+      
+      return(invisible(.self))
     }
   )
 )

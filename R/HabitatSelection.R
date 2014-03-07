@@ -59,7 +59,7 @@ HabitatSelection <- setRefClass(
       maxIntervalH <- as.numeric(names(which.max(table(intervals$intervals$intervalH))))
       maxIntervals <- subset(intervals$intervals, intervalH == maxIntervalH)
       tracksDF <- ld(tracks$tracks)
-      tracksDF <- subset(tracksDF, burst %in% maxIntervals$burst & id %in% maxIntervals$id)
+      tracksDF <- subset(tracksDF, burst %in% maxIntervals$burst & id %in% maxIntervals$individualId)
       
       nullModelUsage <<- getNullModelMovementHabitatDistributions(movements=tracksDF, habitatWeightsTemplate=habitatWeightsTemplate, nSamples=nSamples)
       realizedUsage <<- getRealizedMovementHabitatDistributions(movements=tracksDF, habitatWeightsTemplate=habitatWeightsTemplate)
@@ -67,7 +67,7 @@ HabitatSelection <- setRefClass(
       
       if (save) saveHabitatSelection()
       
-      return(.self)
+      return(invisible(.self))
     },
 
     getHabitatSelectionFileName = function() {
@@ -83,6 +83,15 @@ HabitatSelection <- setRefClass(
     loadHabitatSelection = function() {
       load(file=getHabitatSelectionFileName(), envir=as.environment(.self))
       return(invisible(.self))
+    },
+    
+    show = function() {
+      cat("Habitat null model usage:\n")
+      print(colMeans(nullModelUsage))
+      cat("Habitat realized usage:\n")
+      print(colMeans(realizedUsage))
+      cat("Habitat relative usage:\n")
+      print(colMeans(relativeUsage))
     }
   )
 )
