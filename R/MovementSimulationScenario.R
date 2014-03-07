@@ -273,9 +273,9 @@ MovementSimulationScenario <- setRefClass(
     
     simulateSingle = function(iteration, save=TRUE) {
       initialLocations <- initialPopulation$randomize(nAgents)
-      tracksDF <- randomizeBCRWTracks(iteration=iteration, nIterations=nIterations, initialLocations=initialLocations, habitat=study$studyArea$habitat, habitatWeights=habitatWeights, nAgents=nAgents, boundary=study$studyArea$boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, years=years, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale)
+      tracksDF <- randomizeBCRWTracks(iteration=as.integer(iteration), nIterations=nIterations, initialLocations=initialLocations, habitat=study$studyArea$habitat, habitatWeights=habitatWeights, nAgents=nAgents, boundary=study$studyArea$boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, years=years, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale)
       date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
-      tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=i)
+      tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=as.integer(iteration))
     },
     
     simulate = function(restartIteration=1, iterationVector=1:nIterations, save=FALSE, useCluster=FALSE, maxNodes=50, blacklist=NULL) {
