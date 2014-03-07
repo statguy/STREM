@@ -1,7 +1,12 @@
 # Run test:
-# ./parallel_ssh_r.py -n 5 -m 2 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/simulation.R test A
+# ./parallel_r.py -n 5 -m 2 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/simulation.R test test
 # Run full:
-# ./parallel_ssh_r.py -n 50 -m 50 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/simulation.R notest A
+# ./parallel_r.py -n 50 -m 50 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/simulation.R notest A
+
+function <- dryRun(test) {
+  context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+  mss <- if (test == "test") MovementSimulationScenarioA$new(nAgents=as.integer(2), nIterations=as.integer(5), years=as.integer(2))$newInstance(context=context)
+}
 
 function <- simulateA(test)
   context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
@@ -24,7 +29,8 @@ err <- try({
   library(WTC)
   source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
-  if (scenario == "A") simulateA(test=test)
+  if (scenario == "test") dryRun(test=test)
+  else if (scenario == "A") simulateA(test=test)
   else stop("Unsupported scenario ", scenario)
 })
 
