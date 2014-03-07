@@ -271,7 +271,7 @@ MovementSimulationScenario <- setRefClass(
       return(invisible(.self))
     },
 
-    simulate = function(restartIteration=1, save=FALSE, useCluster=FALSE, maxNodes=50, blacklist=NULL) {
+    simulate = function(restartIteration=1, iterationVector=1:nIterations, save=FALSE, useCluster=FALSE, maxNodes=50, blacklist=NULL) {
       stopifnot(restartIteration <= nIterations)
       
       if (useCluster) {
@@ -293,7 +293,7 @@ MovementSimulationScenario <- setRefClass(
             "homeRangeRadius", "days", "years", "stepIntervalHours", "nSteps", "distanceScale", "stepSpeedScale"),
           envir=as.environment(.self))
         
-        cnpClusterListApplyGeneric(1:nIterations, function(i) {
+        cnpClusterListApplyGeneric(iterationVector, function(i) {
           message("Iteration ", i, " of ", nIterations, "...")
           tracksDF <- randomizeBCRWTracks(iteration=i, nIterations=nIterations, initialLocations=initialLocations,
                                           habitat=study$studyArea$habitat, habitatWeights=habitatWeights, nAgents=nAgents,
