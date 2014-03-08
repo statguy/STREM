@@ -4,18 +4,19 @@
 # ./parallel_r.py -t 1:50 -n 50 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/simulate.R notest A
 
 err <- try({
-dryRun <- function(test) {
-  context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-  mss <- if (test == "test") MovementSimulationScenarioA$new(nAgents=as.integer(2), nIterations=as.integer(5), years=as.integer(2))$newInstance(context=context)
-  else MovementSimulationScenarioA$new()$newInstance(context=context)
-}
+  dryRun <- function(test) {
+    context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+    mss <- if (test == "test") MovementSimulationScenarioA$new(nAgents=as.integer(2), nIterations=as.integer(5), years=as.integer(2))$newInstance(context=context)
+    else MovementSimulationScenarioA$new()$newInstance(context=context)
+    message("SUCCESS")
+  }
 
-simulateA <- function(test)
-  context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-  mss <- if (test == "test") MovementSimulationScenarioA$new(nAgents=as.integer(2), nIterations=as.integer(5), years=as.integer(2))$newInstance(context=context)
-  else MovementSimulationScenarioA$new()$newInstance(context=context)
-  mss$simulateSingle(iteration=task_id)
-}
+  simulateA <- function(test) {
+    context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+    mss <- if (test == "test") MovementSimulationScenarioA$new(nAgents=as.integer(2), nIterations=as.integer(5), years=as.integer(2))$newInstance(context=context)
+    else MovementSimulationScenarioA$new()$newInstance(context=context)
+    mss$simulateSingle(iteration=task_id)
+  }
 
   args <- commandArgs(trailingOnly=TRUE)
   if (length(args) != 3) stop("Invalid arguments.")
