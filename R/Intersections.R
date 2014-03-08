@@ -65,7 +65,7 @@ SimulatedIntersections <- setRefClass(
       # Assumes all survey routes were sampled each year
       # TODO: If only one agent, do we still get matrix not vector?
       if (dimension == 1) {
-        intersectionsMatrix <<- ldply(1:nTracks, function(j, surveyRoutes, tracks, cluster) {          
+        intersectionsMatrix <<- laply(1:nTracks, function(j, surveyRoutes, tracks, cluster) {          
           library(plyr)
           library(rgeos)
           
@@ -82,7 +82,7 @@ SimulatedIntersections <- setRefClass(
         }, surveyRoutes=surveyRoutes, tracks=tracks, .parallel=TRUE)
       }
       else if (dimension == 2) {
-        intersectionsMatrix <<- ldply(1:nSurveyRoutes, function(i, surveyRoutes, tracks) {
+        intersectionsMatrix <<- laply(1:nSurveyRoutes, function(i, surveyRoutes, tracks) {
           library(plyr)
           library(rgeos)
           
