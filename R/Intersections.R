@@ -68,28 +68,8 @@ SimulatedIntersections <- setRefClass(
       nTracks <- length(tracks)
       #intersectionsMatrix <- matrix(0, nrow=nSurveyRoutes, ncol=nTracks)
       
-      # Assumes all survey routes were sampled each year
-      # TODO: If only one agent, do we still get matrix not vector?
+      # Assumes that the survey routes are the same each year
       if (dimension == 1) {
-        intersectionsMatrix <<- laply(1:nTracks, function(j, surveyRoutes, tracks, cluster) {          
-          library(plyr)
-          library(rgeos)
-          
-          nSurveyRoutes <- length(surveyRoutes)
-          nTracks <- length(tracks)
-          message("Finding intersections for track ", j," / ", nTracks, "...")
-          
-          x <- laply(1:nSurveyRoutes,
-            function(i, surveyRoutes, tracks, j) {
-             return(length(gIntersection(surveyRoutes[i], tracks[j,], byid=TRUE)))
-            }, surveyRoutes=surveyRoutes, tracks=tracks, j=j, .parallel=TRUE)
-          
-          return(as.matrix(x))
-        }, surveyRoutes=surveyRoutes, tracks=tracks, .parallel=TRUE)
-        
-        intersectionsMatrix <<- t(intersectionsMatrix)
-      }
-      else if (dimension == 2) {
         intersectionsMatrix <<- laply(1:nSurveyRoutes, function(i, surveyRoutes, tracks) {
           library(plyr)
           library(rgeos)
@@ -99,12 +79,31 @@ SimulatedIntersections <- setRefClass(
           message("Finding intersections for survey route ", i, " / ", nSurveyRoutes, "...")
           
           x <- laply(1:nTracks,
-            function(j, surveyRoutes, tracks, i) {
-             return(length(gIntersection(surveyRoutes[i], tracks[j,], byid=TRUE)))
-            }, surveyRoutes=surveyRoutes, tracks=tracks, i=i, .parallel=TRUE)
+                     function(j, surveyRoutes, tracks, i) {
+                       return(length(gIntersection(surveyRoutes[i], tracks[j], byid=TRUE)))
+                     }, surveyRoutes=surveyRoutes, tracks=tracks, i=i)
           
-          return(as.matrix(x))
-        }, surveyRoutes=surveyRoutes, tracks=tracks)
+          return(x)
+        }, surveyRoutes=surveyRoutes, tracks=tracks, .drop=FALSE, .parallel=TRUE)        
+      }
+      else if (dimension == 2) {
+        intersectionsMatrix <<- laply(1:nTracks, function(j, surveyRoutes, tracks, cluster) {          
+          library(plyr)
+          library(rgeos)
+          
+          nSurveyRoutes <- length(surveyRoutes)
+          nTracks <- length(tracks)
+          message("Finding intersections for track ", j," / ", nTracks, "...")
+          
+          x <- laply(1:nSurveyRoutes,
+                     function(i, surveyRoutes, tracks, j) {
+                       return(length(gIntersection(surveyRoutes[i], tracks[j], byid=TRUE)))
+                     }, surveyRoutes=surveyRoutes, tracks=tracks, j=j)
+          
+          return(x)
+        }, surveyRoutes=surveyRoutes, tracks=tracks, .drop=FALSE, .parallel=TRUE)
+        
+        intersectionsMatrix <<- t(intersectionsMatrix)
       }
       
       rownames(intersectionsMatrix) <<- names(surveyRoutes)
