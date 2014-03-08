@@ -18,10 +18,11 @@ countIntersections <- function(scenario, iteration, test) {
     intersections$saveIntersections()
   }
   else {
-    surveyRoutes$surveyRoutes <- surveyRoutes$surveyRoutes[1:2]
-    surveyRoutes$centroids <- surveyRoutes$centroids[1:2]
-    surveyRoutes$lengths <- surveyRoutes$lengths[1:2]
+    surveyRoutes$surveyRoutes <- surveyRoutes$surveyRoutes[1:3]
+    surveyRoutes$centroids <- surveyRoutes$centroids[1:3]
+    surveyRoutes$lengths <- surveyRoutes$lengths[1:3]
     intersections$findIntersections(tracks, surveyRoutes, dimension=1)
+    intersections$saveIntersections()
     message("SUCCESS")
   }
 }
