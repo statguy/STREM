@@ -57,7 +57,6 @@ SimulatedIntersections <- setRefClass(
     
     findIntersectionsMatrix = function(tracks, surveyRoutes, dimension=1) {
       library(sp)
-      library(CNPCluster)
       
       nSurveyRoutes <- length(surveyRoutes)
       nTracks <- length(tracks)
@@ -66,7 +65,7 @@ SimulatedIntersections <- setRefClass(
       # Assumes all survey routes were sampled each year
       # TODO: If only one agent, do we still get matrix not vector?
       if (dimension == 1) {
-        intersectionsMatrix <<- cnpClusterListApplyGeneric(1:nTracks, function(j, surveyRoutes, tracks, cluster) {          
+        intersectionsMatrix <<- ldply(1:nTracks, function(j, surveyRoutes, tracks, cluster) {          
           library(plyr)
           library(rgeos)
           
@@ -80,10 +79,10 @@ SimulatedIntersections <- setRefClass(
             }, surveyRoutes=surveyRoutes, tracks=tracks, j=j, .parallel=TRUE)
           
           return(as.matrix(x))
-        }, surveyRoutes=surveyRoutes, tracks=tracks)
+        }, surveyRoutes=surveyRoutes, tracks=tracks, .parallel=TRUE)
       }
       else if (dimension == 2) {
-        intersectionsMatrix <<- cnpClusterListApplyGeneric(1:nSurveyRoutes, function(i, surveyRoutes, tracks) {
+        intersectionsMatrix <<- ldply(1:nSurveyRoutes, function(i, surveyRoutes, tracks) {
           library(plyr)
           library(rgeos)
           
