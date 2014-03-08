@@ -43,4 +43,3 @@ source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
 countIntersections(scenario=scenario, iteration=as.integer(task_id), test=test=="test")
 
-traceback()
