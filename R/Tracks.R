@@ -160,7 +160,7 @@ SimulatedTracks <- setRefClass(
   Class = "SimulatedTracks",
   contains = "Tracks",
   fields = list(
-    iteration = "integer"
+    iteration = "numeric"
   ),
   methods = list(
     initialize = function(xy, id, date, thinId, preprocessData=FALSE, ...) {
