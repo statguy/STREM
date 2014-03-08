@@ -58,8 +58,8 @@ SimulationStudy <- setRefClass(
     #},
     
     loadSurveyRoutes = function(n=800, random=TRUE) {
-      surveyRoutes <- if (random) FinlandRandomWTCSurveyRoutes$new(study=study)$newInstance(n=800)
-      else FinlandWTCSurveyRoutes(study=study)$newInstance()
+      surveyRoutes <- if (random) FinlandRandomWTCSurveyRoutes$new(study=.self)$newInstance(n=800)
+      else FinlandWTCSurveyRoutes(study=.self)$newInstance()
       return(surveyRoutes)
     }
   )

@@ -53,8 +53,8 @@ SimulatedIntersections <- setRefClass(
       tracksSP <- tracks$getSpatialLines()
       findIntersectionsMatrix(tracksSP, surveyRoutes$surveyRoutes, ...)
       nYears <- length(unique(tracks$tracks$year))
-      message("Found ", sum(intersectionsMatrix) / nTracks / nYears, " intersections per track.")
-      message("Found ", sum(intersectionsMatrix) / nSurveyRoutes / nYears, " intersections per survey route.")      
+      message("Found ", sum(intersectionsMatrix) / nTracks / nYears, " intersections per track per year.")
+      message("Found ", sum(intersectionsMatrix) / nSurveyRoutes / nYears, " intersections per survey route per year.")
       aggregateIntersectionsMatrix(tracks, surveyRoutes)
     },
     
