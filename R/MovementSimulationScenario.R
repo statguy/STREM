@@ -214,7 +214,7 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
     track <- track[retainIndex,]
     
     tracks <- rbind(tracks, track)
-    }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTracks(); err = 4") }
+    }); if (inherits(err, "try-error")) { message(err); stop("randomizeBCRWTracks(); err = 4, msd = ", err[1]) }
     
   }
   
@@ -278,56 +278,20 @@ MovementSimulationScenario <- setRefClass(
       tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=as.integer(iteration))
     },
     
-    simulate = function(restartIteration=1, iterationVector=1:nIterations, save=FALSE, useCluster=FALSE, maxNodes=50, blacklist=NULL) {
+    simulate = function(restartIteration=1, iterationVector=1:nIterations, save=FALSE) {
       stopifnot(restartIteration <= nIterations)
-      
-      if (useCluster) {
-        library(CNPCluster)       
-
-        localEnv <- new.env()
-        localEnv$tracksDir <- study$context$scratchDirectory
-        localEnv$response <- study$response
-        localEnv$region <- study$studyArea$region
-        localEnv$initialLocations <- initialPopulation$randomize(nAgents)
-        
-        cnpClusterStartRemote(hosts=cnpClusterGetHostsUkko(maxNodes=min(nIterations, maxNodes), blacklist=blacklist))
-
-        cnpClusterEval({ library(sp); library(raster); library(CircStats); library(plyr); library(maptools); library(rgdal) })
-        cnpClusterExport(c("saveSimulatedTracks", "randomizeBCRWTracks", "randomizeBCRWTrack", "randomizeBirthDeath", "getVector"))
-        cnpClusterExport(varlist=c("tracksDir", "response", "region", "initialLocations"), envir=localEnv)
-        cnpClusterExport(varlist=c(
-            "nIterations", "nAgents", "habitatWeights", "CRWCorrelation", "BCRWCorrelationBiasTradeoff",
-            "homeRangeRadius", "days", "years", "stepIntervalHours", "nSteps", "distanceScale", "stepSpeedScale"),
-          envir=as.environment(.self))
-        
-        cnpClusterListApplyGeneric(iterationVector, function(i) {
-          message("Iteration ", i, " of ", nIterations, "...")
-          tracksDF <- randomizeBCRWTracks(iteration=i, nIterations=nIterations, initialLocations=initialLocations,
-                                          habitat=study$studyArea$habitat, habitatWeights=habitatWeights, nAgents=nAgents,
-                                          boundary=study$studyArea$boundary, CRWCorrelation=CRWCorrelation,
-                                          BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius,
-                                          days=days, years=years, stepIntervalHours=stepIntervalHours, nSteps=nSteps,
-                                          distanceScale=distanceScale, stepSpeedScale=stepSpeedScale)
-          date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
-          saveSimulatedTracks(xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=i, tracksDir=tracksDir, response=response, region=region)
-        })
-          
-        cnpClusterStopRemote()
-      }
-      else {
-        #simulatedTracks <- SimulatedTracksCollection$new(study=study)
-        for (i in restartIteration:nIterations) {
-          message("Iteration ", i, " of ", nIterations, "...")
-          initialLocations <- initialPopulation$randomize(nAgents)
-          tracksDF <- randomizeBCRWTracks(iteration=i, nIterations=nIterations, initialLocations=initialLocations, habitat=study$studyArea$habitat, habitatWeights=habitatWeights, nAgents=nAgents, boundary=study$studyArea$boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, years=years, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale)
-          date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
-          tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=i)
-          #if (returnTracks) simulatedTracks$addTracks(tracks)
-        }
-        #return(invisible(simulatedTracks))
+   
+      simulatedTracks <- SimulatedTracksCollection$new(study=study)
+      for (i in restartIteration:nIterations) {
+        message("Iteration ", i, " of ", nIterations, "...")
+        initialLocations <- initialPopulation$randomize(nAgents)
+        tracksDF <- randomizeBCRWTracks(iteration=i, nIterations=nIterations, initialLocations=initialLocations, habitat=study$studyArea$habitat, habitatWeights=habitatWeights, nAgents=nAgents, boundary=study$studyArea$boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, years=years, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale)
+        date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
+        tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=i)
+        simulatedTracks$addTracks(tracks)
       }
       
-      return(invisible(.self))
+      return(invisible(simulatedTracks))
     }        
   )
 )

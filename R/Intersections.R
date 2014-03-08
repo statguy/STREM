@@ -24,7 +24,7 @@ Intersections <- setRefClass(
     saveIntersections = function() {
       stop("Override saveIntersections() method.")
     },
-        
+    
     loadIntersections = function() {
       load(getIntersectionsFileName(), envir=as.environment(.self))
       return(invisible(.self))
