@@ -50,11 +50,15 @@ SimulatedIntersections <- setRefClass(
     },
     
     findIntersections = function(tracks, surveyRoutes, ...) {
-      tracksSP <- tracks$getSpatialLines()      
-      findIntersectionsMatrix(tracksSP, surveyRoutes$surveyRoutes, ...)      
+      tracksSP <- tracks$getSpatialLines()
+      findIntersectionsMatrix(tracksSP, surveyRoutes$surveyRoutes, ...)
+      nYears <- length(unique(tracks$tracks$year))
+      message("Found ", sum(intersectionsMatrix) / nTracks / nYears, " intersections per track.")
+      message("Found ", sum(intersectionsMatrix) / nSurveyRoutes / nYears, " intersections per survey route.")      
       aggregateIntersectionsMatrix(tracks, surveyRoutes)
     },
     
+    # TODO: Support for WTC survey routes for each year
     findIntersectionsMatrix = function(tracks, surveyRoutes, dimension=1) {
       library(sp)
       
@@ -80,6 +84,8 @@ SimulatedIntersections <- setRefClass(
           
           return(as.matrix(x))
         }, surveyRoutes=surveyRoutes, tracks=tracks, .parallel=TRUE)
+        
+        intersectionsMatrix <<- t(intersectionsMatrix)
       }
       else if (dimension == 2) {
         intersectionsMatrix <<- laply(1:nSurveyRoutes, function(i, surveyRoutes, tracks) {
@@ -97,12 +103,7 @@ SimulatedIntersections <- setRefClass(
           
           return(as.matrix(x))
         }, surveyRoutes=surveyRoutes, tracks=tracks)
-        
-        intersectionsMatrix <<- t(intersectionsMatrix)
       }
-
-      message("Found ", sum(intersectionsMatrix) / nTracks, " intersections per track.")
-      message("Found ", sum(intersectionsMatrix) / nSurveyRoutes, " intersections per survey route.")
       
       rownames(intersectionsMatrix) <<- names(surveyRoutes)
       colnames(intersectionsMatrix) <<- sapply(tracks@lines, function(x) x@ID)     
