@@ -32,6 +32,10 @@ Intersections <- setRefClass(
     
     getSurveyLocations = function() {
       return(SpatialPoints(unique(coordinates(intersections)), proj4string=intersections@proj4string))
+    },
+    
+    estimate = function() {
+      stop("Unimplemented method.")
     }
   )
 )
@@ -70,7 +74,7 @@ SimulatedIntersections <- setRefClass(
       
       # Assumes that the survey routes are the same each year
       if (dimension == 1) {
-        intersectionsMatrix <<- laply(1:nSurveyRoutes, function(i, surveyRoutes, tracks) {
+        countIntersections <- function(i, surveyRoutes, tracks) {
           library(plyr)
           library(rgeos)
           
@@ -84,10 +88,12 @@ SimulatedIntersections <- setRefClass(
                      }, surveyRoutes=surveyRoutes, tracks=tracks, i=i)
           
           return(x)
-        }, surveyRoutes=surveyRoutes, tracks=tracks, .drop=FALSE, .parallel=TRUE)        
+        }
+                
+        intersectionsMatrix <<- laply(1:nSurveyRoutes, countIntersections, surveyRoutes=surveyRoutes, tracks=tracks, .drop=FALSE, .parallel=TRUE)
       }
       else if (dimension == 2) {
-        intersectionsMatrix <<- laply(1:nTracks, function(j, surveyRoutes, tracks, cluster) {          
+        countIntersections <- function(j, surveyRoutes, tracks) {
           library(plyr)
           library(rgeos)
           
@@ -101,8 +107,9 @@ SimulatedIntersections <- setRefClass(
                      }, surveyRoutes=surveyRoutes, tracks=tracks, j=j)
           
           return(x)
-        }, surveyRoutes=surveyRoutes, tracks=tracks, .drop=FALSE, .parallel=TRUE)
+        }
         
+        intersectionsMatrix <<- laply(1:nTracks, countIntersections, surveyRoutes=surveyRoutes, tracks=tracks, .drop=FALSE, .parallel=TRUE)
         intersectionsMatrix <<- t(intersectionsMatrix)
       }
       
@@ -157,6 +164,15 @@ SimulatedIntersections <- setRefClass(
       fileName <- getIntersectionsFileName()
       message("Saving intersections to ", fileName)
       save(intersections, intersectionsMatrix, iteration, file=fileName)
+    },
+    
+    estimate = function(meshParams) {
+      tracks <- study$loadTracks(iteration=iteration)
+      print(tracks$getPopulationSize())
+      intersections$distance <<- tracks$getMeanDistance()
+      model <- SimulatedSmoothModel$new(study=study, iteration=iteration)
+      model$setup(intersections=.self, meshParams=meshParams)
+      model$estimate(save=TRUE)
     }
   )
 )
@@ -226,3 +242,20 @@ FinlandWTCIntersections <- setRefClass(
     }
   )
 )
+
+# Debug code
+if (F) {
+if (nSurveyRoutes > 100) {
+  from <- c(round(seq(1, nSurveyRoutes, by=nSurveyRoutes/10)))
+  to <- c(from[-1], nSurveyRoutes+1)-1
+}
+else {
+  from <- 1
+  to <- nSurveyRoutes
+}
+
+for (i in 1:length(from)) {
+  x <- laply(from[i]:to[i], countIntersections, surveyRoutes=surveyRoutes, tracks=tracks, .drop=FALSE, .parallel=TRUE)
+  intersectionsMatrix <<- rbind(intersectionsMatrix, x)
+}
+}

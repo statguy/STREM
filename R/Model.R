@@ -322,11 +322,25 @@ if (F) {
   )
 )
 
+SimulatedSmoothModel <- setRefClass(
+  Class = "FinlandSmoothModel",
+  contains = c("SmoothModel"),
+  fields = list(
+    iteration = "integer"
+  ),
+  methods = list(
+    getEstimatesFileName = function() {
+      if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
+        stop("Provide study, modelName and iteration parameters.")
+      return(study$context$getLongFileName(study$context$resultDataDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
+    }
+  )
+)
+
 FinlandSmoothModel <- setRefClass(
   Class = "FinlandSmoothModel",
   contains = c("SmoothModel", "FinlandCovariates"),
   fields = list(
-    family = "character"
   ),
   methods = list(
     initialize = function(...) {

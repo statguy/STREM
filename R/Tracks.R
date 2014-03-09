@@ -36,6 +36,14 @@ Tracks <- setRefClass(
       if (is.data.frame(tracks)) {
         tracks$year <<- as.POSIXlt(tracks$date)$year + 1900
         tracks$burst <<- paste(tracks$id, tracks$year)
+        
+        tracks <- ddply(tracks, .(burst), function(x) {
+          n <- nrow(x)
+          n1 <- n-1
+          x$dt <- c(difftime(x$date[2:n], x$date[1:n1], units="secs"), NA)
+          x$dist <- c(euclidean(x[1:n1, c("x","y")], x[2:n, c("x","y")]), NA)
+          return(x)
+        }, .parallel=TRUE)        
       }
       return(invisible(.self))
     },
@@ -44,15 +52,7 @@ Tracks <- setRefClass(
       if (nrow(tracks) == 0) loadTracks()
       return(tracks)
     },
-    
-    getPopulationSize = function() {
-      if (is.ltraj(tracks)) stop("Unsupported.")
-      library(plyr)
-      populationSize <- ddply(tracks, .(year), function(x) return(data.frame(Total=length(unique(x$id)))))
-      names(populationSize) <- c("Year","Total")
-      return(populationSize)
-    },
-    
+        
     getSpatialLines = function() {
       library(sp)
       if (is.data.frame(tracks)) {
@@ -73,7 +73,7 @@ Tracks <- setRefClass(
       library(sp)
       library(adehabitatLT)
       
-      tracksDF <- ld(tracks)
+      tracksDF <- if (is.data.frame(tracks)) tracks else ld(tracks)
       plot(tracksDF$x, tracksDF$y, type="n")
       apply(fun=function(x) lines(x$x, x$y, col=x$id), variables=.(burst))
       plot(study$studyArea$boundary, add=T)
@@ -82,7 +82,7 @@ Tracks <- setRefClass(
     },
     
     apply = function(variables=.(id), fun, ..., combine=F) {
-      tracksDF <- ld(tracks)
+      tracksDF <- if (is.data.frame(tracks)) tracks else ld(tracks)
       result <- dlply(.data=tracksDF, .variables=variables, .fun=fun, ...)
       if (combine) result <- do.call("rbind", result)
       return(result)
@@ -104,15 +104,15 @@ Tracks <- setRefClass(
     getDistances = function() {
       warning("Spatial variation in distances not considered in vicinity of the survey routes.")
       
-      tracksDF <- ld(tracks)
+      tracksDF <- if (is.data.frame(tracks)) tracks else ld(tracks)
       d <- as.POSIXlt(tracksDF$date)
       tracksDF$yday <- d$yday
       tracksDF$year <- d$year
-      distances <- ddply(.data=tracksDF, .variables=.(id, burst, yday, year), .fun=function(x) {
+      distances <- daply(tracksDF, .(id, burst, yday, year), function(x) {
         s <- sum(x$dt, na.rm=T) / 3600
         if (s < 23 | s > 25) return(NA)
         return(sum(x$dist) / sum(x$dt) * 24 * 3600)
-      }, .parallel=TRUE)$V1
+      }, .parallel=TRUE)
       
       if (all(is.na(distances)))
         stop("Unable to determine movement distance.")
@@ -123,10 +123,14 @@ Tracks <- setRefClass(
       return(invisible(distances))
     },
     
+    getMeanDistance = function() {
+      return(mean(getDistances(), na.rm=TRUE))
+    },
+    
     .internal.thin = function(by) {
       library(plyr)
       
-      tracksDF <- ld(tracks)
+      tracksDF <- if (is.data.frame(tracks)) tracks else ld(tracks)
       tracksDF <- data.frame(tracksDF, breakDownDate(tracksDF$date))
       oldDt <- mean(tracksDF$dt, na.rm=T)
       
@@ -175,6 +179,7 @@ SimulatedTracks <- setRefClass(
       #tracks <<- as.ltraj(xy=xy, date=date, id=id, burst=burst)
       
       tracks <<- data.frame(xy, id=id, date=date)
+      return(invisible(.self))
     },
     
     getTracksDirectory = function() return(study$context$scratchDirectory),
@@ -191,6 +196,15 @@ SimulatedTracks <- setRefClass(
       if (thinId != 1)
         stop("Saving thinned tracks unsupported.")
       save(tracks, iteration, thinId, distance, file=fileName)
+      return(invisible(.self))
+    },
+    
+    countIntersections = function() {
+      surveyRoutes <- study$loadSurveyRoutes()
+      intersections <- SimulatedIntersections$new(study=study, iteration=iteration)
+      intersections$findIntersections(.self, surveyRoutes, dimension=1)
+      intersections$saveIntersections()
+      return(invisible(.self))
     },
     
     thin = function(by) {
@@ -199,6 +213,13 @@ SimulatedTracks <- setRefClass(
       if (is.null(thinnedTracksDF)) return(NULL)
       thinnedTracks <- SimulatedTracks$new(study=study, tracks=thinnedTracksDF, iteration=iteration, thinId=as.integer(thinId+1))
       return(thinnedTracks)
+    },
+    
+    getPopulationSize = function() {
+      library(plyr)
+      populationSize <- ddply(tracks, .(year), function(x) return(data.frame(Total=length(unique(x$id)))))
+      names(populationSize) <- c("Year","Total")
+      return(populationSize)
     }
   )
 )
