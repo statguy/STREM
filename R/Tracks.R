@@ -36,6 +36,7 @@ Tracks <- setRefClass(
       if (is.data.frame(tracks)) {
         library(plyr)
         tracks$year <<- as.POSIXlt(tracks$date)$year + 1900
+        tracks$yday <<- as.POSIXlt(tracks$date)$yday
         tracks$burst <<- paste(tracks$id, tracks$year)
         tracks <<- ddply(tracks, .(burst), function(x) {
           n <- nrow(x)
@@ -197,6 +198,22 @@ SimulatedTracks <- setRefClass(
         stop("Saving thinned tracks unsupported.")
       save(tracks, iteration, thinId, distance, file=fileName)
       return(invisible(.self))
+    },
+    
+    randomizeObservationDayTracks = function() {
+      dates <- unique(tracks[,c("yday","year")])
+      randomDays <- ddply(dates, .(year), function(x) {
+        return(data.frame(year=x$year[1], yday=sample(x$yday, 1)))
+      })
+      
+      observationDayTracksDF <- ddply(tracks, .(year), function(x, randomDays) {
+        randomYday <- subset(randomDays, year == x$year[1], "yday")$yday
+        return(subset(x, yday == randomYday))
+      }, randomDays=randomDays)
+      
+      observationDayTracks <- copy()
+      observationDayTracks$tracks <- tracksDF
+      return(observationDayTracks)
     },
     
     countIntersections = function() {

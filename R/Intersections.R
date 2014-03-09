@@ -54,14 +54,15 @@ SimulatedIntersections <- setRefClass(
     },
     
     findIntersections = function(tracks, surveyRoutes, ...) {
-      tracksSP <- tracks$getSpatialLines()
+      observationTracks <- tracks$randomizeObservationDayTracks()
+      tracksSP <- observationTracks$getSpatialLines()
       findIntersectionsMatrix(tracksSP, surveyRoutes$surveyRoutes, ...)
       nSurveyRoutes <- length(surveyRoutes$surveyRoutes)
       nTracks <- length(tracksSP)
-      nYears <- length(unique(tracks$tracks$year))
+      nYears <- length(unique(observationTracks$tracks$year))
       message("Found ", sum(intersectionsMatrix) / nTracks / nYears, " intersections per track per year.")
       message("Found ", sum(intersectionsMatrix) / nSurveyRoutes / nYears, " intersections per survey route per year.")
-      aggregateIntersectionsMatrix(tracks, surveyRoutes)
+      aggregateIntersectionsMatrix(observationTracks, surveyRoutes)
     },
     
     # TODO: Support for WTC survey routes for each year
@@ -144,7 +145,7 @@ SimulatedIntersections <- setRefClass(
                         intersections=rowSums(intersectionsMatrix[,bursts,drop=F]),
                         duration=duration,
                         length=surveyRoutes$lengths,
-                        distance=1) # Correct for distance after estimation
+                        distance=1) # Correct for distance after estimation if not set elsewhere
         data <- rbind(data, x)
       }
       
@@ -168,8 +169,7 @@ SimulatedIntersections <- setRefClass(
     
     estimate = function(meshParams) {
       tracks <- study$loadTracks(iteration=iteration)
-      print(tracks$getPopulationSize())
-      intersections$distance <<- tracks$getMeanDistance()
+      intersections$distance <<- tracks$getMeanDistance() # Adds bias as distance not determined from the observation day tracks
       model <- SimulatedSmoothModel$new(study=study, iteration=iteration)
       model$setup(intersections=.self, meshParams=meshParams)
       model$estimate(save=TRUE)
