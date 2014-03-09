@@ -35,5 +35,3 @@ source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 if (scenario == "test") dryRun(iteration=task_id, test=test)
 else if (scenario == "A") simulateA(iteration=task_id, test=test)
 else stop("Unsupported scenario ", scenario)
-
-traceback()

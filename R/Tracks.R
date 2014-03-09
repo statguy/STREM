@@ -36,8 +36,7 @@ Tracks <- setRefClass(
       if (is.data.frame(tracks)) {
         tracks$year <<- as.POSIXlt(tracks$date)$year + 1900
         tracks$burst <<- paste(tracks$id, tracks$year)
-        
-        tracks <- ddply(tracks, .(burst), function(x) {
+        tracks <<- ddply(tracks, .(burst), function(x) {
           n <- nrow(x)
           n1 <- n-1
           x$dt <- c(difftime(x$date[2:n], x$date[1:n1], units="secs"), NA)
