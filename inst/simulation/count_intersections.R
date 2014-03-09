@@ -6,18 +6,11 @@
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 
 
-countIntersections <- function(scenario, iteration, test) {
-  context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-  mss <- if (scenario == "A") MovementSimulationScenarioA$new()$newInstance(context=context) else stop("Unknown scenario ", scenario)
-  study <- mss$study
+countIntersections <- function(study, iteration, test) {
   tracks <- study$loadTracks(iteration=iteration)
-  surveyRoutes <- study$loadSurveyRoutes()
-  intersections <- SimulatedIntersections$new(study=study, iteration=iteration)
-  if (!test) {
-    intersections$findIntersections(tracks, surveyRoutes, dimension=1)
-    intersections$saveIntersections()
-  }
-  else {
+  if (test) {
+    surveyRoutes <- study$loadSurveyRoutes()
+    intersections <- SimulatedIntersections$new(study=study, iteration=iteration)
     surveyRoutes$surveyRoutes <- surveyRoutes$surveyRoutes[1:3]
     surveyRoutes$centroids <- surveyRoutes$centroids[1:3]
     surveyRoutes$lengths <- surveyRoutes$lengths[1:3]
@@ -25,6 +18,7 @@ countIntersections <- function(scenario, iteration, test) {
     intersections$saveIntersections()
     message("SUCCESS")
   }
+  else tracks$countIntersections()
 }
 
 args <- commandArgs(trailingOnly=TRUE)
@@ -42,5 +36,7 @@ registerDoMC(cores=detectCores())
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
-countIntersections(scenario=scenario, iteration=as.integer(task_id), test=test=="test")
-
+context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+mss <- if (scenario == "A") MovementSimulationScenarioA$new()$newInstance(context=context) else stop("Unknown scenario ", scenario)
+study <- mss$study
+countIntersections(study=study, iteration=as.integer(task_id), test=test=="test")

@@ -323,7 +323,7 @@ if (F) {
 )
 
 SimulatedSmoothModel <- setRefClass(
-  Class = "FinlandSmoothModel",
+  Class = "SimulatedSmoothModel",
   contains = c("SmoothModel"),
   fields = list(
     iteration = "integer"
