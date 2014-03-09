@@ -34,6 +34,7 @@ Tracks <- setRefClass(
       library(adehabitatLT)
       load(getTracksFileName(), envir=as.environment(.self))
       if (is.data.frame(tracks)) {
+        library(plyr)
         tracks$year <<- as.POSIXlt(tracks$date)$year + 1900
         tracks$burst <<- paste(tracks$id, tracks$year)
         tracks <<- ddply(tracks, .(burst), function(x) {
@@ -107,11 +108,11 @@ Tracks <- setRefClass(
       d <- as.POSIXlt(tracksDF$date)
       tracksDF$yday <- d$yday
       tracksDF$year <- d$year
-      distances <- daply(tracksDF, .(id, burst, yday, year), function(x) {
+      distances <- ddply(tracksDF, .(id, burst, yday, year), function(x) {
         s <- sum(x$dt, na.rm=T) / 3600
         if (s < 23 | s > 25) return(NA)
         return(sum(x$dist) / sum(x$dt) * 24 * 3600)
-      }, .parallel=TRUE)
+      }, .parallel=TRUE)$V1
       
       if (all(is.na(distances)))
         stop("Unable to determine movement distance.")
