@@ -14,8 +14,8 @@ countIntersections <- function(study, iteration, test) {
     surveyRoutes$surveyRoutes <- surveyRoutes$surveyRoutes[1:3]
     surveyRoutes$centroids <- surveyRoutes$centroids[1:3]
     surveyRoutes$lengths <- surveyRoutes$lengths[1:3]
-    intersections$findIntersections(tracks, surveyRoutes, dimension=1)
-    intersections$saveIntersections()
+    observationTracks <- tracks$randomizeObservationDayTracks()
+    intersections$findIntersections(observationTracks, surveyRoutes, dimension=1)
     message("SUCCESS")
   }
   else tracks$countIntersections()
