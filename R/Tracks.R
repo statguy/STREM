@@ -217,9 +217,10 @@ SimulatedTracks <- setRefClass(
     },
     
     countIntersections = function() {
+      observationTracks <- randomizeObservationDayTracks()
       surveyRoutes <- study$loadSurveyRoutes()
       intersections <- SimulatedIntersections$new(study=study, iteration=iteration)
-      intersections$findIntersections(.self, surveyRoutes, dimension=1)
+      intersections$findIntersections(observationTracks, surveyRoutes, dimension=1)
       intersections$saveIntersections()
       return(invisible(.self))
     },

@@ -54,15 +54,14 @@ SimulatedIntersections <- setRefClass(
     },
     
     findIntersections = function(tracks, surveyRoutes, ...) {
-      observationTracks <- tracks$randomizeObservationDayTracks()
-      tracksSP <- observationTracks$getSpatialLines()
+      tracksSP <- tracks$getSpatialLines()
       findIntersectionsMatrix(tracksSP, surveyRoutes$surveyRoutes, ...)
       nSurveyRoutes <- length(surveyRoutes$surveyRoutes)
       nTracks <- length(tracksSP)
-      nYears <- length(unique(observationTracks$tracks$year))
+      nYears <- length(unique(tracks$tracks$year))
       message("Found ", sum(intersectionsMatrix) / nTracks / nYears, " intersections per track per year.")
       message("Found ", sum(intersectionsMatrix) / nSurveyRoutes / nYears, " intersections per survey route per year.")
-      aggregateIntersectionsMatrix(observationTracks, surveyRoutes)
+      aggregateIntersectionsMatrix(tracks, surveyRoutes)
     },
     
     # TODO: Support for WTC survey routes for each year
