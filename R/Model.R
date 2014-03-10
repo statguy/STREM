@@ -154,14 +154,16 @@ SmoothModel <- setRefClass(
       
       intercept <- result$summary.fixed["intercept","mean"]
       yearsVector <- sort(unique(data$year))
-      e <- numeric(mesh$n * length(yearsVector))
-      for (i in 1:(mesh$n * length(yearsVector)))
+      n <- mesh$n * length(yearsVector)
+      e <- numeric(n)
+      if (length(weightsAtNodes) == 1 | is.null(weightsAtNodes)) weightsAtNodes <- rep(1, n)
+      for (i in 1:n)
         e[i] <- inla.emarginal(function(x) exp(intercept + x) / weightsAtNodes[i], result$marginals.random$st[[i]])
       node$mean <<- matrix(data=e, nrow=mesh$n, ncol=length(yearsVector))
       
       # By Jensen's inequality:
       # E(exp(x)) >= exp(E(x))
-      inla.emarginal(function(x) exp(intercept + x) / weightsAtNodes[1], result$marginals.random$st[[1]]) >= exp(intercept + result$summary.random$st$mean[1]) / weightsAtNodes[1]
+      stopifnot(node$mean >= exp(intercept + result$summary.random$st$mean) / weightsAtNodes)
 
       # TODO: SD
       
