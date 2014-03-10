@@ -232,7 +232,7 @@ SimulatedTracks <- setRefClass(
       return(thinnedTracks)
     },
     
-    getPopulationSize = function() {
+    getTruePopulationSize = function() {
       library(plyr)
       populationSize <- ddply(tracks, .(year), function(x) return(data.frame(Total=length(unique(x$id)))))
       names(populationSize) <- c("Year","Total")

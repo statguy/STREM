@@ -50,6 +50,11 @@ SimulationStudy <- setRefClass(
       return(intersections)
     },
     
+    loadEstimates = function(iteration) {
+      estimates <- SimulatedSmoothModel$new(study=.self, iteration=iteration)$loadEstimates()
+      return(estimates)
+    },
+    
     #loadTracksCollection = function() {
     #  tracks <- SimulatedTracksCollection$new(study=.self)
     #  tracks$loadTracks()

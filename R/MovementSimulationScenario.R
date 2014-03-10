@@ -157,7 +157,7 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
       track <- ldply(1:nAgentsCurrent,
         function(agentIndex, initialLocations, initialAngles, agents, nAgentsCurrent, isFirst, nProposal, iteration, nIterations, habitat, habitatWeights, boundary, CRWCorrelation, BCRWCorrelationBiasTradeoff, homeRangeRadius, days, stepIntervalHours, nSteps, distanceScale, stepSpeedScale) {
           ## TODO: UNTESTED CODE
-          #if (length(habitatWeights) != 0 & loadHabitatRasterInMemory) {
+          #if ((inherits(habitatWeights, "uninitializedField") | is.null(habitatWeights) != 0) & loadHabitatRasterInMemory) {
           #  study$studyArea$readRasterIntoMemory()                
           #}
           
@@ -266,7 +266,11 @@ MovementSimulationScenario <- setRefClass(
       }
       
       return(invisible(simulatedTracks))
-    }        
+    },
+    
+    hasHabitatWeights = function() {
+      return(!inherits(mss$habitatWeights, "uninitializedField"))
+    }
   )
 )
 

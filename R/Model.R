@@ -333,6 +333,28 @@ SimulatedSmoothModel <- setRefClass(
       if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
         stop("Provide study, modelName and iteration parameters.")
       return(study$context$getLongFileName(study$context$resultDataDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
+    },
+    
+    getPopulationSize = function(withHabitatWeights) {
+      loadPopulationSize()
+      collectEstimates()
+      populationDensity <- getPopulationDensity(getSD=FALSE)
+      
+      tracks <- study$loadTracks(iteration=iteration)
+      if (mss$hasHabitatWeights()) {
+        habitatWeights <- CORINEHabitatWeights$new(study=study)
+        habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=FALSE) # TODO: save
+        habitatWeights$setHabitatSelectionWeights(habitatSelection)
+        habitatWeighstRaster <- habitatWeights$getWeightsRaster(save=FALSE)
+        populationDensity$mean$weight(habitatWeightsRaster)
+      }
+      populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study))
+      populationSize$savePopulationSize()
+      
+      truePopulationSize <- tracks$getTruePopulationSize()
+      populationSize$setValidationSizeData(truePopulationSize)
+      
+      return(invisible(populationSize))
     }
   )
 )

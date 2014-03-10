@@ -15,6 +15,10 @@ PopulationSize <- setRefClass(
       return(invisible(.self))
     },
     
+    setValidationSizeData = function(validationSizeData) {
+      sizeData <<- merge(sizeData, validationSizeData, all=TRUE, sort=FALSE)
+    },
+    
     getValidationDataFileName = function() {
       return(context$getFileName(dir=context$processedDataDirectory, name="ValidationPopulationSize", response="", region=study$studyArea$region))
     },
@@ -25,10 +29,10 @@ PopulationSize <- setRefClass(
     
     loadValidationData = function() {
       load(getValidationDataFileName())
-      sizeData <<- merge(sizeData, validationSizeData, all=TRUE, sort=FALSE)
+      setValidationSizeData(validationSizeData)
       return(invisible(.self))
     },
-    
+        
     plotPopulationSize = function() {
       library(ggplot2)
       library(reshape2)
@@ -38,6 +42,20 @@ PopulationSize <- setRefClass(
         xlab("Year") + ylab("Population size")
       print(p)
       
+      return(invisible(.self))
+    },
+    
+    getPopulationSizeFileName = function() {
+      return(context$getFileName(dir=context$processedDataDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region))
+    },
+    
+    savePopulationSize = function(fileName=getPopulationSizeFileName()) {
+      save(sizeData, iteration, file=fileName)
+      return(invisible(.self))
+    },
+    
+    loadPopulationSize = function(fileName=getPopulationSizeFileName()) {
+      load(fileName, envir=as.environment(.self))
       return(invisible(.self))
     },
     
@@ -59,8 +77,29 @@ FinlandPopulationSize <- setRefClass(
     
     loadValidationData = function() {
       load(getValidationDataFileName())
-      sizeData <<- merge(sizeData, validation[,c("Year",study$response)], all=T)
+      setValidationSizeData(validation[,c("Year", study$response)])
+      #sizeData <<- merge(sizeData, validation[,c("Year",study$response)], all=T)
       colnames(sizeData) <<- c("Year","Estimated","Observed")
+      return(invisible(.self))
+    }
+  )
+)
+
+SimulationPopulationSize <- setRefClass(
+  Class = "SimulationPopulationSize",
+  contains = "PopulationSize",
+  fields = list(
+    iteration = "integer"
+  ),
+  methods = list(
+    getPopulationSizeFileName = function() {
+      return(context$getLongFileName(dir=context$processedDataDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region, tag=iteration))
+    },
+    
+    loadValidationData = function() {
+      tracks <- study$loadTracks(iteration=iteration)
+      truePopulationSize <- tracks$getTruePopulationSize()
+      setValidationSizeData(truePopulationSize)
       return(invisible(.self))
     }
   )
