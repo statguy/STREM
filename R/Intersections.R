@@ -54,7 +54,6 @@ SimulatedIntersections <- setRefClass(
     },
     
     findIntersections = function(tracks, surveyRoutes, ...) {
-      message("Finding intersections...")
       tracksSP <- tracks$getSpatialLines()
       findIntersectionsMatrix(tracksSP, surveyRoutes$surveyRoutes, ...)
       nSurveyRoutes <- length(surveyRoutes$surveyRoutes)
@@ -81,7 +80,7 @@ SimulatedIntersections <- setRefClass(
           
           nSurveyRoutes <- length(surveyRoutes)
           nTracks <- length(tracks)
-          message("Finding intersections for survey route ", i, " / ", nSurveyRoutes, "...")
+          message("Finding intersections for survey route ", i, " / ", nSurveyRoutes, " for ", nTracks, " tracks...")
           
           x <- laply(1:nTracks,
                      function(j, surveyRoutes, tracks, i) {
@@ -100,7 +99,7 @@ SimulatedIntersections <- setRefClass(
           
           nSurveyRoutes <- length(surveyRoutes)
           nTracks <- length(tracks)
-          message("Finding intersections for track ", j," / ", nTracks, "...")
+          message("Finding intersections for track ", j," / ", nTracks, " for ", nSurveyRoutes, " survey routes...")
           
           x <- laply(1:nSurveyRoutes,
                      function(i, surveyRoutes, tracks, j) {
