@@ -54,6 +54,7 @@ SimulatedIntersections <- setRefClass(
     },
     
     findIntersections = function(tracks, surveyRoutes, ...) {
+      message("Finding intersections...")
       tracksSP <- tracks$getSpatialLines()
       findIntersectionsMatrix(tracksSP, surveyRoutes$surveyRoutes, ...)
       nSurveyRoutes <- length(surveyRoutes$surveyRoutes)

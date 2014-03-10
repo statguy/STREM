@@ -32,6 +32,7 @@ Tracks <- setRefClass(
        
     loadTracks = function() {
       library(adehabitatLT)
+      message("Processing tracks...")
       load(getTracksFileName(), envir=as.environment(.self))
       if (is.data.frame(tracks)) {
         library(plyr)
@@ -103,7 +104,8 @@ Tracks <- setRefClass(
     
     # Note! Call this before randomizing observation days. Otherwise you'll lose details of the last movements.
     getDistances = function() {
-      warning("Spatial variation in distances not considered in vicinity of the survey routes.")
+      #warning("Spatial variation in distances not considered in vicinity of the survey routes.")
+      message("Finding distances...")
       
       tracksDF <- if (is.data.frame(tracks)) tracks else ld(tracks)
       d <- as.POSIXlt(tracksDF$date)
@@ -201,6 +203,8 @@ SimulatedTracks <- setRefClass(
     },
     
     randomizeObservationDayTracks = function() {
+      message("Randomizing observation day and filtering tracks...")
+      
       dates <- unique(tracks[,c("yday","year")])
       randomDays <- ddply(dates, .(year), function(x) {
         return(data.frame(year=x$year[1], yday=sample(x$yday, 1)))
