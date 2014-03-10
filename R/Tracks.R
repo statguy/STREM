@@ -204,20 +204,15 @@ SimulatedTracks <- setRefClass(
     
     randomizeObservationDayTracks = function() {
       message("Randomizing observation day and filtering tracks...")
-      
-      dates <- unique(tracks[,c("yday","year")])
-      randomDays <- ddply(dates, .(year), function(x) {
-        return(data.frame(year=x$year[1], yday=sample(x$yday, 1)))
+
+      observationTracksDF <- ddply(tracks, .(year), function(x) {
+        randomDay <- sample(x$yday, 1)
+        return(subset(x, yday == randomDay))
       })
       
-      observationDayTracksDF <- ddply(tracks, .(year), function(x, randomDays) {
-        randomYday <- subset(randomDays, year == x$year[1], "yday")$yday
-        return(subset(x, yday == randomYday))
-      }, randomDays=randomDays)
-      
-      observationDayTracks <- copy()
-      observationDayTracks$tracks <- tracksDF
-      return(observationDayTracks)
+      observationTracks <- copy()
+      observationTracks$tracks <- observationTracksDF
+      return(observationTracks)
     },
     
     countIntersections = function() {
