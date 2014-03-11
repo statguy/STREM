@@ -8,8 +8,8 @@ Tracks <- setRefClass(
     #tracks = "ltraj",
     tracks = "ANY",
     distance = "ANY",
-    #thinId = "integer"
-    thinId = "numeric"
+    thinId = "integer"
+    #thinId = "numeric"
   ),
   methods = list(
     initialize = function(thinId, preprocessData=FALSE, ...) {
@@ -170,7 +170,7 @@ SimulatedTracks <- setRefClass(
     iteration = "integer"
   ),
   methods = list(
-    initialize = function(xy, id, date, thinId, preprocessData=FALSE, ...) {
+    initialize = function(xy, id, date, preprocessData=FALSE, ...) {
       if (!missing(xy) && !missing(id) && !missing(date)) setTracks(xy=xy, id=id, date=date)
       callSuper(preprocessData=preprocessData, ...)
     },
@@ -225,10 +225,10 @@ SimulatedTracks <- setRefClass(
     },
     
     thin = function(by) {
-      message("Thinning iteration = ", iteration, ", thin = ", thinId)
+      message("Thinning iteration = ", iteration, ", thin = ", thinId, " to ", thinId + 1)
       thinnedTracksDF <- .internal.thin(by=by)
       if (is.null(thinnedTracksDF)) return(NULL)
-      thinnedTracks <- SimulatedTracks$new(study=study, tracks=thinnedTracksDF, iteration=iteration, thinId=as.integer(thinId+1))
+      thinnedTracks <- SimulatedTracks$new(study=study, tracks=thinnedTracksDF, iteration=iteration, thinId=as.integer(thinId + 1))
       return(thinnedTracks)
     },
     

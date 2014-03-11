@@ -23,7 +23,7 @@ MovementSampleIntervals <- setRefClass(
     getSampleIntervals = function(tracks) {
       library(plyr)
       
-      tracksDF <- ld(tracks$tracks)
+      tracksDF <- if (is.data.frame(tracks$tracks)) tracks$tracks else ld(tracks$tracks)
       tracksDF <- data.frame(tracksDF, breakDownDate(tracksDF$date))
 
       intervals <<- ddply(tracksDF, .(burst, yday, year), function(x) {
@@ -142,13 +142,13 @@ MovementSampleIntervals <- setRefClass(
         ylab("Distance / day (km)") + xlab("Sampling interval (h)") + theme_bw(18)      
       
       if (!inherits(estimationResult, "uninitializedField")) {
-        #predictionDate <- estimationResult@frame[,names(fixef(estimationResult))[-1]]        
-        #n <- names(fixef(estimationResult))
-        
-        # TODO
-        #predictionData <- data.frame(intervalH=seq(0, 24, by=0.1))
-        #predictionData$distanceKm <- predict(predictionData=predictionData)
-        #p <- p + geom_line(data=predictionData, aes(intervalH, distanceKm), color="red")
+        library(lm4)
+        #C <- exp(fixef(estimationResult)["(Intercept)"])
+        #alpha <- -fixef(estimationResult)["intervalH"]
+        predictionData <- data.frame(intervalH=seq(0, 12, by=0.1))
+        #predictionData$distanceKm <- exp(predict(estimationResult, newdata=predictionData, REform=NA))
+        predictionData$distanceKm <- exp(predict(predictionData=predictionData))
+        p <- p + geom_line(data=predictionData, aes(intervalH, distanceKm), color="red")
       }
       
       print(p)

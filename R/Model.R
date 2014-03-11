@@ -352,7 +352,6 @@ SimulatedSmoothModel <- setRefClass(
       
       populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study))
       truePopulationSize <- tracks$getTruePopulationSize()
-      populationSize$setValidationSizeData(truePopulationSize)
       
       return(invisible(populationSize))
     }
