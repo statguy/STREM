@@ -338,7 +338,6 @@ SimulatedSmoothModel <- setRefClass(
     },
     
     getPopulationSize = function(withHabitatWeights) {
-      loadPopulationSize()
       collectEstimates()
       populationDensity <- getPopulationDensity(getSD=FALSE)
       
