@@ -224,15 +224,15 @@ if (F) {
       return(intersections)
     },
     
-    project = function(values, projectionRaster, maskPolygon) {
+    project = function(projectValues, projectionRaster, maskPolygon) {
       library(INLA)
       library(raster)
-
+      
       projector <- inla.mesh.projector(getUnscaledMesh(),
                                        dims=c(ncol(projectionRaster), nrow(projectionRaster)),
                                        xlim=c(xmin(projectionRaster), xmax(projectionRaster)),
                                        ylim=c(ymin(projectionRaster), ymax(projectionRaster)))
-      projectedEstimates <- inla.mesh.project(projector, values)
+      projectedEstimates <- inla.mesh.project(projector, projectValues)
       
       cellArea <- prod(res(projectionRaster))
       values(projectionRaster) <- t(projectedEstimates[,ncol(projectedEstimates):1]) * cellArea
@@ -242,7 +242,7 @@ if (F) {
       
       return(invisible(projectionRaster))
     },
-
+  
     getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
       if (length(node) == 0)
         stop("Did you forgot to run collectEstimates() first?")
@@ -261,14 +261,14 @@ if (F) {
         message("Processing year ", year, "...")
 
         yearIndex <- year - min(xyzMean$Year) + 1
-        meanRaster <- project(values=node$mean[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon)
+        meanRaster <- project(projectValues=node$mean[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon)
         #meanRaster <- rasterInterpolate(subset(xyzMean, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea        
         #if (!(missing(maskPolygon) | is.null(maskPolygon)))
           #meanRaster <- mask(meanRaster, maskPolygon)
         meanPopulationDensityRaster$addLayer(meanRaster, year)
         
         if (getSD) {
-          sdRaster <- project(values=node$sd[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon)
+          sdRaster <- project(projectValues=node$sd[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon)
           #sdRaster <- rasterInterpolate(subset(xyzSD, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea
           #if (!(missing(maskPolygon) | is.null(maskPolygon)))
             #sdRaster <- mask(sdRaster, maskPolygon)

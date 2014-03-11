@@ -128,7 +128,7 @@ SimulatedIntersections <- setRefClass(
         date <- as.POSIXlt(x$date)
         data.frame(burst=x$burst[1],
                    year=date$year[1] + 1900,
-                   duration=round(as.numeric(difftime(max(x$date), min(x$date))))) # Here it is assumed that the observation period is continuous
+                   duration=round(as.numeric(difftime(max(x$date), min(x$date), units="days")))) # Here it is assumed that the observation period is continuous
       })
       
       data <- data.frame()

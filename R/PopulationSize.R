@@ -20,7 +20,7 @@ PopulationSize <- setRefClass(
     },
     
     getValidationDataFileName = function() {
-      return(context$getFileName(dir=context$processedDataDirectory, name="ValidationPopulationSize", response="", region=study$studyArea$region))
+      return(context$getFileName(dir=study$context$processedDataDirectory, name="ValidationPopulationSize", response="", region=study$studyArea$region))
     },
     
     saveValidationData = function() {
@@ -46,7 +46,7 @@ PopulationSize <- setRefClass(
     },
     
     getPopulationSizeFileName = function() {
-      return(context$getFileName(dir=context$processedDataDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region))
+      return(context$getFileName(dir=study$context$resultDataDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region))
     },
     
     savePopulationSize = function(fileName=getPopulationSizeFileName()) {
