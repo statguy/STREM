@@ -163,7 +163,9 @@ SmoothModel <- setRefClass(
       
       # By Jensen's inequality:
       # E(exp(x)) >= exp(E(x))
-      stopifnot(node$mean >= exp(intercept + result$summary.random$st$mean) / weightsAtNodes)
+      p <- (node$mean >= exp(intercept + result$summary.random$st$mean) / weightsAtNodes) / length(node$mean)
+      if (p != 0)
+        warning("Jensen's inequality does not hold for ", round(p*100), "% observations.")
 
       # TODO: SD
       
