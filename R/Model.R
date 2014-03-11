@@ -349,9 +349,8 @@ SimulatedSmoothModel <- setRefClass(
         habitatWeighstRaster <- habitatWeights$getWeightsRaster(save=FALSE)
         populationDensity$mean$weight(habitatWeightsRaster)
       }
-      populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study))
-      populationSize$savePopulationSize()
       
+      populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study))
       truePopulationSize <- tracks$getTruePopulationSize()
       populationSize$setValidationSizeData(truePopulationSize)
       
