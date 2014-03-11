@@ -1,16 +1,28 @@
 # Run test:
 # ./parallel_r.py -t 1:3 -n 3 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/estimate.R test A
 # Run full:
-# ./parallel_r.py -t 1:50 -n 50 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/estimate.R notest A
+# ./parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/estimate.R notest A
 
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 
 
 estimate <- function(study, iteration, test) {
   intersections <- study$loadIntersections(iteration=iteration)
-  meshParams <- if (test) list(maxEdge=c(.2e6, .4e6), cutOff=.1e6, coordsScale=1e-6)
-  else list(maxEdge=c(.05e6, .15e6), cutOff=.02e6, coordsScale=1e-6)
-  intersections$estimate(meshParams=meshParams)
+  if (test) {
+    intersections <- study$loadIntersections(iteration=iteration)
+    tracks <- study$loadTracks(iteration=iteration)
+    intersections$intersections$distance <- tracks$getMeanDistance()
+    model <- SimulatedSmoothModel$new(study=study, iteration=iteration)
+    meshParams <- list(maxEdge=c(.1e6, .2e6), cutOff=.05e6, coordsScale=1e-6)
+    model$setup(intersections=intersections, meshParams=meshParams)
+    model$estimate()
+  }
+  else {
+    #meshParams <- list(maxEdge=c(.05e6, .15e6), cutOff=.02e6, coordsScale=1e-6)
+    meshParams <- list(maxEdge=c(.1e6, .2e6), cutOff=.05e6, coordsScale=1e-6)
+    model <- intersections$estimate(meshParams=meshParams)
+    model$saveEstimates()
+  }
 }
 
 args <- commandArgs(trailingOnly=TRUE)
