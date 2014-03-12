@@ -55,6 +55,11 @@ SimulationStudy <- setRefClass(
       return(estimates)
     },
     
+    loadPopulationSize = function(iteration) {
+      populationSize <- SimulationPopulationSize$new(study=.self, iteration=iteration)$loadPopulationSize()
+      return(populationSize)
+    },
+    
     #loadTracksCollection = function() {
     #  tracks <- SimulatedTracksCollection$new(study=.self)
     #  tracks$loadTracks()

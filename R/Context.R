@@ -39,6 +39,12 @@ Context <- setRefClass(
     
     listLongFiles = function(dir, name, response, region, tag, ext=".RData") {
       return(listFiles(dir=dir, name=name, response=response, region=paste(region, tag, sep="-"), ext=ext))
+    },
+    
+    getIterationIds = function(dir, name, response, region, tag="\\d+", ext=".RData") {
+      files <- listLongFiles(dir=dir, name=name, response=response, region=region, tag=tag, ext=ext)
+      pattern <- file.path(path.expand(dir), paste(paste(name, response, region, "(\\d+)", sep="-"), ext, sep=""))
+      return(as.integer(gsub(pattern, "\\1", files)))
     }
   )
 )

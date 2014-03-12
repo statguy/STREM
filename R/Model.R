@@ -343,9 +343,9 @@ SimulatedSmoothModel <- setRefClass(
       collectEstimates()
       populationDensity <- getPopulationDensity(getSD=FALSE)
       
-      tracks <- study$loadTracks(iteration=iteration)
       if (mss$hasHabitatWeights()) {
         habitatWeights <- CORINEHabitatWeights$new(study=study)
+        tracks <- study$loadTracks(iteration=iteration)
         habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=FALSE) # TODO: save
         habitatWeights$setHabitatSelectionWeights(habitatSelection)
         habitatWeighstRaster <- habitatWeights$getWeightsRaster(save=FALSE)
@@ -353,7 +353,7 @@ SimulatedSmoothModel <- setRefClass(
       }
       
       populationSize <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration))
-      truePopulationSize <- tracks$getTruePopulationSize()
+      populationSize$loadValidationData()
       
       return(invisible(populationSize))
     }
