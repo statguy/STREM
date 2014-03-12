@@ -163,7 +163,7 @@ SmoothModel <- setRefClass(
       
       # By Jensen's inequality:
       # E(exp(x)) >= exp(E(x))
-      p <- (node$mean >= exp(intercept + result$summary.random$st$mean) / weightsAtNodes) / length(node$mean)
+      p <- sum(node$mean >= exp(intercept + result$summary.random$st$mean) / weightsAtNodes) / length(node$mean)
       if (p != 0)
         warning("Jensen's inequality does not hold for ", round(p*100), "% observations.")
 
@@ -352,7 +352,7 @@ SimulatedSmoothModel <- setRefClass(
         populationDensity$mean$weight(habitatWeightsRaster)
       }
       
-      populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study))
+      populationSize <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration))
       truePopulationSize <- tracks$getTruePopulationSize()
       
       return(invisible(populationSize))
