@@ -35,7 +35,7 @@ Model <- setRefClass(
     getEstimatesFileName = function() {
       if (inherits(study, "undefinedField") | length(modelName) == 0)
         stop("Provide study and modelName parameters.")
-      return(study$context$getFileName(study$context$resultDataDirectory, name=modelName, response=study$response, region=study$studyArea$region))
+      return(study$context$getFileName(study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region))
     },
     
     saveEstimates = function(fileName=getEstimatesFileName()) {
@@ -336,7 +336,7 @@ SimulatedSmoothModel <- setRefClass(
     getEstimatesFileName = function() {
       if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
         stop("Provide study, modelName and iteration parameters.")
-      return(study$context$getLongFileName(study$context$resultDataDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
+      return(study$context$getLongFileName(study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
     },
     
     getPopulationSize = function(withHabitatWeights) {
