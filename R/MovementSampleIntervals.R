@@ -142,7 +142,7 @@ MovementSampleIntervals <- setRefClass(
         ylab("Distance / day (km)") + xlab("Sampling interval (h)") + theme_bw(18)      
       
       if (!inherits(estimationResult, "uninitializedField")) {
-        library(lm4)
+        library(lme4)
         #C <- exp(fixef(estimationResult)["(Intercept)"])
         #alpha <- -fixef(estimationResult)["intervalH"]
         predictionData <- data.frame(intervalH=seq(0, 12, by=0.1))

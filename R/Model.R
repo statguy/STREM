@@ -35,7 +35,7 @@ Model <- setRefClass(
     getEstimatesFileName = function() {
       if (inherits(study, "undefinedField") | length(modelName) == 0)
         stop("Provide study and modelName parameters.")
-      return(study$context$getFileName(study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region))
+      return(study$context$getFileName(study$context$resultDataDirectory, name=modelName, response=study$response, region=study$studyArea$region))
     },
     
     saveEstimates = function(fileName=getEstimatesFileName()) {
@@ -172,7 +172,7 @@ SmoothModel <- setRefClass(
 if (F) {      
       message("Processing hyperparameters...")
       spdeResult <- inla.spde2.result(result, "st", spde)
-      logKappa <- getINLAEstimates(spdeResult$marginals.log.kappa[[1]], coordsScale=1)
+      logKappa <- getINLAEstimates(spdeResult$marginals.log.kappa[[1]], coordsScale=1)FinlandSmoothModel$new
       logTau <- getINLAEstimates(spdeResult$marginals.log.tau[[1]], coordsScale=1) ## scale ??
       sd <- getINLAEstimates(spdeResult$marginals.log.variance.nominal[[1]], fun=function(x) sqrt(exp(x)))
       range <- getINLAEstimates(spdeResult$marginals.range.nominal[[1]], coordsScale=coordsScale)

@@ -27,8 +27,10 @@ library(ggplot2)
 library(reshape2)
 
 x <- melt(populationSize, id.vars="Year")
-ggplot(x, aes(x=Year, y=value, group=variable, colour=variable)) +
+p <- ggplot(x, aes(x=Year, y=value, group=variable, colour=variable)) +
   geom_point(stat="summary", stat_params=list(fun.y="mean")) +
   geom_line(stat="summary", stat_params=list(fun.y="mean")) +
   stat_summary(fun.data=mean_se, geom="errorbar") +
   ylab("Population size")
+print(p)
+ggsave(study$context$getFileName(dir=study$context$figuresDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region, ext=".png"), p, width=10, height=8)

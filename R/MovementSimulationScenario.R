@@ -52,7 +52,7 @@ randomizeBCRWTrack <- function(initialLocation, initialAngle, isFirst, nProposal
       newAngles <- rwrpnorm(nProposal, angles[step-1], CRWCorrelation)
       newDistances <- rweibull(nProposal, shape=2, scale=stepSpeedScale * stepIntervalHours * distanceScale)
       
-      if (length(homeRangeRadius) != 0) {
+      if (length(homeRangeRadius) != 0 & !is.na(homeRangeRadius)) {
         if (step > 2 & euclidean(coords[1,,drop=F], coords[step-1,,drop=F]) > homeRangeRadius) {
           # Biased correlated random walk
           xy <- matrix(coords[1,,drop=F], ncol=2, nrow=nProposal, byrow=T) - matrix(coords[step-1,,drop=F], ncol=2, nrow=nProposal, byrow=T)
@@ -162,7 +162,21 @@ randomizeBCRWTracks <- function(iteration, nIterations, initialLocations, habita
           #}
           
           message("Iteration = ", iteration, " / ", nIterations, ", agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgentsCurrent, ", year = ", year,  " / ", years, ", days = ", days, "...")
-          track <- randomizeBCRWTrack(initialLocation=initialLocations[agentIndex,,drop=F], initialAngle=initialAngles[agentIndex], isFirst=isFirst, nProposal=nProposal, habitat=habitat, habitatWeights=habitatWeights, boundary=boundary, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, days=days, stepIntervalHours=stepIntervalHours, nSteps=nSteps, distanceScale=distanceScale, stepSpeedScale=stepSpeedScale)
+          track <- randomizeBCRWTrack(initialLocation=initialLocations[agentIndex,,drop=F],
+                                      initialAngle=initialAngles[agentIndex],
+                                      isFirst=isFirst,
+                                      nProposal=nProposal,
+                                      habitat=habitat,
+                                      habitatWeights=habitatWeights,
+                                      boundary=boundary,
+                                      CRWCorrelation=CRWCorrelation,
+                                      BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff[iteration],
+                                      homeRangeRadius=homeRangeRadius[iteration],
+                                      days=days,
+                                      stepIntervalHours=stepIntervalHours,
+                                      nSteps=nSteps,
+                                      distanceScale=distanceScale,
+                                      stepSpeedScale=stepSpeedScale)
           track$agent <- agents[agentIndex]
           
           return(track)
@@ -238,6 +252,8 @@ MovementSimulationScenario <- setRefClass(
     },
     
     newInstance = function() {
+      BCRWCorrelationBiasTradeoff <<- rep(NA, nAgents)
+      homeRangeRadius <<- rep(NA, nAgents)
       nSteps.tmp <- 24 * days / stepIntervalHours
       message("Number of steps = ", nSteps.tmp, ", steps per day = ", 24 / stepIntervalHours)
       if (nSteps.tmp %% 1 != 0) stop("Number of steps must be integer.")
@@ -312,27 +328,36 @@ MovementSimulationScenarioA <- setRefClass(
   )
 )
 
-if (F) {
-
 # Biased correlated random walk in a homogenous landscape, random initial locations
 MovementSimulationScenarioB <- setRefClass(
   Class = "MovementSimulationScenarioB",
-  contains = "MovementSimulationScenarioA",
+  contains = "MovementSimulationScenario",
   fields = list(
-
   ),
   methods = list(
-    initialize = function(isTest=FALSE, response="B", ...) {
-      callSuper(response=response, isTest=isTest, ...)
-    }
+    initialize = function(nAgents=as.integer(200), nIterations=as.integer(50), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, runParallel=T, ...) {
+      callSuper(years=years, nAgents=nAgents, nIterations=nIterations, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, runParallel=runParallel, ...)
+
+      pAgentsA <- 0.1
+      nAgentsA <- pAgentsA * nAgents
+      nAgentsB <- nAgents - nAgentsA
+      BCRWCorrelationBiasTradeoff <<- c(rep(NA, nAgentsA), rep(0.3, nAgentsB))
+      homeRangeRadius <<- c(rep(NA, nAgentsA), rep(10000, nAgentsB))
+      
+      return(invisible(.self))
+    },
     
-    #discardMovements = function(tracks, retainDaysIndex) {
-    #  library(plyr)
-    #  x <- ddply(trackReplicates, .(year, individual, iteration), function(x, i) x[i,], i=retainDaysIndex)
-    #  return(x)
-    #}
+    newInstance = function(context, response="B") {
+      callSuper()
+      study <<- SimulationStudy$new(response=response)$newInstance(context=context)
+      initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
+      return(invisible(.self))
+    }
   )
 )
+
+if (F) {
+
 
 # TODO: scenario C
 
