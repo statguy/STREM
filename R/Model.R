@@ -172,7 +172,7 @@ SmoothModel <- setRefClass(
 if (F) {      
       message("Processing hyperparameters...")
       spdeResult <- inla.spde2.result(result, "st", spde)
-      logKappa <- getINLAEstimates(spdeResult$marginals.log.kappa[[1]], coordsScale=1)FinlandSmoothModel$new
+      logKappa <- getINLAEstimates(spdeResult$marginals.log.kappa[[1]], coordsScale=1)
       logTau <- getINLAEstimates(spdeResult$marginals.log.tau[[1]], coordsScale=1) ## scale ??
       sd <- getINLAEstimates(spdeResult$marginals.log.variance.nominal[[1]], fun=function(x) sqrt(exp(x)))
       range <- getINLAEstimates(spdeResult$marginals.range.nominal[[1]], coordsScale=coordsScale)
