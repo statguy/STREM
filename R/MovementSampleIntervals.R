@@ -185,10 +185,17 @@ FinlandMovementSampleIntervals <- setRefClass(
         stop("Run get getSampleIntervals() first.")     
       if (nrow(covariates) == 0) saveIntervalCovariates()
       dailyDistanceData <- merge(intervals, covariates, sort=F)
+      
+      # To avoid problems with log-transformation
+      dailyDistanceData$populationDensity <- dailyDistanceData$populationDensity + 1
+      dailyDistanceData$rrday <- dailyDistanceData$rrday + 1
+      dailyDistanceData$snow <- dailyDistanceData$snow + 1
+      dailyDistanceData$tday <- dailyDistanceData$tday + 100
+      
       return(dailyDistanceData)
     },
         
-    predictDistances = function(model=log(distanceKm) ~ sqrt(populationDensity) + rrday + snow + tday + log(intervalH) + (1|individualId) + (1|thinId), predictCovariates) {
+    predictDistances = function(model=log(distanceKm) ~ log(sqrt(populationDensity)) + log(rrday) + log(snow) + log(tday) + log(intervalH) + (1|individualId) + (1|thinId), predictCovariates, truncateDistance=30000) {
       tracks <- study$loadTracks()
       getThinnedTracksSampleIntervals(tracks=tracks)
       fit(model)
@@ -206,14 +213,14 @@ FinlandMovementSampleIntervals <- setRefClass(
       message("Estimation results:")
       print(summary(estimationResult))
       
-      if (sum(predictedDistances > 40000) != 0) {
+      if (any(predictedDistances > truncateDistance)) {
         message("Invalid predicted distances:")
         predictCovariates$predictedDistances <- predictedDistances
-        print(predictCovariates[predictedDistances > 30000,])
+        print(predictCovariates[predictedDistances > truncateDistance,])
         
         # TODO: Extreme predicted distances are truncated for now. Find better prediction model...
-        predictedDistances[predictedDistances > 30000] <- 30000
-      }      
+        predictedDistances[predictedDistances > truncateDistance] <- truncateDistance
+      }
       
       observedDistances <- tracks$getDistances()
       observedDistances <- observedDistances[!is.na(observedDistances)]

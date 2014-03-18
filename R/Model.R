@@ -152,13 +152,21 @@ SmoothModel <- setRefClass(
       
       message("Processing random effects...")
       
-      intercept <- result$summary.fixed["intercept","mean"]
+      #intercept <- result$summary.fixed["intercept","mean"]      
       yearsVector <- sort(unique(data$year))
       n <- mesh$n * length(yearsVector)
       e <- numeric(n)
       if (length(weightsAtNodes) == 1 | is.null(weightsAtNodes)) weightsAtNodes <- rep(1, n)
-      for (i in 1:n)
-        e[i] <- inla.emarginal(function(x) exp(intercept + x) / weightsAtNodes[i], result$marginals.random$st[[i]])
+      
+      # TODO: This is calculated as E[exp(intercept)] * E[exp(st)] which is wrong as
+      # E[exp(intercept) * exp(st)] != E[exp(intercept)] * E[exp(st)]
+      # How to find E[exp(intercept) * exp(st)] with INLA?
+      a <- inla.emarginal(exp, result$marginals.fixed$intercept)
+      for (i in 1:n) {
+        b <- inla.emarginal(exp, result$marginals.random$st[[i]])
+        e[i] <- a * b / weightsAtNodes[i]
+        #e[i] <- inla.emarginal(function(x) exp(intercept + x) / weightsAtNodes[i], result$marginals.random$st[[i]])
+      }
       node$mean <<- matrix(data=e, nrow=mesh$n, ncol=length(yearsVector))
       
       # By Jensen's inequality:

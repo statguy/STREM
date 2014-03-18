@@ -193,13 +193,17 @@ FinlandWTCStudy <- setRefClass(
       
       message("Predictions for survey routes...")
       intersections <- loadIntersections()
-      distancesAtSurveyRoutes <- if (withDistanceWeights) subset(intervals$predictDistances(predictCovariates=intersections$covariates), Variable=="Predicted", select="Value", drop=TRUE)
-      else mean(loadTracks()$getDistances(), na.rm=T)
+      distancesAtSurveyRoutes <- if (withDistanceWeights)
+        subset(intervals$predictDistances(predictCovariates=intersections$covariates), Variable=="Predicted", select="Value", drop=TRUE)
+      else
+        mean(loadTracks()$getDistances(), na.rm=T)
       
       message("Predictions for mesh nodes...")
       estimates <- loadEstimates()
-      distancesAtNodes <- if (withDistanceWeights) subset(intervals$predictDistances(predictCovariates=estimates$covariates), Variable=="Predicted", select="Value", drop=TRUE)
-      else mean(loadTracks()$getDistances(), na.rm=T)
+      distancesAtNodes <- if (withDistanceWeights)
+        subset(intervals$predictDistances(predictCovariates=estimates$covariates), Variable=="Predicted", select="Value", drop=TRUE)
+      else
+        mean(loadTracks()$getDistances(), na.rm=T)
       
       estimates$collectEstimates(weightsAtSurveyRoutes=distancesAtSurveyRoutes, weightsAtNodes=distancesAtNodes, quick=TRUE)
       
