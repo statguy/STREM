@@ -18,10 +18,9 @@ Model <- setRefClass(
     spde = "inla.spde2",
     index = "list",
     A = "Matrix",
-    dataStack = "inla.data.stack",
-    #predA = "Matrix",
-    #predStack = "inla.data.stack",
-    countOffset = "numeric",
+    obsStack = "inla.data.stack",
+    predStack = "inla.data.stack",
+    fullStack = "inla.data.stack",
     result = "inla",
     node = "list",
     modelName = "character"
@@ -40,7 +39,7 @@ Model <- setRefClass(
     
     saveEstimates = function(fileName=getEstimatesFileName()) {
       message("Saving result to ", fileName, "...")
-      save(locations, data, model, coordsScale, years, mesh, spde, index, A, dataStack, countOffset, result, file=fileName)
+      save(locations, data, model, coordsScale, years, mesh, spde, index, A, fullStack, result, file=fileName)
     },
     
     loadEstimates = function(fileName=getEstimatesFileName()) {
@@ -98,34 +97,34 @@ SmoothModel <- setRefClass(
       index <<- inla.spde.make.index("st", n.spde=mesh$n, n.group=nYears)
       
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
-      dataStack <<- inla.stack(data=list(response=data$intersections),
+      obsStack <<- inla.stack(data=list(response=data$intersections,
+                                        E=2/pi * data$length * data$duration * data$distance,
+                                        link=1),
                                A=list(A),
                                effects=list(c(index, list(intercept=1))),
                                tag="observed")
       
+      predStack <<- inla.stack(data=list(response=NA,
+                                         E=rep(2/pi * 12000 * 1 * mean(data$distance), mesh$n * nYears),
+                                         link=1),
+                               A=list(1),
+                               effects=list(c(index, list(intercept=1))),
+                               tag="predicted")
             
-      #loc <- matrix(rep(t(mesh$loc[,1:2]), nYears), nrow=nYears * nrow(mesh$loc), byrow=T)
-      #predA <<- inla.spde.make.A(mesh=mesh, loc=loc, group=rep(1:nYears, each=mesh$n), n.group=nYears)
-      #predStack <<- inla.stack(data=list(response=NA),
-      #                         A=list(predA),
-      #                         effects=list(c(index, list(intercept=1))),
-      #                         tag="predicted")
-      
-      countOffset <<- 2/pi * data$length * data$duration * data$distance
-      
       return(invisible(.self))
     },
     
     estimate = function(save=FALSE, fileName=getEstimatesFileName()) {
       library(INLA)
       
-      #dataStack <- inla.stack(obsStack, predStack)
+      fullStack <<- inla.stack(obsStack, predStack)
+      stackData <- inla.stack.data(fullStack)
       result <<- inla(model,
                       family=family,
-                      data=inla.stack.data(dataStack),
-                      E=countOffset,
+                      data=inla.stack.data(fullStack, spde=spde),
+                      E=stackData$E,
                       verbose=TRUE,
-                      control.predictor=list(A=inla.stack.A(dataStack), compute=TRUE),
+                      control.predictor=list(A=inla.stack.A(fullStack), link=stackData$link, compute=TRUE),
                       control.compute=list(cpo=FALSE, dic=TRUE))
       
       if (is.null(result$ok) || result$ok == FALSE) {
@@ -136,48 +135,29 @@ SmoothModel <- setRefClass(
       }
     },
 
-    # TODO: fix this
     collectEstimates = function(weightsAtSurveyRoutes=1, weightsAtNodes=1, quick=FALSE) {
-      #if (quick) return(collectEstimatesQuick(weights=weights))
-      
       library(INLA)
       library(plyr)
       
       message("Processing fitted values...")
       
-      indexObserved <- inla.stack.index(dataStack, "observed")$data
+      indexObserved <- inla.stack.index(fullStack, "observed")$data
       data$eta <<- result$summary.linear.predictor$mean[indexObserved] - log(weightsAtSurveyRoutes)
       data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] / weightsAtSurveyRoutes
       data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] / weightsAtSurveyRoutes^2
       
       message("Processing random effects...")
-      
-      #intercept <- result$summary.fixed["intercept","mean"]      
+        
       yearsVector <- sort(unique(data$year))
       n <- mesh$n * length(yearsVector)
       e <- numeric(n)
       if (length(weightsAtNodes) == 1 | is.null(weightsAtNodes)) weightsAtNodes <- rep(1, n)
       
-      # TODO: This is calculated as E[exp(intercept)] * E[exp(st)] which is wrong as
-      # E[exp(intercept) * exp(st)] != E[exp(intercept)] * E[exp(st)]
-      # How to find E[exp(intercept) * exp(st)] with INLA?
-      a <- inla.emarginal(exp, result$marginals.fixed$intercept)
-      for (i in 1:n) {
-        b <- inla.emarginal(exp, result$marginals.random$st[[i]])
-        e[i] <- a * b / weightsAtNodes[i]
-        #e[i] <- inla.emarginal(function(x) exp(intercept + x) / weightsAtNodes[i], result$marginals.random$st[[i]])
-      }
-      node$mean <<- matrix(data=e, nrow=mesh$n, ncol=length(yearsVector))
+      indexPredicted <- inla.stack.index(fullStack, "predicted")$data
+      node$mean <<- matrix(result$summary.fitted.values$mean[indexPredicted] / weightsAtNodes[i], nrow=mesh$n, ncol=length(yearsVector))
+      node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / weightsAtNodes[i]^2, nrow=mesh$n, ncol=length(yearsVector))
       
-      # By Jensen's inequality:
-      # E(exp(x)) >= exp(E(x))
-      intercept <- result$summary.fixed["intercept","mean"]
-      p <- sum(node$mean >= exp(intercept + result$summary.random$st$mean) / weightsAtNodes) / length(node$mean)
-      if (p != 0)
-        warning("Jensen's inequality does not hold for ", round(p*100), "% observations.")
-
-      # TODO: SD
-      
+      # TODO: fix this
 if (F) {      
       message("Processing hyperparameters...")
       spdeResult <- inla.spde2.result(result, "st", spde)
@@ -199,33 +179,6 @@ if (F) {
 }
     },
 
-    collectEstimatesQuick = function(weights=1) {
-      library(INLA)
-      
-      indexObserved <- inla.stack.index(dataStack, "observed")$data
-      data$eta <<- result$summary.linear.predictor$mean[indexObserved] - log(weights)
-      data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] / weights
-      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] / weights^2
-      
-      st <- result$summary.random$st
-      node <<- list()
-      node$mean <<- matrix(data=st$mean, nrow=length(years), ncol=mesh$n)
-      node$sd <<- matrix(data=st$sd, nrow=length(years), ncol=mesh$n)
-      
-      spdeResult <- inla.spde2.result(result, "st", spde)
-      logKappa <- spdeResult$summary.log.kappa
-      logTau <- spdeResult$summary.log.tau
-      sd <- sqrt(exp(spdeResult$summary.log.variance.nominal))
-      range <- exp(spdeResult$summary.log.range.nominal) / coordsScale
-      x <- rbind(logKappa=logKappa,
-                 logTau=logTau,
-                 sd=sd,
-                 range=range)
-      if (any(rownames(result$summary.hyperpar)=="GroupRho for st"))
-        x <- rbind(x, rho=result$summary.hyperpar["GroupRho for st",])
-      return(x)      
-    },
-    
     getPredictedIntersections = function() {
       x <- data
       x$countOffset <- countOffset
