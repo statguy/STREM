@@ -149,13 +149,9 @@ SmoothModel <- setRefClass(
       message("Processing random effects...")
         
       yearsVector <- sort(unique(data$year))
-      n <- mesh$n * length(yearsVector)
-      e <- numeric(n)
-      if (length(weightsAtNodes) == 1 | is.null(weightsAtNodes)) weightsAtNodes <- rep(1, n)
-      
       indexPredicted <- inla.stack.index(fullStack, "predicted")$data
-      node$mean <<- matrix(result$summary.fitted.values$mean[indexPredicted] / weightsAtNodes[i], nrow=mesh$n, ncol=length(yearsVector))
-      node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / weightsAtNodes[i]^2, nrow=mesh$n, ncol=length(yearsVector))
+      node$mean <<- matrix(result$summary.fitted.values$mean[indexPredicted] / weightsAtNodes, nrow=mesh$n, ncol=length(yearsVector))
+      node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / weightsAtNodes^2, nrow=mesh$n, ncol=length(yearsVector))
       
       # TODO: fix this
 if (F) {      
