@@ -6,8 +6,7 @@
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 
 
-estimate <- function(study, iteration, test) {
-  intersections <- study$loadIntersections(iteration=iteration)
+estimate <- function(study, iteration, test) {  
   if (test) {
     intersections <- study$loadIntersections(iteration=iteration)
     tracks <- study$loadTracks(iteration=iteration)
@@ -21,6 +20,7 @@ estimate <- function(study, iteration, test) {
     #sum(model$node$mean[,1] * (inla.mesh.fem(model$mesh, order=1)$c1 %*% model$node$mean[,1]))
   }
   else {
+    intersections <- study$loadIntersections(iteration=iteration)
     #meshParams <- list(maxEdge=c(.05e6, .15e6), cutOff=.02e6, coordsScale=1e-6)
     meshParams <- list(maxEdge=c(.1e6, .2e6), cutOff=.05e6, coordsScale=1e-6)
     model <- intersections$estimate(meshParams=meshParams)

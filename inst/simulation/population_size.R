@@ -5,10 +5,18 @@
 
 
 population_size <- function(mss, iteration, test) {
-  study <- mss$study
-  estimates <- study$loadEstimates(iteration=iteration)
-  populationSize <- estimates$getPopulationSize(withHabitatWeights=mss$hasHabitatWeights())
-  populationSize$savePopulationSize()
+  if (test) {
+    study <- mss$study
+    estimates <- study$loadEstimates(iteration=iteration)
+    estimates$collectEstimates()
+      
+  }
+  else {
+    study <- mss$study
+    estimates <- study$loadEstimates(iteration=iteration)
+    populationSize <- estimates$getPopulationSize(withHabitatWeights=mss$hasHabitatWeights())
+    populationSize$savePopulationSize()
+  }
 }
 
 args <- commandArgs(trailingOnly=TRUE)

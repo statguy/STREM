@@ -153,6 +153,24 @@ SmoothModel <- setRefClass(
       node$mean <<- matrix(result$summary.fitted.values$mean[indexPredicted] / weightsAtNodes, nrow=mesh$n, ncol=length(yearsVector))
       node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / weightsAtNodes^2, nrow=mesh$n, ncol=length(yearsVector))
       
+      
+      a <- inla.emarginal(exp, result$marginals.fixed$intercept)
+      if (!all(a >= exp(result$summary.fixed["intercept","mean"])))
+        warning("Jensen's inequality does not hold for fixed effects.")
+      
+      b <- numeric(length(result$marginals.random$st))
+      for (i in 1:length(result$marginals.random$st)) {
+        b[i] <- inla.emarginal(exp, result$marginals.random$st[[i]])
+      }
+      if (!all(b >= exp(result$summary.random$st$mean)))
+        warning("Jensen's inequality does not hold for random effects.")
+      
+      e <- a * b
+      e.m <- matrix(e / weightsAtNodes, nrow=mesh$n, ncol=length(yearsVector))
+      if (!all(node$mean >= e.m))
+        warning("Jensen's inequality does not hold for fitted values.")
+      
+      
       # TODO: fix this
 if (F) {      
       message("Processing hyperparameters...")
@@ -177,9 +195,10 @@ if (F) {
 
     getPredictedIntersections = function() {
       x <- data
-      x$countOffset <- countOffset
+      indexObserved <- inla.stack.index(fullStack, "observed")$data
+      x$offset <- inla.stack.data(fullStack)$E[indexObserved]
       intersections <- ddply(x, .(year), function(x) {
-        data.frame(Observed=sum(x$intersections), Predicted=sum(x$fittedMean * x$countOffset))
+        data.frame(Observed=sum(x$intersections), Predicted=sum(x$fittedMean * x$offset), logObsOff=log(sum(x$intersections / x$offset)), eta=sum(x$eta))
       })
       return(intersections)
     },

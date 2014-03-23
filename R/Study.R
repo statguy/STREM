@@ -93,10 +93,6 @@ FinlandWTCStudy <- setRefClass(
     },
     
     preprocessResponse = function(response, maxDuration=1, cacheCovariates=TRUE, findHabitatWeights=TRUE, fmiApiKey) {
-      library(CNPCluster)
-      
-      cnpClusterStartLocal()
-      
       response <<- response
       
       intersections <- FinlandWTCIntersections$new(study=.self, maxDuration=maxDuration)
@@ -113,8 +109,6 @@ FinlandWTCStudy <- setRefClass(
         habitatWeights <- CORINEHabitatWeights$new(study=.self)$setHabitatSelectionWeights(habitatSelection)
         habitatWeights$getWeightsRaster(save=TRUE)
       }
-      
-      cnpClusterStopLocal()
     },
     
     preprocess = function(cacheCovariates=TRUE, findHabitatWeights=TRUE, fmiApiKey) {
@@ -153,10 +147,7 @@ FinlandWTCStudy <- setRefClass(
       return(CORINEHabitatWeights$new(study=.self)$loadWeightsRaster())
     },
     
-    estimate = function(test=FALSE, quick=FALSE) {
-      meshParams <- if (quick) list(maxEdge=c(.2e6, .4e6), cutOff=.1e6, coordsScale=1e-6)
-      else list(maxEdge=c(.05e6, .15e6), cutOff=.02e6, coordsScale=1e-6)
-      
+    estimate = function(meshParams, test=FALSE) {
       intersections <- loadIntersections()
       intersections$intersections$distance <- 1
             
