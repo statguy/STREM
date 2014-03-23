@@ -267,9 +267,9 @@ if (F) {
       nMeshLocations <- nrow(meshLocations)
       predictLocations <- repeatMatrix(meshLocations, nYears)      
       id <- rep(1:nMeshLocations, nYears)
-      year <- rep(estimates$years, each=nMeshLocations)
+      year <- rep(years, each=nMeshLocations)
       
-      xyt <- ddply(estimates$data, .(year), function(x) {
+      xyt <- ddply(data, .(year), function(x) {
         message("Finding closest observations for mesh nodes for year ", x$year[1], "...")
         xyt <- data.frame()
         for (i in 1:nMeshLocations) {
