@@ -1,5 +1,7 @@
 # ./parallel_r.py -t 1:3 -n 6 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/wtc/estimate.R notest
 
+# library(devtools); install_github("statguy/Winter-Track-Counts")
+
 args <- commandArgs(trailingOnly=TRUE)
 if (length(args) != 2) stop("Invalid arguments.")
 test <- args[1]
@@ -40,4 +42,5 @@ if (test == "test") {
   response <- if (task_id == 1) "canis.lupus"
   else if (task_id == 2) "lynx.lynx"
   else if (task_id == 3) "rangifer.tarandus.fennicus"
+  estimate(response=response)
 }
