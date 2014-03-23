@@ -27,8 +27,7 @@ if (test == "test") {
   model$plotMesh(surveyRoutes)
   
   model <- study$estimate(meshParams=meshParams)
-}
-else {
+} else {
 # For full estimation
   estimate <- function(response) {
     context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
