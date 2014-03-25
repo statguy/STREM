@@ -69,3 +69,22 @@ inverseDistanceWeightningImpute <- function(data, varname, formula=as.formula(pa
   data.na[,varname] <- p$var1.pred
   return(rbind(data.full, data.na))
 }
+
+theme_raster <- function(base_size=12, ...) {
+  theme(
+    ...,
+    panel.background=element_blank(),
+    panel.border=element_blank(),
+    panel.grid.major=element_blank(),
+    panel.grid.minor=element_blank(),
+    panel.margin=unit(0, "lines"),
+    axis.line=element_blank(),
+    axis.text.x=element_blank(),
+    axis.text.y=element_blank(),
+    axis.title.x=element_blank(),
+    axis.title.y=element_blank(),
+    axis.ticks=element_blank(),
+    plot.margin=unit(c(0,0,-1,-1), "lines"),
+    legend.position="none"
+  )
+}

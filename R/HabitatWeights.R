@@ -140,17 +140,16 @@ CORINEHabitatWeights <- setRefClass(
       return(weightsRaster)
     },
     
-    show = function() {
+    getHabitatSelectionWeights = function() {
       w <- numeric(length(habitatTypes))
       names(w) <- names(habitatTypes)
-      
-      for (type in habitatTypes) {
-        w[type] <- weights$weight[weights$type == type][1]
-      }
-      
+      for (type in habitatTypes) w[type] <- weights$weight[weights$type == type][1]
+      return(w)
+    },
+    
+    show = function() {
       cat("Habitat weights:\n")
-      print(w)
-      
+      print(getHabitatSelectionWeights())
       return(invisible(.self))
     }
   )
