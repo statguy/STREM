@@ -35,7 +35,8 @@ if (test == "test") {
     context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
     study <- FinlandWTCStudy$new(context=context, response=response)
     
-    meshParams <- list(maxEdge=c(.06e6, .15e6), cutOff=.03e6, coordsScale=1e-6)
+    #meshParams <- list(maxEdge=c(.06e6, .15e6), cutOff=.03e6, coordsScale=1e-6)
+    meshParams <- list(maxEdge=c(.07e6, .2e6), cutOff=.01e6, coordsScale=1e-6)
     model <- study$estimate(meshParams=meshParams)
   }
   

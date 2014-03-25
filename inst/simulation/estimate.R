@@ -23,8 +23,7 @@ estimate <- function(study, iteration, test) {
   else {
     intersections <- study$loadIntersections(iteration=iteration)
     #meshParams <- list(maxEdge=c(.05e6, .15e6), cutOff=.02e6, coordsScale=1e-6)
-    #meshParams <- list(maxEdge=c(.1e6, .2e6), cutOff=.05e6, coordsScale=1e-6)
-    meshParams <- list(maxEdge=c(.07e6, .2e6), cutOff=.01e6, coordsScale=1e-6)
+    meshParams <- list(maxEdge=c(.1e6, .2e6), cutOff=.05e6, coordsScale=1e-6)
     model <- intersections$estimate(meshParams=meshParams)
     model$saveEstimates()
   }
