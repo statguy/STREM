@@ -270,7 +270,7 @@ if (F) {
       year <- rep(years, each=nMeshLocations)
       
       xyt <- ddply(data, .(year), function(x) {
-        message("Finding closest observations for mesh nodes for year ", x$year[1], "...")
+        message("Finding the closest observations for mesh nodes for year ", x$year[1], "...")
         xyt <- data.frame()
         for (i in 1:nMeshLocations) {
           xy <- meshLocations[i,,drop=F]

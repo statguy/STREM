@@ -5,11 +5,9 @@ Tracks <- setRefClass(
   Class = "Tracks",
   fields = list(
     study = "Study",
-    #tracks = "ltraj",
     tracks = "ANY",
     distance = "ANY",
     thinId = "integer"
-    #thinId = "numeric"
   ),
   methods = list(
     initialize = function(thinId, preprocessData=FALSE, ...) {
@@ -64,8 +62,8 @@ Tracks <- setRefClass(
         })
         tracksSP <- SpatialLines(lines, proj4string=study$studyArea$proj4string)
       }
-      else if (is.ltraj(tracks)) {
-        tracksSP <- ltraj2sldf(tracks, byid=FALSE)
+      else if (inherits(tracks, "ltraj")) {
+        tracksSP <- ltraj2sldf(tracks, byid=TRUE)
         proj4string(tracksSP) <- study$studyArea$proj4string
       }
       return(tracksSP)
