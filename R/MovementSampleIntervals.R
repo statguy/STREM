@@ -118,29 +118,6 @@ MovementSampleIntervals <- setRefClass(
       return(invisible(distanceKm))
     },
     
-    OLD_FIX_THIS_IF_NEEDED.predictDistances = function(model=log(distanceKm) ~ log(intervalH) + (1|individualId) + (1|thinId), covariates) {
-      tracks <- study$loadTracks()
-      getThinnedTracksSampleIntervals(tracks=tracks)
-      fit(model)
-      
-      # TODO: remove distances > 1
-      intersections <- study$loadIntersections()
-      dailyDistancePredictions <- intersections$covariates
-      dailyDistancePredictions$intervalH <- 1 # TODO: find this
-      dailyDistancePredictions$thinId <- 1
-      predictedDistances <- 1000 * exp(predict(dailyDistancePredictions))#, ~(1|thinId))
-      
-      observedDistances <- tracks$getDistances()
-      observedDistances <- observedDistances[!is.na(observedDistances)]
-      message("Predicted distances = ", mean(predictedDistances, na.rm=T), " ± ", sd(predictedDistances, na.rm=T))
-      
-      o <- data.frame(Variable="Observed", Value=observedDistances)
-      p <- data.frame(Variable="Predicted", Value=predictedDistances)
-      distances <- rbind(o, p)
-      
-      return(invisible(distances))
-    },
-    
     plotIntervalDistance = function() {
       library(ggplot2)
       p <- ggplot(intervals, aes(intervalH, distanceKm)) +
