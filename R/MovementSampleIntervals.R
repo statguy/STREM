@@ -18,7 +18,7 @@ MovementSampleIntervals <- setRefClass(
       callSuper(...)
       return(invisible(.self))
     },
-    
+        
     # Determines sampling intervals of the recorded movements for each day
     getSampleIntervals = function(tracks) {
       library(plyr)
@@ -27,9 +27,11 @@ MovementSampleIntervals <- setRefClass(
       tracksDF <- data.frame(tracksDF, breakDownDate(tracksDF$date))
 
       intervals <<- ddply(tracksDF, .(burst, yday, year), function(x) {
+        if (is.na(x$dt[nrow(x)])) x$dt[nrow(x)] <- mean(x$dt, na.rm=T)
+        
         s <- sum(x$dt, na.rm=T) / 3600
         if (s < 23 | s > 25) return(NULL)
-        distKm <- sum(x$dist) / 1e3
+        distKm <- sum(x$dist, na.rm=T) / 1e3
         if (is.na(distKm) | distKm > 100) return(NULL)
         intervalMin <- 24 / nrow(x) * 60
         if (intervalMin > 24*60) return(NULL)
@@ -46,9 +48,9 @@ MovementSampleIntervals <- setRefClass(
                         y=mean(x$y))        
         return(y)
       }, .parallel=TRUE)
-            
+      
       if (nrow(intervals) == 0) warning("Unable to determine sampling intervals.")
-      intervals$thinId <<- tracks$thinId
+      else intervals$thinId <<- tracks$thinId
       
       return(invisible(.self))
     },
@@ -59,23 +61,27 @@ MovementSampleIntervals <- setRefClass(
       intervalsList <- list()
       intervalsList[[1]] <- tracks$getSampleIntervals()
       
-      maxThins <- 1000
+      # TODO: Implement the algorithm properly...
+      maxThins <- 200
       for (i in 2:maxThins) {
-        #thinnedTracks <- thinnedTracksCollection$getTracks(1)$thin(by=i)
-        thinnedTracks <- thinnedTracksCollection$getTracks(i-1)$thin(by=2)
+        thinnedTracks <- thinnedTracksCollection$getTracks(1)$thin(by=i, thinId=i)
+        #thinnedTracks <- thinnedTracksCollection$getTracks(i-1)$thin(by=2, thinId=i)
         if (is.null(thinnedTracks)) break
         thinnedIntervals <- thinnedTracks$getSampleIntervals()
+        if (nrow(thinnedIntervals$intervals) == 0) next
         
         retainIndex <- thinnedIntervals$intervals$intervalH <= 12
         if (sum(retainIndex) == 0) break
+
         thinnedIntervals$intervals <- thinnedIntervals$intervals[retainIndex,]
         retainBurst <- unique(thinnedIntervals$intervals[, "burst"])
-        thinnedTracks$tracks <- thinnedTracks$tracks[burst = retainBurst]
-
+        #thinnedTracks$tracks <- thinnedTracks$tracks[burst = retainBurst]
+        thinnedTracks$tracks <- subset(thinnedTracks$tracks, burst == retainBurst)
+        
         intervalsList[[i]] <- thinnedIntervals         
         thinnedTracksCollection$addTracks(thinnedTracks)
       }
-      if (i == maxThins) stop("Something wrong with thinning.")
+      #if (i == maxThins) stop("Something wrong with thinning.")
       
       intervals <<- ldply(intervalsList, function(x) x$intervals)
       

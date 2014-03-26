@@ -27,24 +27,27 @@ Tracks <- setRefClass(
     saveTracks = function() {
       stop("Override saveData() method.")
     },
-       
+    
+    addDtDist = function(trax) {
+      library(plyr)
+      trax$year <- as.POSIXlt(trax$date)$year + 1900
+      trax$yday <- as.POSIXlt(trax$date)$yday
+      trax$burst <- paste(trax$id, trax$year)
+      trax <- ddply(trax, .(burst), function(x) {
+        n <- nrow(x)
+        n1 <- n-1
+        x$dt <- c(difftime(x$date[2:n], x$date[1:n1], units="secs"), NA)
+        x$dist <- c(euclidean(x[1:n1, c("x","y")], x[2:n, c("x","y")]), NA)
+        return(x)
+      }, .parallel=TRUE)
+      return(trax)
+    },
+    
     loadTracks = function() {
       library(adehabitatLT)
       message("Processing tracks...")
       load(getTracksFileName(), envir=as.environment(.self))
-      if (is.data.frame(tracks)) {
-        library(plyr)
-        tracks$year <<- as.POSIXlt(tracks$date)$year + 1900
-        tracks$yday <<- as.POSIXlt(tracks$date)$yday
-        tracks$burst <<- paste(tracks$id, tracks$year)
-        tracks <<- ddply(tracks, .(burst), function(x) {
-          n <- nrow(x)
-          n1 <- n-1
-          x$dt <- c(difftime(x$date[2:n], x$date[1:n1], units="secs"), NA)
-          x$dist <- c(euclidean(x[1:n1, c("x","y")], x[2:n, c("x","y")]), NA)
-          return(x)
-        }, .parallel=TRUE)        
-      }
+      if (is.data.frame(tracks)) tracks <<- addDtDist(tracks)
       return(invisible(.self))
     },
     
@@ -128,6 +131,19 @@ Tracks <- setRefClass(
       return(mean(getDistances(), na.rm=TRUE))
     },
     
+    # Thinning strategies:
+    # 
+    # xxxxxxxxxx
+    # x x x x x
+    # x   x   
+    # x
+    #
+    # xxxxxxxxxx
+    # x x x x x
+    # x  x  x  x
+    # x   x   x
+    # x    x   
+    
     .internal.thin = function(by) {
       library(plyr)
       
@@ -138,19 +154,24 @@ Tracks <- setRefClass(
       tracksDFThinned <- ddply(tracksDF, .variables=.(id, burst, year, yday), .fun=function(x, by) {
         n <- nrow(x)
         if (n==1) return(NULL)
-        retainIndex <- seq(1, n, by=by) 
+        retainIndex <- seq(1, n, by=by)
         return(x[retainIndex,])
       }, by=by, .parallel=TRUE)
       
+      tracksDFThinned <- tracksDFThinned[,c("x","y","id","date","year","yday","burst","dt","dist")]
+      
       if (nrow(tracksDFThinned) == 0) return(NULL)
-      
-      tracksThinned <- as.ltraj(xy=tracksDFThinned[,c("x","y")], burst=tracksDFThinned$burst, id=tracksDFThinned$id, date=as.POSIXct(tracksDFThinned$date))
-      #tracksThinned <- dl(tracksDFThinned)
-      tracksDFThinned <- ld(tracksThinned)
-      
+            
+      # TODO: return data frame instead of ltraj ??
+#      tracksThinned <- as.ltraj(xy=tracksDFThinned[,c("x","y")], burst=tracksDFThinned$burst, id=tracksDFThinned$id, date=as.POSIXct(tracksDFThinned$date))
+#      #tracksThinned <- dl(tracksDFThinned)
+#      tracksDFThinned <- ld(tracksThinned)
+      tracksDFThinned <- addDtDist(tracksDFThinned)
+
       newDt <- mean(tracksDFThinned$dt, na.rm=T)
       message("Thinned movements from dt = ", oldDt, " to dt = ", newDt, " (note: these values can be misleading)")      
-      return(tracksThinned)
+      #return(tracksThinned)
+      return(tracksDFThinned)
     },
     
     getHabitatPreferences = function(habitatWeightsTemplate, nSamples=30, save=FALSE) {
@@ -222,11 +243,11 @@ SimulatedTracks <- setRefClass(
       return(invisible(.self))
     },
     
-    thin = function(by) {
-      message("Thinning iteration = ", iteration, ", thin = ", thinId, " to ", thinId + 1)
+    thin = function(by, thinId) {
+      message("Thinning iteration = ", iteration, ", thin = ", .self$thinId, " to ", thinId)
       thinnedTracksDF <- .internal.thin(by=by)
       if (is.null(thinnedTracksDF)) return(NULL)
-      thinnedTracks <- SimulatedTracks$new(study=study, tracks=thinnedTracksDF, iteration=iteration, thinId=as.integer(thinId + 1))
+      thinnedTracks <- SimulatedTracks$new(study=study, tracks=thinnedTracksDF, iteration=iteration, thinId=thinId)#thinId=as.integer(thinId + 1))
       return(thinnedTracks)
     },
     

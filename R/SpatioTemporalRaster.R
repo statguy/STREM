@@ -31,42 +31,37 @@ SpatioTemporalRaster <- setRefClass(
       return(invisible(.self))
     },
     
-    animate = function(delay=100, name, boundary=study$studyArea$boundary, sameScale=TRUE) {
+    animate = function(name, delay=100, boundary=FALSE, sameScale=TRUE) {
+      if (missing(name)) stop("name argument missing.")
+      
       library(raster)
-
+      library(rasterVis)
+      
       vmin <- min(minValue(rasterStack))
       vmax <- max(maxValue(rasterStack))
+      aspectRatio <- dim(layer)[2] / dim(layer)[1]
+      if (boundary) boundaryDF <- fortify(study$studyArea$boundary)
       
-      #tmpDir <- tempdir()
       for (i in 1:nlayers(rasterStack)) {
-        # TODO: same legend scale
-        
-        layer <- rasterStack[[i]]
+        layer <- crop(rasterStack[[i]], extent(study$studyArea$boundary))        
         layerName <- names(layer)
-        #layerFileName <- file.path(tmpDir, paste("animate", i, ".png", sep=""))
+        if (substr(layerName, start=1, stop=1) == "X") layerName <- substr(layerName, start=2, stop=nchar(layerName))
         layerFileName <- context$getFileName(dir=study$context$figuresDirectory, name=paste(name, layerName, sep="-"), response=study$response, region=study$studyArea$region, ext=".png")        
         message("Saving ", layerFileName, "...")
-        png(filename=layerFileName, width=dim(layer)[2], height=dim(layer)[1])
         
-        if (sameScale) {
-          plot(layer, main=layerName,
-               col=(terrain.colors(99)),
-               breaks=seq(vmin, vmax, length.out=100))
-        }
-        else {
-          plot(layer, main=layerName, col=(terrain.colors(99)))
-        }
+        p <- gplot(layer) + geom_raster(aes(fill=value)) + coord_equal() + theme_raster() + ggtitle(layerName)
+        p <- if (sameScale) p + scale_fill_gradientn(colours=terrain.colors(99), breaks=seq(vmin, vmax, length.out=100), na.value=NA)
+        else p + scale_fill_gradientn(colours=terrain.colors(99), na.value=NA)
+        if (boundary) p <- p + geom_polygon(data=boundaryDF, aes(long, lat), colour="white", fill=NA)
         
-        plot(boundary, add=T)
-        dev.off()
+        print(p)
+        ggsave(p, filename=layerFileName, width=8, height=8*aspectRatio)
       }
       
       message("Converting...")
       outputFile <- context$getFileName(dir=study$context$figuresDirectory, name=name, response=study$response, region=study$studyArea$region, ext=".gif")
-      #file.path(study$context$figuresDirectory, fileName)
       layerFileNameMask <- context$getFileName(dir=study$context$figuresDirectory, name=paste(name, "*", sep="-"), response=study$response, region=study$studyArea$region, ext=".png")      
       cmd <- paste("convert -loop 0 -delay ", delay, " ", layerFileNameMask, " ", outputFile, sep="")
-      #cmd <- paste("convert -loop 0 -delay ", delay, " ", file.path(tmpDir, "animate*.png"), " ", outputFile, sep="")
       message(cmd)
       system(cmd)
       

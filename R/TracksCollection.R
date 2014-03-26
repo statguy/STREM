@@ -2,7 +2,8 @@ TracksCollection <- setRefClass(
   Class = "TracksCollection",
   fields = list(
     study = "Study",
-    tracksList = "list"
+    tracksList = "list",
+    tracksFiles = "list"
   ),
   methods = list(
     initialize = function(...) {
@@ -47,18 +48,20 @@ SimulatedTracksCollection <- setRefClass(
   methods = list(
     loadTracks = function() {
       # TODO: bad design here if directory or file name pattern changes in Tracks (sub)class...
-      tracksFiles <- study$context$listLongFiles(dir=study$context$scratchDirectory, name="Tracks", response=study$response, tag="\\d+", region=study$studyArea$region)
+      tracksFiles <<- study$context$listLongFiles(dir=study$context$scratchDirectory, name="Tracks", response=study$response, tag="\\d+", region=study$studyArea$region)
       if (length(tracksFiles) == 0)
         stop("Cannot find any tracks files in ", study$context$scratchDirectory)
       
-      for (iteration in 1:length(tracksFiles)) { # TODO: better to use iteration number rather than number of files
-        tracks <- SimulatedTracks$new(study=study, iteration=iteration)
-        tracks$loadTracks()
-        addTracks(tracks)
-      }
+      #if (onlyFile == FALSE) {
+      #  for (iteration in 1:length(tracksFiles)) { # TODO: better to use iteration number rather than number of files
+      #    tracks <- SimulatedTracks$new(study=study, iteration=iteration)
+      #    tracks$loadTracks()
+      #    addTracks(tracks)
+      #  }
+      #}
     },
     
-    randomizeObservationDays = function(minYday=0, maxYday=60) {
+    DEPRECATED.randomizeObservationDays = function(minYday=0, maxYday=60) {
       tracksList <<- apply(function(tracks, minYday, maxYday) {
         tracksDF <- ld(tracks$tracks)
         date <- as.POSIXlt(tracksDF$date)
@@ -80,6 +83,18 @@ SimulatedTracksCollection <- setRefClass(
       }, minYday=minYday, maxYday=maxYday)
     },
     
+    findIntersections.NEW = function(surveyRoutes, dimension, save=FALSE) {
+      for (iteration in 1:length(tracksFiles)) {
+        tracks <- SimulatedTracks$new(study=study, iteration=iteration)
+        tracks$loadTracks()
+        
+        message("Finding intersections for response = ", study$response, ", iteration = ", tracks$iteration, ", thin = ", tracks$thinId)
+        intersections <- SimulatedIntersections$new(study=study, iteration=tracks$iteration)
+        intersections$findIntersections(tracks, surveyRoutes, dimension)
+        
+      }
+    },
+
     findIntersections = function(surveyRoutes, dimension, save=FALSE) {
       intersectionsList <- applyTracks(function(tracks, surveyTracks, dimension, save) {
         message("Finding intersections for response = ", study$response, ", iteration = ", tracks$iteration, ", thin = ", tracks$thinId)
