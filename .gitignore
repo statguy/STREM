@@ -6,4 +6,5 @@
 .Rproj.user
 .RData
 
-test
+test/
+setup/
