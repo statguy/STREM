@@ -60,18 +60,6 @@ SimulationStudy <- setRefClass(
       return(populationSize)
     },
     
-    #loadTracksCollection = function() {
-    #  tracks <- SimulatedTracksCollection$new(study=.self)
-    #  tracks$loadTracks()
-    #  return(tracks)
-    #},
-    
-    #loadIntersectionsCollection = function() {
-    #  intersections <- SimulatedIntersectionsCollection$new(study=.self)
-    #  intersections$loadIntersections()
-    #  return(intersections)
-    #},
-    
     loadSurveyRoutes = function(n=800, random=TRUE) {
       surveyRoutes <- if (random) FinlandRandomWTCSurveyRoutes$new(study=.self)$newInstance(n=800)
       else FinlandWTCSurveyRoutes(study=.self)$newInstance()

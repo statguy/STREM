@@ -55,6 +55,10 @@ Model <- setRefClass(
       mesh.unscaled <- mesh
       mesh.unscaled$loc <- mesh.unscaled$loc / coordsScale
       return(mesh.unscaled)
+    },
+    
+    getUnscaledMeshCoordinates = function() {
+      return(getUnscaledMesh()$loc[,1:2])
     }
   )
 )
