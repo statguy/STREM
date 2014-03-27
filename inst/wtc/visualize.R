@@ -284,12 +284,12 @@ getPopulationDensity <- function(responses, context, withHabitatWeights=FALSE, w
 
 populationDensity <- getPopulationDensity(responses=responses, context=context)
 
-for (response in responses[1:2]) {
+for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   populationDensity[[response]]$mean$animate(name="PopulationDensity", delay=50)
 }
 
-for (response in responses[1:2]) {
+for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   populationSize <- populationDensity[[response]]$mean$integrate(volume=FinlandPopulationSize$new(study=study))
   populationSize$loadValidationData()
