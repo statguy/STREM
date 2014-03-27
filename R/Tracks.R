@@ -28,21 +28,6 @@ Tracks <- setRefClass(
       stop("Override saveData() method.")
     },
     
-    addDtDist = function(trax) {
-      library(plyr)
-      trax$year <- as.POSIXlt(trax$date)$year + 1900
-      trax$yday <- as.POSIXlt(trax$date)$yday
-      trax$burst <- paste(trax$id, trax$year)
-      trax <- ddply(trax, .(burst), function(x) {
-        n <- nrow(x)
-        n1 <- n-1
-        x$dt <- c(difftime(x$date[2:n], x$date[1:n1], units="secs"), NA)
-        x$dist <- c(euclidean(x[1:n1, c("x","y")], x[2:n, c("x","y")]), NA)
-        return(x)
-      }, .parallel=TRUE)
-      return(trax)
-    },
-    
     loadTracks = function() {
       library(adehabitatLT)
       message("Processing tracks...")
@@ -108,18 +93,29 @@ Tracks <- setRefClass(
       #warning("Spatial variation in distances not considered in vicinity of the survey routes.")
       message("Finding distances...")
       
-      tracksDF <- if (is.data.frame(tracks)) tracks else ld(tracks)
-      d <- as.POSIXlt(tracksDF$date)
-      tracksDF$yday <- d$yday
-      tracksDF$year <- d$year
-      distances <- ddply(tracksDF, .(id, burst, yday, year), function(x) {
-        s <- sum(x$dt, na.rm=T) / 3600
-        if (s < 23 | s > 25) return(NA)
-        return(sum(x$dist) / sum(x$dt) * 24 * 3600)
-      }, .parallel=TRUE)$V1
+      tracksDF <- if (inherits(tracks, "ltraj")) addDtDist(ld(tracks)) else tracks
+      #tracksDF <- if (is.data.frame(tracks)) tracks else ld(tracks)
+      #d <- as.POSIXlt(tracksDF$date)
+      #tracksDF$yday <- d$yday
+      #tracksDF$year <- d$year
+      distances <- ddply(tracksDF, .(burst), function(x) {
+        add <- if (is.na(x$dt[nrow(x)])) mean(x$dt, na.rm=T) else 0
+        if (is.na(add)) return(NA)
+        s <- (sum(x$dt, na.rm=T) + add) / 3600
+        if (s < 23 | s > 25) return(NA)        
+        noNAIndex <- !(is.na(x$dist) | is.na(x$dt))
+        if (length(noNAIndex) == 0) return(NA)
+        return(sum(x$dist[noNAIndex]) / sum(x$dt[noNAIndex]) * 24 * 3600)
+      }, .parallel=TRUE, .inform=TRUE)$V1
       
       if (all(is.na(distances)))
         stop("Unable to determine movement distance.")
+      
+      distances <- distances[!is.na(distances)]
+      if (any(distances > 50000)) {
+        warning("Unrealistic distances. Removing those...")
+        distances <- distances[distances<50000]
+      }
       
       message(sum(!is.na(distances)), " / ", length(distances), " of day movements used to determine mean movement distance = ", mean(distances, na.rm=T), " ± ", sd(distances, na.rm=T), ".")
       distance <<- mean(distances, na.rm=T)
@@ -148,29 +144,23 @@ Tracks <- setRefClass(
       library(plyr)
       
       tracksDF <- if (is.data.frame(tracks)) tracks else ld(tracks)
-      tracksDF <- data.frame(tracksDF, breakDownDate(tracksDF$date))
+      #tracksDF <- data.frame(tracksDF, breakDownDate(tracksDF$date))
       oldDt <- mean(tracksDF$dt, na.rm=T)
       
-      tracksDFThinned <- ddply(tracksDF, .variables=.(id, burst, year, yday), .fun=function(x, by) {
+      #tracksDFThinned <- ddply(tracksDF, .variables=.(id, burst, year, yday), .fun=function(x, by) {
+      tracksDFThinned <- ddply(tracksDF, .variables=.(burst), .fun=function(x, by) {
         n <- nrow(x)
-        if (n==1) return(NULL)
+        if (n == 1 | n < 2*by) return(NULL)
         retainIndex <- seq(1, n, by=by)
         return(x[retainIndex,])
       }, by=by, .parallel=TRUE)
       
-      tracksDFThinned <- tracksDFThinned[,c("x","y","id","date","year","yday","burst","dt","dist")]
-      
       if (nrow(tracksDFThinned) == 0) return(NULL)
-            
-      # TODO: return data frame instead of ltraj ??
-#      tracksThinned <- as.ltraj(xy=tracksDFThinned[,c("x","y")], burst=tracksDFThinned$burst, id=tracksDFThinned$id, date=as.POSIXct(tracksDFThinned$date))
-#      #tracksThinned <- dl(tracksDFThinned)
-#      tracksDFThinned <- ld(tracksThinned)
+      tracksDFThinned <- tracksDFThinned[,c("x","y","id","date","year","yday","burst","dt","dist")]
       tracksDFThinned <- addDtDist(tracksDFThinned)
-
+      
       newDt <- mean(tracksDFThinned$dt, na.rm=T)
-      message("Thinned movements from dt = ", oldDt, " to dt = ", newDt, " (note: these values can be misleading)")      
-      #return(tracksThinned)
+      message("Thinned movements from dt = ", oldDt, " to dt = ", newDt, ", ratio = ", newDt/oldDt)
       return(tracksDFThinned)
     },
     
@@ -343,11 +333,11 @@ FinlandWTCTracks <- setRefClass(
       return(intervals)
     },
     
-    thin = function(by) {
+    thin = function(by, thinId) {
       message("Thinning thin = ", thinId)
       thinnedTracksDF <- .internal.thin(by=by)
       if (is.null(thinnedTracksDF)) return(NULL)
-      thinnedTracks <- FinlandWTCTracks$new(study=study, tracks=thinnedTracksDF, thinId=as.integer(thinId+1))
+      thinnedTracks <- FinlandWTCTracks$new(study=study, tracks=thinnedTracksDF, thinId=thinId)#as.integer(thinId+1))
       return(thinnedTracks)
     }
   )

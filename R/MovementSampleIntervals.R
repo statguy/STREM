@@ -1,8 +1,13 @@
 #setOldClass("lmerMod")
 
 MovementSampleIntervalsPredict <- function(estimationResult, predictionData, randomEffectsFormula=NA) {
-  library(lme4)
-  distanceKm <- predict(object=estimationResult, newdata=predictionData, REform=randomEffectsFormula)
+  if (inherits(estimationResult, "lm")) {
+    distanceKm <- predict(estimationResult, newdata=predictionData)
+  }
+  else {
+    library(lme4)
+    distanceKm <- predict(object=estimationResult, newdata=predictionData, REform=randomEffectsFormula)
+  }
   return(distanceKm)
 }
 
@@ -55,30 +60,38 @@ MovementSampleIntervals <- setRefClass(
       return(invisible(.self))
     },
     
-    getThinnedTracksSampleIntervals = function(tracks) {
-      thinnedTracksCollection <- SimulatedTracksCollection$new(study=study)
+    # TODO: rewrite
+    getThinnedTracksSampleIntervals = function(tracks, maxThins=200) {
+      thinnedTracksCollection <- TracksCollection$new(study=study)
+      if (inherits(tracks$tracks, "ltraj")) {
+        #tracks$tracks <- ld(tracks$tracks)
+        tracks$tracks <- addDtDist(ld(tracks$tracks)) # TODO: remove ltraj objects everywhere
+      }
       thinnedTracksCollection$addTracks(tracks)
       intervalsList <- list()
       intervalsList[[1]] <- tracks$getSampleIntervals()
       
-      # TODO: Implement the algorithm properly...
-      maxThins <- 200
       for (i in 2:maxThins) {
         thinnedTracks <- thinnedTracksCollection$getTracks(1)$thin(by=i, thinId=i)
         #thinnedTracks <- thinnedTracksCollection$getTracks(i-1)$thin(by=2, thinId=i)
+        #message("nrows before = ", nrow(thinnedTracksCollection$getTracks(1)$tracks), ", nrows after = ", nrow(thinnedTracks$tracks))
+        
         if (is.null(thinnedTracks)) break
+        
         thinnedIntervals <- thinnedTracks$getSampleIntervals()
-        if (nrow(thinnedIntervals$intervals) == 0) next
+        #head(intervalsList[[1]]$intervals) # before
+        #head(thinnedIntervals$intervals) # after
+        
+        if (nrow(thinnedIntervals$intervals) == 0) next        
         
         retainIndex <- thinnedIntervals$intervals$intervalH <= 12
         if (sum(retainIndex) == 0) break
 
         thinnedIntervals$intervals <- thinnedIntervals$intervals[retainIndex,]
-        retainBurst <- unique(thinnedIntervals$intervals[, "burst"])
-        #thinnedTracks$tracks <- thinnedTracks$tracks[burst = retainBurst]
-        thinnedTracks$tracks <- subset(thinnedTracks$tracks, burst == retainBurst)
+        retainBursts <- unique(thinnedIntervals$intervals[, "burst"])
+        thinnedTracks$tracks <- subset(thinnedTracks$tracks, burst %in% retainBursts)
         
-        intervalsList[[i]] <- thinnedIntervals         
+        intervalsList[[i]] <- thinnedIntervals  
         thinnedTracksCollection$addTracks(thinnedTracks)
       }
       #if (i == maxThins) stop("Something wrong with thinning.")
@@ -90,8 +103,7 @@ MovementSampleIntervals <- setRefClass(
     
     getDailyDistanceData = function() {
       if (nrow(intervals) == 0)
-        stop("Run get getSampleIntervals() first.")
-      return(intervals)      
+        stop("Run get getSampleIntervals() first.")    
       
       #intervalsSP <- intervals
       #coordinates(intervalsSP) <- ~ x+y
@@ -105,36 +117,35 @@ MovementSampleIntervals <- setRefClass(
     
     fit = function(model=log(distanceKm) ~ log(intervalH) + (1|individualId) + (1|thinId)) {
       library(lme4)  
-      
       dailyDistanceData <- getDailyDistanceData()
-      estimationResult <<- lmer(model, data=dailyDistanceData)    
-      #estimationResult <<- list(C=exp(fixef(result)["(Intercept)"])[1], alpha=-fixef(result)["log(intervalH)"][1])
-      
+      estimationResult <<- lmer(model, data=dailyDistanceData)
       return(invisible(.self))
     },
-        
-    predict = function(predictionData=data.frame(intervalH=seq(0, 24, by=0.1)), randomEffectsFormula=NA) {
+    
+    fitTest = function(model=log(distanceKm) ~ intervalH) {
+      dailyDistanceData <- getDailyDistanceData()
+      estimationResult <<- glm(model, data=dailyDistanceData, family=gaussian(link="log"))
+      return(invisible(.self))
+    },
+    
+    predict = function(predictionData=data.frame(intervalH=seq(0, 12, by=0.1)), randomEffectsFormula=NA) {
       distanceKm <- MovementSampleIntervalsPredict(estimationResult=estimationResult, predictionData=predictionData, randomEffectsFormula=randomEffectsFormula)
       return(invisible(distanceKm))
     },
     
-    plotIntervalDistance = function() {
+    plotIntervalDistance = function(predictionData=data.frame(intervalH=seq(0, 12, by=0.1)), randomEffectsFormula=NA) {
       library(ggplot2)
-      p <- ggplot(intervals, aes(intervalH, distanceKm)) +
-        geom_point(aes(color=individualId)) +
-        ylab("Distance / day (km)") + xlab("Sampling interval (h)") + theme_bw(18)      
+      p <- ggplot(intervals, aes(intervalH, distanceKm)) + geom_point() +
+        ylab("Distance / day (km)") + xlab("Sampling interval (h)") + theme_bw(18)  
       
       if (!inherits(estimationResult, "uninitializedField")) {
         library(lme4)
-        #C <- exp(fixef(estimationResult)["(Intercept)"])
-        #alpha <- -fixef(estimationResult)["intervalH"]
-        predictionData <- data.frame(intervalH=seq(0, 12, by=0.1))
-        #predictionData$distanceKm <- exp(predict(estimationResult, newdata=predictionData, REform=NA))
-        predictionData$distanceKm <- exp(predict(predictionData=predictionData))
+        predictionData$distanceKm <- exp(predict(predictionData=predictionData, randomEffectsFormula=randomEffectsFormula))
         p <- p + geom_line(data=predictionData, aes(intervalH, distanceKm), color="red")
       }
       
       print(p)
+      return(invisible(p))
     },
     
     plotDistances = function(distances) {
@@ -178,7 +189,7 @@ FinlandMovementSampleIntervals <- setRefClass(
       return(dailyDistanceData)
     },
         
-    predictDistances = function(model=log(distanceKm) ~ log(sqrt(populationDensity)) + log(rrday) + log(snow) + log(tday) + log(intervalH) + (1|individualId) + (1|thinId), predictCovariates, truncateDistance=30000) {
+    predictDistances = function(model=log(distanceKm) ~ sqrt(populationDensity) + rrday + snow + tday + log(intervalH) + (1|individualId) + (1|thinId), predictCovariates, truncateDistance=30000) {
       tracks <- study$loadTracks()
       getThinnedTracksSampleIntervals(tracks=tracks)
       fit(model)
@@ -189,7 +200,7 @@ FinlandMovementSampleIntervals <- setRefClass(
       #estimates <- study$loadEstimates()
       #predictCovariates <- estimates$covariates
       
-      predictCovariates$intervalH <- 4 # TODO: find this
+      predictCovariates$intervalH <- 2 # TODO: this needs to be found empirically
       #predictCovariates$thinId <- 1
       predictedDistances <- 1000 * exp(predict(predictCovariates))#, ~(1|thinId))      
       

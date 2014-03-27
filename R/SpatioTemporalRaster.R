@@ -41,6 +41,7 @@ SpatioTemporalRaster <- setRefClass(
     },
     
     plotLayer = function(layerName, plotTitle, legendTitle, boundary=FALSE, save=FALSE, name) {
+      library(ggplot2)
       library(raster)
       library(rasterVis)
 
@@ -50,7 +51,7 @@ SpatioTemporalRaster <- setRefClass(
       p <- if (!missing(legendTitle)) p + theme_raster(legend.position="right") + guides(fill=guide_legend(title=legendTitle))
       else p + theme_raster()
       if (boundary) {
-        boundaryDF <- fortify(study$studyArea$boundary)
+        boundaryDF <- ggplot2::fortify(study$studyArea$boundary)
         p <- p + geom_polygon(data=boundaryDF, aes(long, lat), colour="white", fill=NA)
       }
       if (!missing(plotTitle)) p <- p + ggtitle(plotTitle)
@@ -61,9 +62,17 @@ SpatioTemporalRaster <- setRefClass(
       return(invisible(p))
     },
     
-    interpolate = function(xyzt, timeVariable, templateRaster=study$getTemplateRaster(), transform=identity, inverseTransform=identity) {
+    interpolate = function(xyzt, timeVariable, templateRaster=study$getTemplateRaster(), transform=identity, inverseTransform=identity, layerNames) {
       library(ST)
-      rasterStack <<- multiRasterInterpolate(xyzt, variables=timeVariable, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)        
+      if (missing(timeVariable)) {
+        if (missing(layerNames)) stop("Missing layerNames argument.")
+        x <- rasterInterpolate(xyzt, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)
+        addLayer(x, layerNames)
+      }
+      else {
+        rasterStack <<- multiRasterInterpolate(xyzt, variables=timeVariable, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)
+        if (!missing(layerNames)) names(rasterStack) <<- layerNames
+      }
       return(invisible(.self))
     },
     
