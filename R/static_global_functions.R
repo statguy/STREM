@@ -73,10 +73,14 @@ inverseDistanceWeightningImpute <- function(data, varname, formula=as.formula(pa
 theme_raster <- function(base_size=12, ...) {
   theme(
     ...,
-    panel.background=element_blank(),
-    panel.border=element_blank(),
+    panel.background=element_rect(fill="transparent", colour=NA),
+    panel.grid.minor=element_blank(), 
     panel.grid.major=element_blank(),
-    panel.grid.minor=element_blank(),
+    plot.background=element_rect(fill="transparent", colour=NA),
+    #panel.background=element_blank(),
+    panel.border=element_blank(),
+    #panel.grid.major=element_blank(),
+    #panel.grid.minor=element_blank(),
     panel.margin=unit(0, "lines"),
     axis.line=element_blank(),
     axis.text.x=element_blank(),
@@ -84,9 +88,23 @@ theme_raster <- function(base_size=12, ...) {
     axis.title.x=element_blank(),
     axis.title.y=element_blank(),
     axis.ticks=element_blank(),
+    strip.background=element_blank(),
     plot.margin=unit(c(0,0,-1,-1), "lines"),
     legend.position="none"
   )
+}
+
+saveFigure <- function(p, filename, width=8, height=6, dimensions) {
+  library(ggplot2)
+  if (missing(p) | missing(filename))
+    stop("Argument p or filename missing.")
+  filename <- file.path(context$figuresDirectory, filename)
+  message("Saving plot to ", filename, "...")
+  if (!missing(dimensions)) {
+    aspectRatio <- dimensions[1] / dimensions[2]
+    height <- width * aspectRatio
+  }
+  ggsave(p, filename=filename, width=width, height=height)
 }
 
 addDtDist <- function(tracksDF) {

@@ -7,7 +7,7 @@ SpatioTemporalRaster <- setRefClass(
     ext = "character"
   ),
   methods = list(
-    initialize = function(layerList, width=8, ext="png", ...) {
+    initialize = function(layerList, width=16, ext="png", ...) {
       callSuper(...)
       width <<- width
       ext <<- ext
@@ -29,15 +29,19 @@ SpatioTemporalRaster <- setRefClass(
       return(invisible(.self))
     },
     
-    getRasterFileName = function(name, layerName) {
-      return(context$getFileName(dir=study$context$figuresDirectory, name=paste(name, layerName, sep="-"), response=study$response, region=study$studyArea$region, ext=paste(".", ext, sep="")))
+    getRasterFileName = function(name, layerName, ext) {
+      ext0 <- if (missing(ext)) .self$ext else ext
+      return(context$getFileName(dir=study$context$figuresDirectory, name=paste(name, layerName, sep="-"), response=study$response, region=study$studyArea$region, ext=paste(".", ext0, sep="")))
     },
     
     saveRasterFile = function(p, layer, name, layerName) {
       if (missing(p) | missing(name) | missing(layerName))
         stop("Argument p, name or layerName missing.")
-      aspectRatio <- dim(layer)[2] / dim(layer)[1]
-      ggsave(p, filename=getRasterFileName(name=name, layerName=layerName), width=width, height=width * aspectRatio)
+      aspectRatio <- dim(layer)[1] / dim(layer)[2]
+      height <- 12
+      if (aspectRatio > 1) width0 <- height / aspectRatio
+      else height <- width * aspectRatio
+      ggsave(p, filename=getRasterFileName(name=name, layerName=layerName), width=width0, height=height)
     },
     
     plotLayer = function(layerName, plotTitle, legendTitle, boundary=FALSE, save=FALSE, name) {
@@ -79,6 +83,7 @@ SpatioTemporalRaster <- setRefClass(
     animate = function(name, delay=100, boundary=FALSE, sameScale=TRUE) {
       if (missing(name)) stop("Argument name missing.")
       
+      library(ggplot2)
       library(raster)
       library(rasterVis)
       
@@ -90,23 +95,26 @@ SpatioTemporalRaster <- setRefClass(
         layer <- crop(rasterStack[[i]], extent(study$studyArea$boundary))
         layerName <- names(layer)
         if (substr(layerName, start=1, stop=1) == "X") layerName <- substr(layerName, start=2, stop=nchar(layerName))
-        #layerFileName <- context$getFileName(dir=study$context$figuresDirectory, name=paste(name, layerName, sep="-"), response=study$response, region=study$studyArea$region, ext=".png")        
-        #message("Saving ", layerFileName, "...")
         
         p <- gplot(layer) + geom_raster(aes(fill=value)) + coord_equal() + theme_raster() + ggtitle(layerName)
         p <- if (sameScale) p + scale_fill_gradientn(colours=terrain.colors(99), breaks=seq(vmin, vmax, length.out=100), na.value=NA)
         else p + scale_fill_gradientn(colours=terrain.colors(99), na.value=NA)
         if (boundary) p <- p + geom_polygon(data=boundaryDF, aes(long, lat), colour="white", fill=NA)
-        
         print(p)
-        #ggsave(p, filename=layerFileName, width=width, height=width * aspectRatio)
+
         saveRasterFile(p=p, layer=layer, name=name, layerName=layerName)
+        if (ext == "svg") {
+          inputFile <- getRasterFileName(name=name, layerName=layerName)
+          outputFile <- getRasterFileName(name=name, layerName=layerName, ext="png")
+          cmd <- paste("inkscape -z -e ", outputFile, " -w ", dim(layer)[2]," -h ", dim(layer)[1]," ", inputFile, sep="")
+          message(cmd)
+          system(cmd)
+        }
       }
       
       message("Converting...")
       outputFile <- context$getFileName(dir=study$context$figuresDirectory, name=name, response=study$response, region=study$studyArea$region, ext=".gif")
-      layerFileNameMask <- getRasterFileName(name=name, layerName="*")
-      #layerFileNameMask <- context$getFileName(dir=study$context$figuresDirectory, name=paste(name, "*", sep="-"), response=study$response, region=study$studyArea$region, ext=".png")      
+      layerFileNameMask <- getRasterFileName(name=name, layerName="*", ext="png")
       cmd <- paste("convert -loop 0 -delay ", delay, " ", layerFileNameMask, " ", outputFile, sep="")
       message(cmd)
       system(cmd)
@@ -117,7 +125,8 @@ SpatioTemporalRaster <- setRefClass(
     weight = function(weights) {
       for (i in 1:nlayers(rasterStack)) {
         name <- names(rasterStack[[i]])
-        rasterStack[[i]] <<- rasterStack[[i]] * weights
+        if (inherits(weights, "RasterStack") & length(weights) > 1) rasterStack[[i]] <<- rasterStack[[i]] * weights[[i]]
+        else rasterStack[[i]] <<- rasterStack[[i]] * weights
         names(rasterStack[[i]]) <<- name
       }
       return(invisible(.self))

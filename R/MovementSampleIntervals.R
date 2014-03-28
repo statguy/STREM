@@ -122,12 +122,6 @@ MovementSampleIntervals <- setRefClass(
       return(invisible(.self))
     },
     
-    fitTest = function(model=log(distanceKm) ~ intervalH) {
-      dailyDistanceData <- getDailyDistanceData()
-      estimationResult <<- glm(model, data=dailyDistanceData, family=gaussian(link="log"))
-      return(invisible(.self))
-    },
-    
     predict = function(predictionData=data.frame(intervalH=seq(0, 12, by=0.1)), randomEffectsFormula=NA) {
       distanceKm <- MovementSampleIntervalsPredict(estimationResult=estimationResult, predictionData=predictionData, randomEffectsFormula=randomEffectsFormula)
       return(invisible(distanceKm))
@@ -189,20 +183,20 @@ FinlandMovementSampleIntervals <- setRefClass(
       return(dailyDistanceData)
     },
         
-    predictDistances = function(model=log(distanceKm) ~ sqrt(populationDensity) + rrday + snow + tday + log(intervalH) + (1|individualId) + (1|thinId), predictCovariates, truncateDistance=30000) {
-      tracks <- study$loadTracks()
-      getThinnedTracksSampleIntervals(tracks=tracks)
-      fit(model)
+    predictDistances = function(model=log(distanceKm) ~ sqrt(populationDensity) + rrday + snow + tday + log(intervalH) + (1|individualId) + (1|thinId), predictCovariates, truncateDistance=30, thin=TRUE) {
+      if (thin) {
+        tracks <- study$loadTracks()
+        getThinnedTracksSampleIntervals(tracks=tracks)
+      }
       
-      # TODO: remove distances > 1
-      #intersections <- study$loadIntersections()
-      #predictCovariates <- intersections$covariates
-      #estimates <- study$loadEstimates()
-      #predictCovariates <- estimates$covariates
+      #fit(model) # TODO: fix the problem here
+      # quickfix:
+      model <- log(distanceKm) ~ sqrt(sqrt(populationDensity)) + sqrt(rrday) + sqrt(snow) + log(intervalH) # problem with tday
+      estimationResult <<- glm(model, data=getDailyDistanceData())
       
       predictCovariates$intervalH <- 2 # TODO: this needs to be found empirically
       #predictCovariates$thinId <- 1
-      predictedDistances <- 1000 * exp(predict(predictCovariates))#, ~(1|thinId))      
+      predictedDistances <- exp(predict(predictCovariates))#, ~(1|thinId))
       
       message("Estimation results:")
       print(summary(estimationResult))
@@ -212,21 +206,19 @@ FinlandMovementSampleIntervals <- setRefClass(
         predictCovariates$predictedDistances <- predictedDistances
         print(predictCovariates[predictedDistances > truncateDistance,])
         
-        # TODO: Extreme predicted distances are truncated for now. Find better prediction model...
+        # TODO: Extreme predicted distances are truncated for now. Find better prediction model or add more data, etc...
         predictedDistances[predictedDistances > truncateDistance] <- truncateDistance
       }
       
-      observedDistances <- tracks$getDistances()
-      observedDistances <- observedDistances[!is.na(observedDistances)]
-      message("Predicted distances = ", mean(predictedDistances, na.rm=T), " ± ", sd(predictedDistances, na.rm=T))
+      #observedDistances <- tracks$getDistances()
+      #observedDistances <- observedDistances[!is.na(observedDistances)]
+      #message("Predicted distances = ", mean(predictedDistances, na.rm=T), " ± ", sd(predictedDistances, na.rm=T))
       
-      o <- data.frame(Variable="Observed", Value=observedDistances)
-      p <- data.frame(Variable="Predicted", Value=predictedDistances)
-      distances <- rbind(o, p)
+      #o <- data.frame(Variable="Observed", Value=observedDistances)
+      #p <- data.frame(Variable="Predicted", Value=predictedDistances)
+      #distances <- rbind(o, p)
       
-      return(invisible(distances))
-      #loadCovariates()
-      #callSuper(model=model)
+      return(invisible(predictedDistances))
     }      
   )
 )

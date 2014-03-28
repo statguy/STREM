@@ -184,21 +184,21 @@ FinlandWTCStudy <- setRefClass(
       else
         mean(loadTracks()$getDistances(), na.rm=T)
       
-      estimates$collectEstimates(weightsAtSurveyRoutes=distancesAtSurveyRoutes, weightsAtNodes=distancesAtNodes, quick=TRUE)
+      estimates$collectEstimates(weightsAtSurveyRoutes=distancesAtSurveyRoutes, weightsAtNodes=distancesAtNodes)
       
       return(estimates)
     },
     
-    getPopulationDensity = function(withHabitatWeights=TRUE, withDistanceWeights=TRUE, saveDensityPlots=FALSE) {
+    getPopulationDensity = function(withHabitatWeights=TRUE, withDistanceWeights=TRUE, saveDensityPlots=FALSE, getSD=FALSE) {
       estimates <- collectEstimates(withDistanceWeights=withDistanceWeights)
       
       habitatWeights <- if (withHabitatWeights) loadHabitatWeightsRaster() else HabitatWeights$new(study=study)$getWeightsRaster()
-      populationDensity <- estimates$getPopulationDensity(templateRaster=habitatWeights, getSD=FALSE)
+      populationDensity <- estimates$getPopulationDensity(templateRaster=habitatWeights, getSD=getSD)
       populationDensity$mean$weight(habitatWeights)
       
       if (saveDensityPlots) {
         populationDensity$mean$animate(name=estimates$modelName)
-        # TODO: SD
+        if (getSD) populationDensity$sd$animate(name=estimates$modelName)
       }
       
       return(populationDensity)

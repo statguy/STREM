@@ -157,6 +157,9 @@ SmoothModel <- setRefClass(
       node$mean <<- matrix(result$summary.fitted.values$mean[indexPredicted] / weightsAtNodes, nrow=mesh$n, ncol=length(yearsVector))
       node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / weightsAtNodes^2, nrow=mesh$n, ncol=length(yearsVector))
       
+      message("Random effect mean and SD sums each year:")
+      print(colSums(node$mean))
+      print(colSums(node$sd))
       
       a <- inla.emarginal(exp, result$marginals.fixed$intercept)
       if (!all(a >= exp(result$summary.fixed["intercept","mean"])))
@@ -207,7 +210,7 @@ if (F) {
       return(intersections)
     },
     
-    project = function(projectValues, projectionRaster, maskPolygon) {
+    project = function(projectValues, projectionRaster=study$getTemplateRaster(), maskPolygon) {
       library(INLA)
       library(raster)
       
@@ -241,9 +244,9 @@ if (F) {
       #cellArea <- prod(res(templateRaster)) # m^2
       
       for (year in sort(unique(xyzMean$Year))) {
-        message("Processing year ", year, "...")
-
         yearIndex <- year - min(xyzMean$Year) + 1
+        message("Processing year ", year, "...")
+        
         meanRaster <- project(projectValues=node$mean[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon)
         #meanRaster <- rasterInterpolate(subset(xyzMean, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea        
         #if (!(missing(maskPolygon) | is.null(maskPolygon)))
