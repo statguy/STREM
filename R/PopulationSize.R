@@ -79,7 +79,7 @@ FinlandPopulationSize <- setRefClass(
       load(fileName)
       setValidationSizeData(validation[,c("Year", study$response)])
       #sizeData <<- merge(sizeData, validation[,c("Year",study$response)], all=T)
-      colnames(sizeData) <<- c("Year","Estimated","Observed")
+      colnames(sizeData) <<- c("Year","Estimated","Validation")
       return(invisible(.self))
     }
   )
