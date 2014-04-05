@@ -184,7 +184,7 @@ SimulatedTracks <- setRefClass(
       callSuper(preprocessData=preprocessData, ...)
     },
     
-    setTracks = function(xy, id, date, dt=dt, dist=dist, burst=burst) {  
+    setTracks = function(xy, id, date, dt, dist, burst) {  
       tracks <<- data.frame(xy, id=id, burst=burst, date=date, dt=dt, dist=dist)
       return(invisible(.self))
     },
