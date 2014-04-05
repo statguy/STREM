@@ -72,8 +72,8 @@ MovementSampleIntervals <- setRefClass(
       intervalsList[[1]] <- tracks$getSampleIntervals()
       
       for (i in 2:maxThins) {
-        thinnedTracks <- thinnedTracksCollection$getTracks(1)$thin(by=i, thinId=i)
-        #thinnedTracks <- thinnedTracksCollection$getTracks(i-1)$thin(by=2, thinId=i)
+        #thinnedTracks <- thinnedTracksCollection$getTracks(1)$thin(by=i, thinId=i)
+        thinnedTracks <- thinnedTracksCollection$getTracks(i-1)$thin(by=2, thinId=i)
         #message("nrows before = ", nrow(thinnedTracksCollection$getTracks(1)$tracks), ", nrows after = ", nrow(thinnedTracks$tracks))
         
         if (is.null(thinnedTracks)) break

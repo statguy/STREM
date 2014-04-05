@@ -223,14 +223,14 @@ MovementSimulationScenario <- setRefClass(
             isFirst <- FALSE
             nAgentsCurrent <- length(agents)
           }        
-          
+
           track$year <- year
           date <- as.POSIXct(strptime(paste(2000+track$year, track$day, track$hour, track$minute, track$second), format="%Y %j %H %M %S"))
+          track$date <- date
           month <- as.POSIXlt(date)$mon + 1
           retainMonths <- c(1,2)
           retainIndex <- month %in% retainMonths
           track <- track[retainIndex,]
-          track$date <- date
           track <- addDtDist(track)
           
           tracks <- rbind(tracks, track)
@@ -243,13 +243,15 @@ MovementSimulationScenario <- setRefClass(
     },
 
     simulateSingle = function(iteration, save=TRUE) {
+      nIterations <- 1
       tracksDF <- randomizeBCRWTracks(iteration=as.integer(iteration))
       #date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
       tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=tracksDF$date, dt=tracks$dt, dist=tracks$dist, burst=tracks$burst, iteration=as.integer(iteration))
       return(invisible(tracks))
     },
     
-    simulate = function(restartIteration=1, iterationVector=1:nIterations, save=FALSE) {
+    simulate = function(nIterations=as.integer(50), restartIteration=1, iterationVector=1:nIterations, save=FALSE) {
+      nIterations <<- nIterations
       stopifnot(restartIteration <= nIterations)
       
       simulatedTracks <- SimulatedTracksCollection$new(study=study)
@@ -275,7 +277,7 @@ MovementSimulationScenarioIntensive <- setRefClass(
   Class = "MovementSimulationScenarioIntensive",
   contains = "MovementSimulationScenario",
   methods = list(
-    initialize = function(nAgents=as.integer(50), nIterations=as.integer(1), years=as.integer(1), days=as.integer(60), stepIntervalHours=0.1, runParallel=T, ...) {
+    initialize = function(nAgents=as.integer(50), years=as.integer(1), days=as.integer(60), stepIntervalHours=0.1, runParallel=T, ...) {
       callSuper(years=years, nAgents=nAgents, nIterations=nIterations, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=0.8, runParallel=runParallel, ...)
       return(invisible(.self))
     },
@@ -294,7 +296,7 @@ MovementSimulationScenarioA <- setRefClass(
   Class = "MovementSimulationScenarioA",
   contains = "MovementSimulationScenario",
   methods = list(
-    initialize = function(nAgents=as.integer(200), nIterations=as.integer(50), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, runParallel=T, ...) {
+    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, runParallel=T, ...) {
       callSuper(years=years, nAgents=nAgents, nIterations=nIterations, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=0.8, runParallel=runParallel, ...)
       return(invisible(.self))
     },
@@ -315,7 +317,7 @@ MovementSimulationScenarioB <- setRefClass(
   fields = list(
   ),
   methods = list(
-    initialize = function(nAgents=as.integer(200), nIterations=as.integer(50), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, runParallel=T, ...) {
+    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, runParallel=T, ...) {
       callSuper(years=years, nAgents=nAgents, nIterations=nIterations, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, runParallel=runParallel, ...)
 
       pAgentsA <- 0.1
