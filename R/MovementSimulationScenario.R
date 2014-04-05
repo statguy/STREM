@@ -243,7 +243,7 @@ MovementSimulationScenario <- setRefClass(
     },
 
     simulateSingle = function(iteration, save=TRUE) {
-      nIterations <- 1
+      nIterations <<- 1
       tracksDF <- randomizeBCRWTracks(iteration=as.integer(iteration))
       #date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
       tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=tracksDF$date, dt=tracks$dt, dist=tracks$dist, burst=tracks$burst, iteration=as.integer(iteration))
