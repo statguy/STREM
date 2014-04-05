@@ -209,7 +209,7 @@ MovementSimulationScenario <- setRefClass(
                                          CRWCorrelation=CRWCorrelation,
                                          BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff[iteration],
                                          homeRangeRadius=homeRangeRadius[iteration])
-              track$agent <- agents[agentIndex]
+              track$id <- agents[agentIndex]
               
               return(track)
             },
@@ -246,7 +246,7 @@ MovementSimulationScenario <- setRefClass(
       nIterations <<- as.integer(1)
       tracksDF <- randomizeBCRWTracks(iteration=as.integer(iteration))
       #date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
-      tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=tracksDF$date, dt=tracks$dt, dist=tracks$dist, burst=tracks$burst, iteration=as.integer(iteration))
+      tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$id, date=tracksDF$date, dt=tracks$dt, dist=tracks$dist, burst=tracks$burst, iteration=as.integer(iteration))
       return(invisible(tracks))
     },
     
