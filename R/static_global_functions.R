@@ -124,8 +124,8 @@ addDtDist <- function(tracksDF) {
     n1 <- n-1
     x$dt <- c(difftime(x$date[2:n], x$date[1:n1], units="secs"), NA)
     x$dist <- c(euclidean(x[1:n1, c("x","y")], x[2:n, c("x","y")]), NA)
-    if (any(x$dt[!is.na(x$dt)] < 0)) warning("Negative dt, something wrong with the data...")
+    if (any(x$dt[!is.na(x$dt)] <= 0)) warning("dt <= 0, something wrong with the data...")
     return(x)
-  }, .parallel=TRUE)
+  }, .parallel=TRUE, .progress="text")
   return(tracksDF)
 }

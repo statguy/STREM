@@ -32,7 +32,7 @@ Tracks <- setRefClass(
       library(adehabitatLT)
       message("Processing tracks...")
       load(getTracksFileName(), envir=as.environment(.self))
-      if (is.data.frame(tracks)) tracks <<- addDtDist(tracks)
+      #if (is.data.frame(tracks)) tracks <<- addDtDist(tracks)
       return(invisible(.self))
     },
     
@@ -179,18 +179,13 @@ SimulatedTracks <- setRefClass(
     iteration = "integer"
   ),
   methods = list(
-    initialize = function(xy, id, date, preprocessData=FALSE, ...) {
-      if (!missing(xy) && !missing(id) && !missing(date)) setTracks(xy=xy, id=id, date=date)
+    initialize = function(xy, id, date, dt, dist, burst, preprocessData=FALSE, ...) {
+      if (!missing(xy) && !missing(id) && !missing(date)) setTracks(xy=xy, id=id, date=date, dt=dt, dist=dist, burst=burst)
       callSuper(preprocessData=preprocessData, ...)
     },
     
-    setTracks = function(xy, id, date) {
-      #library(adehabitatLT)
-      #d <- as.POSIXlt(date)
-      #burst <- paste(id, d$year, sep=".")
-      #tracks <<- as.ltraj(xy=xy, date=date, id=id, burst=burst)
-      
-      tracks <<- data.frame(xy, id=id, date=date)
+    setTracks = function(xy, id, date, dt=dt, dist=dist, burst=burst) {  
+      tracks <<- data.frame(xy, id=id, burst=burst, date=date, dt=dt, dist=dist)
       return(invisible(.self))
     },
     
