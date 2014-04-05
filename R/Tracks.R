@@ -179,13 +179,13 @@ SimulatedTracks <- setRefClass(
     iteration = "integer"
   ),
   methods = list(
-    initialize = function(xy, id, date, dt, dist, burst, preprocessData=FALSE, ...) {
-      if (!missing(xy) && !missing(id) && !missing(date)) setTracks(xy=xy, id=id, date=date, dt=dt, dist=dist, burst=burst)
+    initialize = function(xy, id, date, dt, dist, burst, year, yday, preprocessData=FALSE, ...) {
+      if (!missing(xy) && !missing(id) && !missing(date)) setTracks(xy=xy, id=id, date=date, dt=dt, dist=dist, burst=burst, year=year, yday=yday)
       callSuper(preprocessData=preprocessData, ...)
     },
     
-    setTracks = function(xy, id, date, dt, dist, burst) {  
-      tracks <<- data.frame(xy, id=id, burst=burst, date=date, dt=dt, dist=dist)
+    setTracks = function(xy, id, date, dt, dist, burst, year, yday) {  
+      tracks <<- data.frame(xy, id=id, burst=burst, date=date, year=year, yday=yday, dt=dt, dist=dist)
       return(invisible(.self))
     },
     

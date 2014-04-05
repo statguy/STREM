@@ -225,9 +225,8 @@ MovementSimulationScenario <- setRefClass(
           }        
 
           track$year <- year
-          date <- as.POSIXct(strptime(paste(2000+track$year, track$day, track$hour, track$minute, track$second), format="%Y %j %H %M %S"))
-          track$date <- date
-          month <- as.POSIXlt(date)$mon + 1
+          track$date <- as.POSIXct(strptime(paste(2000+track$year, track$day, track$hour, track$minute, track$second), format="%Y %j %H %M %S"))
+          month <- as.POSIXlt(track$date)$mon + 1
           retainMonths <- c(1,2)
           retainIndex <- month %in% retainMonths
           track <- track[retainIndex,]
@@ -246,7 +245,7 @@ MovementSimulationScenario <- setRefClass(
       nIterations <<- as.integer(1)
       tracksDF <- randomizeBCRWTracks(iteration=as.integer(iteration))
       #date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
-      tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$id, date=tracksDF$date, dt=tracksDF$dt, dist=tracksDF$dist, burst=tracksDF$burst, iteration=as.integer(iteration))
+      tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$id, date=tracksDF$date, dt=tracksDF$dt, dist=tracksDF$dist, burst=tracksDF$burst, year=tracksDF$year, yday=tracksDF$yday, iteration=as.integer(iteration))
       return(invisible(tracks))
     },
     
