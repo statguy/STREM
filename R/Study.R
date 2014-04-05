@@ -64,7 +64,24 @@ SimulationStudy <- setRefClass(
       surveyRoutes <- if (random) FinlandRandomWTCSurveyRoutes$new(study=.self)$newInstance(n=800)
       else FinlandWTCSurveyRoutes(study=.self)$newInstance()
       return(surveyRoutes)
-    }    
+    },
+    
+    countIntersections = function(iteration) {
+      tracks <- study$loadTracks(iteration=iteration)
+      intersections <- tracks$countIntersections()
+      return(invisible(intersection))
+    },
+    
+    estimate = function(iteration, meshParams) {
+      intersections <- study$loadIntersections(iteration=iteration)
+      model <- intersections$estimate(meshParams=meshParams)
+      model$saveEstimates()
+      return(invisible(model))
+    },
+    
+    collectEstimates = function(iteration) {
+      
+    }
   )
 )
 
