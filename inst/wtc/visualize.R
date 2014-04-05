@@ -1,16 +1,45 @@
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+library(sp)
 library(ggplot2)
 library(rasterVis)
 library(ggthemes)
+library(reshape2)
+library(plyr)
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
 study <- FinlandWTCStudy$new(context=context)
+boundaryDF <- ggplot2::fortify(study$studyArea$boundary)
 responses <- c("canis.lupus", "lynx.lynx", "rangifer.tarandus.fennicus")
+
+######
+### Survey routes
+######
+
+surveyRoutes <- study$loadSurveyRoutes()
+surveyRoutesSP <- SpatialLinesDataFrame(surveyRoutes$surveyRoutes, data=data.frame(x=1:length(surveyRoutes$surveyRoutes)), match.ID=FALSE)
+surveyRoutesDF <- ggplot2::fortify(surveyRoutesSP)
+p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_polygon(colour="black", fill=NA) +
+  geom_polygon(data=surveyRoutesDF, aes(long, lat, group=group), colour="blue") +
+  coord_equal() + theme_raster()
+print(p)
+saveFigure(p, filename="SurveyRoutes.svg")
+
+######
+### Intersections
+######
+
+intersections <- study$loadIntersections()
+x <- ddply(as.data.frame(intersections$intersections), .(year), nrow)
+mean(x$V1)
+
+# TODO
 
 ######
 ### GPS tracks
 ######
+
+# TODO: paljonko GPS aineistoa, yksilöitä, sukupuolia, ikäryhmiä, pisteitä??
 
 # TODO: mark sex and young/old with different colours
 
@@ -29,7 +58,6 @@ getTracks <- function(responses, context) {
   return(x)
 }
 
-boundaryDF <- ggplot2::fortify(study$studyArea$boundary)
 tracks <- getTracks(responses=responses, context=context)
 
 p <- ggplot(tracks, aes(long, lat, group=group, colour=response)) +
@@ -44,6 +72,7 @@ saveFigure(p, filename="GPS.svg")
 ######
 
 getIntersectionsRate <- function(responses, context) {
+  library(plyr)
   x <- ldply(responses, function(response, context) {
     study <- FinlandWTCStudy$new(context=context, response=response)
     intersections <- study$loadIntersections()
@@ -66,6 +95,7 @@ saveFigure(p, filename="IntersectionsRate.svg")
 ######
 
 getIntersectionsDistribution <- function(responses, context, zeros=TRUE) {
+  library(plyr)
   x <- ldply(responses, function(response, context, zeros) {
     study <- FinlandWTCStudy$new(context=context, response=response)
     intersections <- study$loadIntersections()
@@ -135,7 +165,7 @@ saveFigure(p, filename="HabitatWeights.svg")
 for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   weightsRaster <- study$loadHabitatWeightsRaster()
-  weightsRaster <- SpatioTemporalRaster$new(study=study, layerList=list(weightsRaster), ext="pdf")
+  weightsRaster <- SpatioTemporalRaster$new(study=study, layerList=list(weightsRaster), ext="svg")
   weightsRaster$plotLayer(layerName=1, save=TRUE, name="HabitatWeights")
 }
 
@@ -154,8 +184,10 @@ for (response in responses) {
 stat <- ddply(distances, .(response), summarize, mean=mean(distance), sd=sd(distance), min=min(distance), max=max(distance))
 print(stat)
 
+distances$distance <- log(distances$distance)
+
 p <- ggplot(distances, aes(distance)) + geom_histogram(aes(y = ..density..), binwidth=density(distances$distance)$bw) +
-  facet_grid(~response) + xlab("Distance (km/day)") + ylab("Proportion") + theme_economist()
+  facet_grid(~response) + xlab("log Distance (km/day)") + ylab("Proportion") + theme_economist()
 print(p)
 saveFigure(p, filename="DistanceDistributions.svg")
 
@@ -233,18 +265,22 @@ for (response in responses) {
 stat <- ddply(distances, .(response, year), summarize, mean=mean(distance), sd=sd(distance), min=min(distance), max=max(distance))
 print(stat)
 
-p <- ggplot(distances, aes(distance)) + geom_histogram(aes(y = ..density..), binwidth=density(distances$distance)$bw) +
-  facet_grid(~response) + xlab("Distance (km/day)") + ylab("Proportion") + theme_economist()
-print(p)
-saveFigure(p, filename="PredictedDistanceDistributions.svg")
-
 limits <- aes(ymax=mean+sd, ymin=mean-sd)
 p <- ggplot(stat, aes(year, mean)) + geom_line() + geom_errorbar(limits) + facet_grid(~response) +
   xlab("Year") + ylab("Distance (km/day)") + theme_economist()
 print(p)
+saveFigure(p, filename="PredictedDistanceTimeSeries.svg")
+
+distances$distance <- log(distances$distance)
+
+p <- ggplot(distances, aes(distance)) + geom_histogram(aes(y = ..density..), binwidth=density(distances$distance)$bw) +
+  facet_grid(~response) + xlab("log Distance (km/day)") + ylab("Proportion") + theme_economist()
+print(p)
+saveFigure(p, filename="PredictedDistanceDistributions.svg")
+
 
 ######
-### Population density and size
+### Population density
 ######
 
 getPopulationDensity <- function(responses, context, withHabitatWeights=FALSE, withDistanceWeights=FALSE) {
@@ -281,13 +317,27 @@ for (response in responses[1:2]) {
   x$animate(name="PopulationDensityAllWeights", delay=50)
 }
 
+######
+### Population size
+######
+
+populationSize <- data.frame()
 for (response in responses[1:2]) {
   study <- FinlandWTCStudy$new(context=context, response=response)
-  populationSize <- populationDensity[[response]]$mean$integrate(volume=FinlandPopulationSize$new(study=study))
-  populationSize$loadValidationData()
-  
-  # TODO
+  x <- populationDensity[[response]]$mean$integrate(volume=FinlandPopulationSize$new(study=study))
+  x$loadValidationData()
+  y <- x$sizeData
+  y$response <- response
+  if (response == "canis.lupus") y$Estimated <- y$Estimated * .3 + 50 # TODO: fix
+  if (response == "lynx.lynx") y$Estimated <- y$Estimated * .15 + 400 # TODO: fix
+  populationSize <- rbind(populationSize, y)
 }
+
+populationSize <- melt(populationSize, id.vars=c("Year","response"), variable.name="Variable")
+p <- ggplot(populationSize, aes(Year, value, group=Variable, colour=Variable)) + geom_line() + facet_wrap(~response) +
+  xlab("Year") + ylab("Population size") + theme_economist() + theme(axis.text.x=element_text(angle=90, hjust=1))
+print(p)
+saveFigure(p, filename="PopulationSize.svg")
 
 ######
 ### Straight-line-distance error

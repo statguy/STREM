@@ -62,7 +62,7 @@ Tracks <- setRefClass(
       library(adehabitatLT)
       
       tracksDF <- if (is.data.frame(tracks)) tracks else ld(tracks)
-      plot(tracksDF$x, tracksDF$y, type="n")
+      plot(tracksDF$x, tracksDF$y, type="n", asp=1)
       apply(fun=function(x) lines(x$x, x$y, col=x$id), variables=.(burst))
       plot(study$studyArea$boundary, add=T)
       if (!missing(surveyRoutes))
@@ -134,7 +134,7 @@ Tracks <- setRefClass(
     # x   x   
     # x
     #
-    # xxxxxxxxxx
+    # xxxxxxxxxx <--- WRONG!
     # x x x x x
     # x  x  x  x
     # x   x   x
