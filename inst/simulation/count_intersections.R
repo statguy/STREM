@@ -7,8 +7,8 @@
 
 
 countIntersections <- function(study, iteration, test) {
-  tracks <- study$loadTracks(iteration=iteration)
   if (test) {
+    tracks <- study$loadTracks(iteration=iteration)
     surveyRoutes <- study$loadSurveyRoutes()
     intersections <- SimulatedIntersections$new(study=study, iteration=iteration)
     surveyRoutes$surveyRoutes <- surveyRoutes$surveyRoutes[1:3]
@@ -18,7 +18,10 @@ countIntersections <- function(study, iteration, test) {
     intersections$findIntersections(observationTracks, surveyRoutes, dimension=1)
     message("SUCCESS")
   }
-  else tracks$countIntersections()
+  else {
+    study$countIntersections()
+    #tracks$countIntersections()
+  }
 }
 
 args <- commandArgs(trailingOnly=TRUE)
