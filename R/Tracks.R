@@ -45,8 +45,8 @@ Tracks <- setRefClass(
       library(sp)
       if (is.data.frame(tracks)) {
         library(plyr)
-        lines <- dlply(tracks, .(id, year), function(x) {
-          return(Lines(Line(x[,c("x","y")]), ID=paste(x$id[1], x$year[1])))
+        lines <- dlply(tracks, .(burst), function(x) {
+          return(Lines(Line(x[,c("x","y")]), ID=x$burst[1]))
         })
         tracksSP <- SpatialLines(lines, proj4string=study$studyArea$proj4string)
       }
@@ -207,6 +207,7 @@ SimulatedTracks <- setRefClass(
     },
     
     randomizeObservationDayTracks = function() {
+      library(plyr)
       message("Randomizing observation day and filtering tracks...")
 
       observationTracksDF <- ddply(tracks, .(year), function(x) {

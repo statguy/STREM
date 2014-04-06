@@ -81,7 +81,7 @@ SimulatedIntersections <- setRefClass(
           nSurveyRoutes <- length(surveyRoutes)
           nTracks <- length(tracks)
           message("Finding intersections for survey route ", i, " / ", nSurveyRoutes, " for ", nTracks, " tracks...")
-          
+
           x <- laply(1:nTracks,
                      function(j, surveyRoutes, tracks, i) {
                        return(length(gIntersection(surveyRoutes[i], tracks[j], byid=TRUE)))
@@ -89,7 +89,7 @@ SimulatedIntersections <- setRefClass(
           
           return(x)
         }
-                
+        
         intersectionsMatrix <<- laply(1:nSurveyRoutes, countIntersections, surveyRoutes=surveyRoutes, tracks=tracks, .drop=FALSE, .parallel=TRUE)
       }
       else if (dimension == 2) {
@@ -134,7 +134,7 @@ SimulatedIntersections <- setRefClass(
       data <- data.frame()
       for (year in sort(unique(burstYear$year))) {
         yearToBurstsIndex <- burstYear$year == year
-        bursts <- burstYear[yearToBurstsIndex,]$burst
+        bursts <- as.character(burstYear[yearToBurstsIndex,]$burst)
         duration <- burstYear[yearToBurstsIndex,]$duration[1]
         centroids <- coordinates(surveyRoutes$centroids)
         x <- data.frame(surveyRoute=rownames(intersectionsMatrix[,bursts,drop=F]),
