@@ -67,7 +67,8 @@ SmoothModel <- setRefClass(
   Class = "SmoothModel",
   contains = "Model",
   fields = list(
-    family = "character"
+    family = "character",
+    interceptPrior = "list"
   ),
   methods = list(
     initialize = function(...) {
@@ -75,11 +76,29 @@ SmoothModel <- setRefClass(
       return(invisible(.self))
     },
     
+    setupInterceptPrior = function(populationSizeMean, populationSizeDeviation) {
+      # TODO: Find area from raster ignoring NA values if habitat weights are used
+      # TODO: Use correct link function (now using default)
+      
+      area <- study$studyArea$boundary@polygons[[1]]@area
+      toTheta <- function(x, area) log(x / area)
+      fromTheta <- function(x, area) exp(x) * area
+      
+      x <- toTheta(populationSizeMean, area)
+      y <- transformDeviation(populationSizeMean, populationSizeDeviation, toTheta, area=area)
+      interceptPrior <<- list(mean=x, prec=1/y)
+      
+      z <- fromTheta(qnorm(c(0.025,0.5,0.975), x, y), area)
+      message("intercept 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
+      
+      return(invisible(.self))
+    },
+    
     setup = function(intersections, meshParams, family="nbinomial") {
       library(INLA)
       
       message("Constructing mesh...")
-
+      
       data <<- intersections$getData()
       coordsScale <<- meshParams$coordsScale
       locations <<- intersections$getCoordinates() * coordsScale
@@ -113,7 +132,7 @@ SmoothModel <- setRefClass(
                                tag="observed")
       
       predStack <<- inla.stack(data=list(response=NA,
-                                         E=rep(2/pi * 12000 * 1 * mean(data$distance), mesh$n * nYears),
+                                         E=1, #rep(2/pi * 12000 * 1 * mean(data$distance), mesh$n * nYears),
                                          link=1),
                                A=list(1),
                                effects=list(c(index, list(intercept=1))),
@@ -127,11 +146,17 @@ SmoothModel <- setRefClass(
       
       fullStack <<- inla.stack(obsStack, predStack)
       stackData <- inla.stack.data(fullStack)
+      
+      control.fixed <- if (!inherits(interceptPrior, "undefinedField"))
+         list(mean=list(intercept=interceptPrior$mean), prec=list(intercept=interceptPrior$prec))
+      else NULL
+      
       result <<- inla(model,
                       family=family,
                       data=inla.stack.data(fullStack, spde=spde),
                       E=stackData$E,
                       verbose=TRUE,
+                      control.fixed=control.fixed,
                       control.predictor=list(A=inla.stack.A(fullStack), link=stackData$link, compute=TRUE),
                       control.compute=list(cpo=FALSE, dic=TRUE))
       
@@ -156,8 +181,8 @@ SmoothModel <- setRefClass(
 
       message("Fitted values sums all years:")
       stackData <- inla.stack.data(fullStack, tag="observed")
-      sum(data$intersections / stackData$E[indexObserved])
-      sum(data$fittedMean)
+      message("observed = ", sum(data$intersections))
+      message("estimated = ", sum(data$fittedMean * stackData$E[indexObserved]))
       
       message("Processing random effects...")
         
@@ -165,38 +190,39 @@ SmoothModel <- setRefClass(
       indexPredicted <- inla.stack.index(fullStack, "predicted")$data
       node$mean <<- matrix(result$summary.fitted.values$mean[indexPredicted] / weightsAtNodes, nrow=mesh$n, ncol=length(yearsVector))
       node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / weightsAtNodes^2, nrow=mesh$n, ncol=length(yearsVector))
+      node$spatialMean <<- matrix(result$summary.random$st$mean, nrow=mesh$n, ncol=length(yearsVector))
+      node$spatialSd <<- matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(yearsVector))
       
-      message("Random effect mean and SD sums each year:")
+      message("Fitted mean and SD sums at mesh nodes each year:")
       print(colSums(node$mean))
       print(colSums(node$sd))
       
-      a <- inla.emarginal(exp, result$marginals.fixed$intercept)
-      if (!all(a >= exp(result$summary.fixed["intercept","mean"])))
-        warning("Jensen's inequality does not hold for fixed effects.")
+      #a <- inla.emarginal(exp, result$marginals.fixed$intercept)
+      #if (!all(a >= exp(result$summary.fixed["intercept","mean"])))
+      #  warning("Jensen's inequality does not hold for fixed effects.")
+      #b <- numeric(length(result$marginals.random$st))
+      #for (i in 1:length(result$marginals.random$st)) {
+      #  b[i] <- inla.emarginal(exp, result$marginals.random$st[[i]])
+      #}
+      #if (!all(b >= exp(result$summary.random$st$mean)))
+      #  warning("Jensen's inequality does not hold for random effects.")
+      #e <- a * b
+      #e.m <- matrix(e / weightsAtNodes, nrow=mesh$n, ncol=length(yearsVector))
+      #if (!all(node$mean >= e.m))
+      #  warning("Jensen's inequality does not hold for fitted values.")
       
-      b <- numeric(length(result$marginals.random$st))
-      for (i in 1:length(result$marginals.random$st)) {
-        b[i] <- inla.emarginal(exp, result$marginals.random$st[[i]])
-      }
-      if (!all(b >= exp(result$summary.random$st$mean)))
-        warning("Jensen's inequality does not hold for random effects.")
-      
-      e <- a * b
-      e.m <- matrix(e / weightsAtNodes, nrow=mesh$n, ncol=length(yearsVector))
-      if (!all(node$mean >= e.m))
-        warning("Jensen's inequality does not hold for fitted values.")
-      
-      
-      # TODO: fix this
-if (F) {      
+      return(invisible(.self))
+    },
+    
+    collectHyperparameters = function() {
       message("Processing hyperparameters...")
       spdeResult <- inla.spde2.result(result, "st", spde)
       logKappa <- getINLAEstimates(spdeResult$marginals.log.kappa[[1]], coordsScale=1)
       logTau <- getINLAEstimates(spdeResult$marginals.log.tau[[1]], coordsScale=1) ## scale ??
       sd <- getINLAEstimates(spdeResult$marginals.log.variance.nominal[[1]], fun=function(x) sqrt(exp(x)))
       range <- getINLAEstimates(spdeResult$marginals.range.nominal[[1]], coordsScale=coordsScale)
-      # sqrt(8)/kappa
-      # 1/(4*pi*kappa^2*tau^2)
+      # range = sqrt(8)/kappa
+      # sd = 1/(4*pi*kappa^2*tau^2)
       
       x <- rbind(logKappa=logKappa,
                  logTau=logTau,
@@ -206,7 +232,6 @@ if (F) {
         x <- rbind(x, rho=result$summary.hyperpar["GroupRho for st",])
             
       return(x)
-}
     },
 
     getPredictedIntersections = function() {
@@ -219,7 +244,7 @@ if (F) {
       return(intersections)
     },
     
-    project = function(projectValues, projectionRaster=study$getTemplateRaster(), maskPolygon) {
+    project = function(projectValues, projectionRaster=study$getTemplateRaster(), maskPolygon, weights=1) {
       library(INLA)
       library(raster)
       
@@ -228,11 +253,9 @@ if (F) {
                                        xlim=c(xmin(projectionRaster), xmax(projectionRaster)),
                                        ylim=c(ymin(projectionRaster), ymax(projectionRaster)))
       projectedEstimates <- inla.mesh.project(projector, projectValues)
+      values(projectionRaster) <- t(projectedEstimates[,ncol(projectedEstimates):1]) * weights
       
-      cellArea <- prod(res(projectionRaster))
-      values(projectionRaster) <- t(projectedEstimates[,ncol(projectedEstimates):1]) * cellArea
-      
-      if (!missing(maskPolygon) & !is.null(maskPolygon))
+      if (!missing(maskPolygon))
         projectionRaster <- mask(projectionRaster, maskPolygon)
       
       return(invisible(projectionRaster))
@@ -250,20 +273,20 @@ if (F) {
       
       xyzMean <- data.frame(Year=data$year, locations / coordsScale, z=data$fittedMean)
       xyzSD <- data.frame(Year=data$year, locations / coordsScale, z=data$fittedSD)
-      #cellArea <- prod(res(templateRaster)) # m^2
+      cellArea <- prod(res(templateRaster)) # m^2
       
       for (year in sort(unique(xyzMean$Year))) {
         yearIndex <- year - min(xyzMean$Year) + 1
         message("Processing year ", year, "...")
         
-        meanRaster <- project(projectValues=node$mean[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon)
+        meanRaster <- project(projectValues=node$mean[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon, weights=cellArea)
         #meanRaster <- rasterInterpolate(subset(xyzMean, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea        
         #if (!(missing(maskPolygon) | is.null(maskPolygon)))
           #meanRaster <- mask(meanRaster, maskPolygon)
         meanPopulationDensityRaster$addLayer(meanRaster, year)
         
         if (getSD) {
-          sdRaster <- project(projectValues=node$sd[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon)
+          sdRaster <- project(projectValues=node$sd[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon, weights=cellArea)
           #sdRaster <- rasterInterpolate(subset(xyzSD, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea
           #if (!(missing(maskPolygon) | is.null(maskPolygon)))
             #sdRaster <- mask(sdRaster, maskPolygon)
@@ -315,6 +338,31 @@ if (F) {
       else plot(surveyRoutes$surveyRoutes, col="blue", add=T)
       
       return(invisible(.self))
+    },
+    
+    plotProjection = function(projectionRaster=study$getTemplateRaster(), variable, weights=1) {
+      meanRaster <- project(projectValues=variable, projectionRaster=projectionRaster, weights=weights)
+      op <- par(mar=rep(0, 4))
+      plot(meanRaster)
+      plot(study$studyArea$boundary, add=T)
+      points(locations / coordsScale, col=data$intersections)
+      par(op)
+    },
+    
+    plotEstimatedMean = function(yearIndex=1) {
+      plotProjection(variable=node$mean[,yearIndex], weights=prod(res(study$getTemplateRaster())))
+    },
+    
+    plotEstimatedSD = function(yearIndex=1) {
+      plotProjection(variable=node$sd[,yearIndex], weights=prod(res(study$getTemplateRaster()))^2)
+    },
+
+    plotRandomEffectMean = function(yearIndex=1) {
+      plotProjection(variable=node$spatialMean[,yearIndex])
+    },
+    
+    plotRandomEffectSD = function(yearIndex=1) {
+      plotProjection(variable=node$spatialSd[,yearIndex])
     }
   )
 )

@@ -41,13 +41,13 @@ Tracks <- setRefClass(
       return(tracks)
     },
         
-    getSpatialLines = function() {
+    getSpatialLines = function(variables=.(burst)) {
       library(sp)
       if (is.data.frame(tracks)) {
         library(plyr)
-        lines <- dlply(tracks, .(burst), function(x) {
-          return(Lines(Line(x[,c("x","y")]), ID=x$burst[1]))
-        })
+        lines <- dlply(tracks, variables, function(x, variables) {
+          return(Lines(Line(x[,c("x","y")]), ID=paste(x[1,variables], collapse=" ")))
+        }, variables=as.character(variables))
         tracksSP <- SpatialLines(lines, proj4string=study$studyArea$proj4string)
       }
       else if (inherits(tracks, "ltraj")) {
@@ -57,16 +57,27 @@ Tracks <- setRefClass(
       return(tracksSP)
     },
     
-    plotTracks = function(surveyRoutes) {
+    plotTracks = function(surveyRoutes, intersects=FALSE) {
       library(sp)
-      library(adehabitatLT)
+      #library(adehabitatLT)
       
-      tracksDF <- if (is.data.frame(tracks)) tracks else ld(tracks)
-      plot(tracksDF$x, tracksDF$y, type="n", asp=1)
-      apply(fun=function(x) lines(x$x, x$y, col=x$id), variables=.(burst))
+      op <- par(mar=rep(0, 4))
+      tracksSP <- getSpatialLines(variables=.(id, year))
+      plot(tracksSP, col=1:16)
       plot(study$studyArea$boundary, add=T)
-      if (!missing(surveyRoutes))
-        plot(surveyRoutes$surveyRoutes, col="blue", add=T)
+      if (!missing(surveyRoutes)) {
+        col <- rep("blue", length(intersects))
+        col[intersects] <- "red"
+        plot(surveyRoutes$surveyRoutes, col=col, add=T)
+      }
+      par(op)
+      
+      #tracksDF <- if (is.data.frame(tracks)) tracks else ld(tracks)
+      #plot(tracksDF$x, tracksDF$y, type="n", asp=1)
+      #apply(fun=function(x) lines(x$x, x$y, col=x$id), variables=.(burst))
+      #plot(study$studyArea$boundary, add=T)
+      #if (!missing(surveyRoutes))
+      #  plot(surveyRoutes$surveyRoutes, col="blue", add=T)
     },
     
     apply = function(variables=.(id), fun, ..., combine=F) {
@@ -98,11 +109,11 @@ Tracks <- setRefClass(
       #d <- as.POSIXlt(tracksDF$date)
       #tracksDF$yday <- d$yday
       #tracksDF$year <- d$year
-      distances <- ddply(tracksDF, .(burst), function(x) {
+      distances <- ddply(tracksDF, .(burst, year, id, yday), function(x) {
         add <- if (is.na(x$dt[nrow(x)])) mean(x$dt, na.rm=T) else 0
         if (is.na(add)) return(NA)
         s <- (sum(x$dt, na.rm=T) + add) / 3600
-        if (s < 23 | s > 25) return(NA)        
+        if (s < 23 | s > 25) return(NA)
         noNAIndex <- !(is.na(x$dist) | is.na(x$dt))
         if (length(noNAIndex) == 0) return(NA)
         return(sum(x$dist[noNAIndex]) / sum(x$dt[noNAIndex]) * 24 * 3600)

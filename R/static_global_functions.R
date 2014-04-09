@@ -129,3 +129,9 @@ addDtDist <- function(tracksDF) {
   }, .parallel=TRUE, .progress="text")
   return(tracksDF)
 }
+
+transformDeviation <- function(mean, deviation, fun, ...) {
+  x <- fun(mean, ...)
+  y <- mean(abs(c(x-fun(mean-deviation, ...), x-fun(mean+deviation, ...))) / qnorm(c(0.975)))
+  return(y)
+}
