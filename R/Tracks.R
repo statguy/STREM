@@ -220,6 +220,16 @@ SimulatedTracks <- setRefClass(
       return(observationTracks)
     },
     
+    getObservationDaysTracks = function(ydays) {
+      observationTracksDF <- ddply(tracks, .(year), function(x, ydays) {
+        return(subset(x, yday %in% ydays))
+      }, ydays=ydays)
+      
+      observationTracks <- copy()
+      observationTracks$tracks <- observationTracksDF
+      return(observationTracks)
+    },
+    
     countIntersections = function() {
       observationTracks <- randomizeObservationDayTracks()
       surveyRoutes <- study$loadSurveyRoutes()

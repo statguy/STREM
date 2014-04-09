@@ -15,18 +15,21 @@ Intersections <- setRefClass(
     getCoordinates = function() return(coordinates(intersections)),
     getData = function() return(intersections@data),
     
-    getIntersectionsFileName = function() {
+    getIntersectionsFileName = function(tag) {
       if (inherits(study, "undefinedField"))
         stop("Provide study parameters.")
-      return(study$context$getFileName(dir=study$context$resultDataDirectory, name="Intersections", response=study$response, region=study$studyArea$region))
+      if (missing(tag))
+        return(study$context$getFileName(dir=study$context$resultDataDirectory, name="Intersections", response=study$response, region=study$studyArea$region))  
+      else
+        return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Intersections", response=study$response, region=study$studyArea$region, tag=tag))
     },
     
-    saveIntersections = function() {
+    saveIntersections = function(fileName) {
       stop("Override saveIntersections() method.")
     },
     
-    loadIntersections = function() {
-      load(getIntersectionsFileName(), envir=as.environment(.self))
+    loadIntersections = function(fileName=getIntersectionsFileName()) {
+      load(fileName, envir=as.environment(.self))
       return(invisible(.self))
     },
     
@@ -160,8 +163,7 @@ SimulatedIntersections <- setRefClass(
       return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Intersections", response=study$response, region=study$studyArea$region, tag=iteration))
     },
     
-    saveIntersections = function() {
-      fileName <- getIntersectionsFileName()
+    saveIntersections = function(fileName=getIntersectionsFileName()) {
       message("Saving intersections to ", fileName)
       save(intersections, intersectionsMatrix, iteration, file=fileName)
     },
