@@ -149,6 +149,11 @@ SmoothModel <- setRefClass(
       data$eta <<- result$summary.linear.predictor$mean[indexObserved] - log(weightsAtSurveyRoutes)
       data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] / weightsAtSurveyRoutes
       data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] / weightsAtSurveyRoutes^2
+
+      message("Fitted values sums all years:")
+      stackData <- inla.stack.data(fullStack, tag="observed")
+      sum(data$intersections / stackData$E[indexObserved])
+      sum(data$fittedMean)
       
       message("Processing random effects...")
         

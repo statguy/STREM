@@ -70,7 +70,7 @@ SimulatedIntersections <- setRefClass(
       
       nSurveyRoutes <- length(surveyRoutes)
       nTracks <- length(tracks)
-      #intersectionsMatrix <- matrix(0, nrow=nSurveyRoutes, ncol=nTracks)
+      #intersectionsMatrix <<- matrix(0, nrow=nSurveyRoutes, ncol=nTracks)
       
       # Assumes that the survey routes are the same each year
       if (dimension == 1) {
@@ -81,16 +81,16 @@ SimulatedIntersections <- setRefClass(
           nSurveyRoutes <- length(surveyRoutes)
           nTracks <- length(tracks)
           message("Finding intersections for survey route ", i, " / ", nSurveyRoutes, " for ", nTracks, " tracks...")
-
+                    
           x <- laply(1:nTracks,
                      function(j, surveyRoutes, tracks, i) {
                        return(length(gIntersection(surveyRoutes[i], tracks[j], byid=TRUE)))
-                     }, surveyRoutes=surveyRoutes, tracks=tracks, i=i)
+                     }, surveyRoutes=surveyRoutes, tracks=tracks, i=i, .inform=TRUE)
           
           return(x)
         }
         
-        intersectionsMatrix <<- laply(1:nSurveyRoutes, countIntersections, surveyRoutes=surveyRoutes, tracks=tracks, .drop=FALSE, .parallel=TRUE)
+        intersectionsMatrix <<- laply(1:nSurveyRoutes, countIntersections, surveyRoutes=surveyRoutes, tracks=tracks, .drop=FALSE, .parallel=TRUE, .inform=TRUE)
       }
       else if (dimension == 2) {
         countIntersections <- function(j, surveyRoutes, tracks) {
@@ -104,12 +104,12 @@ SimulatedIntersections <- setRefClass(
           x <- laply(1:nSurveyRoutes,
                      function(i, surveyRoutes, tracks, j) {
                        return(length(gIntersection(surveyRoutes[i], tracks[j], byid=TRUE)))
-                     }, surveyRoutes=surveyRoutes, tracks=tracks, j=j)
+                     }, surveyRoutes=surveyRoutes, tracks=tracks, j=j, .inform=TRUE)
           
           return(x)
         }
         
-        intersectionsMatrix <<- laply(1:nTracks, countIntersections, surveyRoutes=surveyRoutes, tracks=tracks, .drop=FALSE, .parallel=TRUE)
+        intersectionsMatrix <<- laply(1:nTracks, countIntersections, surveyRoutes=surveyRoutes, tracks=tracks, .drop=FALSE, .parallel=TRUE, .inform=TRUE)
         intersectionsMatrix <<- t(intersectionsMatrix)
       }
       

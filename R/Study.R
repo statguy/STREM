@@ -69,7 +69,7 @@ SimulationStudy <- setRefClass(
     countIntersections = function(iteration) {
       tracks <- study$loadTracks(iteration=iteration)
       intersections <- tracks$countIntersections()
-      return(invisible(intersection))
+      return(invisible(intersections))
     },
     
     estimate = function(iteration, meshParams) {
@@ -79,8 +79,11 @@ SimulationStudy <- setRefClass(
       return(invisible(model))
     },
     
-    collectEstimates = function(iteration) {
-      
+    findPopulationSize = function(iteration, withHabitatWeights=FALSE) {
+      estimates <- study$loadEstimates(iteration=iteration)
+      populationSize <- estimates$getPopulationSize(withHabitatWeights=withHabitatWeights)
+      populationSize$savePopulationSize()
+      return(invisible(populationSize))
     }
   )
 )
