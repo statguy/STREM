@@ -221,6 +221,8 @@ SimulatedTracks <- setRefClass(
     },
     
     getObservationDaysTracks = function(ydays) {
+      library(plyr)
+      
       observationTracksDF <- ddply(tracks, .(year), function(x, ydays) {
         return(subset(x, yday %in% ydays))
       }, ydays=ydays)

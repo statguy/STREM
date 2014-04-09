@@ -100,6 +100,10 @@ SmoothModel <- setRefClass(
       spde <<- inla.spde2.matern(mesh)
       index <<- inla.spde.make.index("st", n.spde=mesh$n, n.group=nYears)
       
+      message("Average survey route length = ", mean(data$length))
+      message("Average count duration = ", mean(data$duration))
+      message("Average animal track length = ", mean(data$distance))
+      
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
       obsStack <<- inla.stack(data=list(response=data$intersections,
                                         E=2/pi * data$length * data$duration * data$distance,

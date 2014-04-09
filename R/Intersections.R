@@ -157,10 +157,13 @@ SimulatedIntersections <- setRefClass(
                                                match.ID=FALSE)
     },
     
-    getIntersectionsFileName = function() {
+    getIntersectionsFileName = function(tag) {
       if (inherits(study, "undefinedField") | length(iteration) == 0)
         stop("Provide study and iteration parameters.")
-      return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Intersections", response=study$response, region=study$studyArea$region, tag=iteration))
+      if (missing(tag))
+        return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Intersections", response=study$response, region=study$studyArea$region, tag=iteration))
+      else
+        return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Intersections", response=study$response, region=study$studyArea$region, tag=paste(iteration, tag, sep="-")))
     },
     
     saveIntersections = function(fileName=getIntersectionsFileName()) {
