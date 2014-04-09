@@ -380,13 +380,13 @@ SimulatedSmoothModel <- setRefClass(
       return(study$context$getLongFileName(study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
     },
     
-    getPopulationSize = function(withHabitatWeights) {
+    getPopulationSize = function(tracks, withHabitatWeights) {
       collectEstimates()
       populationDensity <- getPopulationDensity(getSD=FALSE)
       
       if (mss$hasHabitatWeights()) {
         habitatWeights <- CORINEHabitatWeights$new(study=study)
-        tracks <- study$loadTracks(iteration=iteration)
+        if (missing(tracks)) tracks <- study$loadTracks(iteration=iteration)
         habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=FALSE) # TODO: save
         habitatWeights$setHabitatSelectionWeights(habitatSelection)
         habitatWeighstRaster <- habitatWeights$getWeightsRaster(save=FALSE)
