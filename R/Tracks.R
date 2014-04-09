@@ -28,11 +28,23 @@ Tracks <- setRefClass(
       stop("Override saveData() method.")
     },
     
-    loadTracks = function() {
+    loadTracks = function(addColumns=TRUE) {
       library(adehabitatLT)
-      message("Processing tracks...")
       load(getTracksFileName(), envir=as.environment(.self))
-      #if (is.data.frame(tracks)) tracks <<- addDtDist(tracks)
+      
+      if (is.data.frame(tracks)) {
+        if (any(!names(tracks) %in% c("year","yday","burst"))) {
+          message("Breaking down dates...")
+          tracks <<- data.frame(tracks, breakDownDate(tracks$date))
+          tracks$burst <<- with(tracks, paste(id,year))
+        }
+        if (addColumns) {
+          if (any(!names(tracks) %in% c("dt","dist"))) {
+            message("Finding sample intervals and distances...")
+            tracks <<- addDtDist(tracks)
+          }
+        }
+      }
       return(invisible(.self))
     },
     
@@ -98,9 +110,46 @@ Tracks <- setRefClass(
       intervals$getThinnedTracksSampleIntervals(tracks=.self)
       return(intervals)
     },
-    
+
     # Note! Call this before randomizing observation days. Otherwise you'll lose details of the last movements.
     getDistances = function() {
+      library(dplyr)
+      message("Finding distances...")
+      
+      tracksDF <- if (inherits(tracks, "ltraj")) addDtDist(ld(tracks)) else tracks
+      
+      dayDistance <- function(dt, dist) {
+        add <- if (is.na(last(dt))) mean(dt, na.rm=T) else 0
+        if (is.na(add)) return(as.numeric(NA))
+        s <- (sum(dt, na.rm=T) + add) / 3600
+        if (s < 23 | s > 25) return(as.numeric(NA))
+        noNAIndex <- !(is.na(dist) | is.na(dt))
+        if (length(noNAIndex) == 0) return(as.numeric(NA))
+        return(sum(dist[noNAIndex]) / sum(dt[noNAIndex]) * 24 * 3600)        
+      }
+      
+      distances <- tracksDF %.%
+        group_by(year, id, yday) %.%
+        summarise(distance=dayDistance(dt, dist))
+      distances <- distances$distance
+      
+      if (all(is.na(distances)))
+        stop("Unable to determine movement distance.")
+      
+      distances <- distances[!is.na(distances)]
+      if (any(distances > 50000)) {
+        warning("Unrealistic distances. Removing those...")
+        distances <- distances[distances<50000]
+      }
+      
+      message(sum(!is.na(distances)), " / ", length(distances), " of day movements used to determine mean movement distance = ", mean(distances, na.rm=T), " ± ", sd(distances, na.rm=T), ".")
+      distance <<- mean(distances, na.rm=T)
+      return(invisible(distances))
+    },
+    
+    
+    # Note! Call this before randomizing observation days. Otherwise you'll lose details of the last movements.
+    DEPRECATED.getDistances = function() {
       #warning("Spatial variation in distances not considered in vicinity of the survey routes.")
       message("Finding distances...")
       

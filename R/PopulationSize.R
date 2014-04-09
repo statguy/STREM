@@ -97,7 +97,7 @@ SimulationPopulationSize <- setRefClass(
     },
     
     loadValidationData = function(fileName) {
-      tracks <- study$loadTracks(iteration=iteration)
+      tracks <- study$loadTracks(iteration=iteration, addColumns=FALSE)
       truePopulationSize <- tracks$getTruePopulationSize()
       setValidationSizeData(truePopulationSize)
       return(invisible(.self))

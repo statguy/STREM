@@ -45,13 +45,15 @@ SimulationStudy <- setRefClass(
       return(invisible(.self))
     },
     
-    loadTracks = function(iteration) {
-      tracks <- SimulatedTracks$new(study=.self, iteration=iteration)$loadTracks()
+    loadTracks = function(iteration, addColumns=TRUE) {
+      tracks <- SimulatedTracks$new(study=.self, iteration=iteration)$loadTracks(addColumns=addColumns)
       return(tracks)
     },
     
     loadIntersections = function(iteration) {
       intersections <- SimulatedIntersections$new(study=.self, iteration=iteration)$loadIntersections()
+      tracks <- loadTracks(iteration=iteration)
+      intersections$intersections$distance <- tracks$getMeanDistance()
       return(intersections)
     },
     
