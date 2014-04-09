@@ -40,6 +40,11 @@ SimulationStudy <- setRefClass(
       return(invisible(.self))
     },
     
+    preprocess = function() {
+      loadSurveyRoutes(save=TRUE)
+      return(invisible(.self))
+    },
+    
     loadTracks = function(iteration) {
       tracks <- SimulatedTracks$new(study=.self, iteration=iteration)$loadTracks()
       return(tracks)
@@ -60,10 +65,15 @@ SimulationStudy <- setRefClass(
       return(populationSize)
     },
     
-    loadSurveyRoutes = function(n=800, random=TRUE) {
-      surveyRoutes <- if (random) FinlandRandomWTCSurveyRoutes$new(study=.self)$newInstance(n=800)
-      else FinlandWTCSurveyRoutes(study=.self)$newInstance()
-      return(surveyRoutes)
+    loadSurveyRoutes = function(n=800, random=TRUE, save=FALSE) {
+      surveyRoutes <- if (random) {
+        surveyRoutes <- FinlandRandomWTCSurveyRoutes$new(study=.self)
+        if (save) surveyRoutes$randomizeSurveyRoutes(nSurveyRoutes=n, save=TRUE)
+        return(surveyRoutes$loadSurveyRoutes())
+      }
+      else {
+        return(FinlandWTCSurveyRoutes$new(study=.self)$loadSurveyRoutes())
+      }
     },
     
     countIntersections = function(iteration) {
@@ -131,7 +141,7 @@ FinlandWTCStudy <- setRefClass(
     },
     
     loadSurveyRoutes = function() {
-      return(FinlandWTCSurveyRoutes$new(study=.self)$newInstance())
+      return(FinlandWTCSurveyRoutes$new(study=.self)$loadSurveyRoutes())
     },
     
     loadIntersections = function() {

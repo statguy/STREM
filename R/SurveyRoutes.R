@@ -14,6 +14,20 @@ SurveyRoutes <- setRefClass(
       plot(surveyRoutes, col="blue", add=T)
       return(invisible(.self))
     },
+
+    getSurveyRoutesFileName = function() {
+      return(context$getFileName(dir=context$resultDataDirectory, name="SurveyRoutes", response=study$response, region=study$studyArea$region))
+    },
+    
+    loadSurveyRoutes = function(fileName=getSurveyRoutesFileName()) {
+      load(fileName, env=as.environment(.self))
+      return(invisible(.self))
+    },
+
+    saveSurveyRoutes = function(fileName=getSurveyRoutesFileName()) {
+      save(surveyRoutes, centroids, lengths, file=fileName)
+      return(invisible(.self))
+    },
     
     getLengths = function() {
       library(rgeos)
@@ -56,17 +70,18 @@ FinlandRandomWTCSurveyRoutes <- setRefClass(
       return(invisible(.self))
     },
     
-    newInstance = function(nStudyRoutes) {
-      surveyRoutes <<- getRandomSurveyRoutes(nStudyRoutes=nStudyRoutes)
+    randomizeSurveyRoutes = function(nSurveyRoutes, save=FALSE) {
+      initialPopulation <- RandomInitialPopulation$new(studyArea=study$studyArea)
+      centroids <<- initialPopulation$randomize(nSurveyRoutes)
+      angles <- runif(length(centroids), 0, 2*pi)
+      surveyRoutes <<- getTriangles(centroids, angles, 4000)
       getLengths()
+      if (save) saveSurveyRoutes()
       return(invisible(.self))
     },
     
-    getRandomSurveyRoutes = function(nStudyRoutes) {
-      initialPopulation <- RandomInitialPopulation$new(studyArea=study$studyArea)
-      centroids <<- initialPopulation$randomize(nStudyRoutes)
-      angles <- runif(length(centroids), 0, 2*pi)
-      return(getTriangles(centroids, angles, 4000))
+    getSurveyRoutesFileName = function() {
+      return(context$getFileName(dir=context$resultDataDirectory, name="SurveyRoutes", response="Random", region=study$studyArea$region))
     }
   )  
 )
@@ -82,18 +97,18 @@ FinlandWTCSurveyRoutes <- setRefClass(
       return(invisible(.self))
     },
     
-    newInstance = function() {
-      getWTCSurveyRoutes()
-      getLengths()
-      return(invisible(.self))
-    },
-        
-    getWTCSurveyRoutes = function() {
+    loadSurveyRoutes = function(fileName=getSurveyRoutesFileName()) {
       intersections <- FinlandWTCIntersections$new(study=study)$loadIntersections()
       centroids <<- intersections$getSurveyLocations()
       # Angles are unknown, randomize. TODO: Find the most likely angles given the landscape.
       angles <- runif(length(centroids), 0, 2 * pi)
       surveyRoutes <<- getTriangles(centroids, angles, 4000)
+      getLengths()
+      return(invisible(.self))
+    },
+    
+    saveSurveyRoutes = function(fileName=getSurveyRoutesFileName()) {
+      stop("Unsupported method.")
     }
   )
 )
