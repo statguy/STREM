@@ -50,7 +50,7 @@ MovementSampleIntervals <- setRefClass(
                         intervalSec=intervalMin * 60,
                         distanceKm=distKm,
                         x=mean(x$x),
-                        y=mean(x$y))        
+                        y=mean(x$y))   
         return(y)
       }, .parallel=TRUE)
       
@@ -72,8 +72,8 @@ MovementSampleIntervals <- setRefClass(
       intervalsList[[1]] <- tracks$getSampleIntervals()
       
       for (i in 2:maxThins) {
-        #thinnedTracks <- thinnedTracksCollection$getTracks(1)$thin(by=i, thinId=i)
-        thinnedTracks <- thinnedTracksCollection$getTracks(i-1)$thin(by=2, thinId=i)
+        thinnedTracks <- thinnedTracksCollection$getTracks(1)$thin(by=i, thinId=i)
+        #thinnedTracks <- thinnedTracksCollection$getTracks(i-1)$thin(by=2, thinId=i)
         #message("nrows before = ", nrow(thinnedTracksCollection$getTracks(1)$tracks), ", nrows after = ", nrow(thinnedTracks$tracks))
         
         if (is.null(thinnedTracks)) break
@@ -115,30 +115,102 @@ MovementSampleIntervals <- setRefClass(
       return(dailyDistanceData)
     },
     
-    fit = function(model=log(distanceKm) ~ log(intervalH) + (1|individualId) + (1|thinId)) {
-      library(lme4)  
-      dailyDistanceData <- getDailyDistanceData()
-      estimationResult <<- lmer(model, data=dailyDistanceData)
+    fit = function(covariatesFormula) {
+      library(rstan)
+      set_cppo("fast")
+      
+      code <- '
+      data {
+      int<lower=1> n_obs;
+      vector[n_obs] distance;
+      vector[n_obs] interval;
+      int<lower=1> n_individuals;
+      matrix[n_obs,n_individuals] individual_model_matrix;
+      int<lower=1> n_samples;
+      matrix[n_obs,n_samples] sample_model_matrix;
+      int<lower=1> n_fixed;
+      matrix[n_obs,n_fixed] fixed_model_matrix;
+      int<lower=1> n_predicts;
+      vector[n_predicts] predict_interval;
+      }
+      parameters {
+      real alpha;
+      real intercept;
+      real<lower=0> sigma;
+      vector[n_individuals] individual_effect;
+      real<lower=0> individual_sigma;
+      vector[n_samples] sample_effect;
+      real<lower=0> sample_sigma;
+      vector[n_fixed] fixed_effect;
+      }
+      model {
+      vector[n_obs] mu;
+      individual_effect ~ normal(0, individual_sigma);
+      sample_effect ~ normal(0, sample_sigma);
+      mu <- intercept + fixed_model_matrix * fixed_effect - alpha * log(interval) + individual_model_matrix * individual_effect + sample_model_matrix * sample_effect;
+      log(distance) ~ normal(mu, sigma);
+      }
+      generated quantities {
+      vector[n_predicts] predicted_distance;
+      predicted_distance <- exp(intercept - alpha * log(predict_interval));
+      }
+      '
+      
+      #covariatesFormula <- ~populationDensity + rrday + snow + tday - 1
+      fixed_model_matrix <- if (missing(covariatesFormula)) matrix(0, nrow=nrow(movements), ncol=1)
+      else model.matrix(covariatesFormula, movements)
+      
+      predict_interval <- seq(0, 12, by=0.1)
+      data <- with(movements, list(
+        n_obs = length(distanceKm),
+        distance = distanceKm,
+        interval = intervalH,
+        n_individuals = length(unique(individualId)),
+        individual_model_matrix = model.matrix(~individualId-1, movements),
+        n_samples = length(unique(sampleId)),
+        sample_model_matrix = model.matrix(~sampleId-1, movements),
+        predict_interval = predict_interval,
+        n_predicts = length(predict_interval),
+        n_fixed = ncol(fixed_model_matrix),
+        fixed_model_matrix = fixed_model_matrix
+      ))
+      
+      estimationResult <<- stan(model_code=code, data=data, iter=1000, chains=1)
+      
       return(invisible(.self))
     },
     
-    predict = function(predictionData=data.frame(intervalH=seq(0, 12, by=0.1)), randomEffectsFormula=NA) {
-      distanceKm <- MovementSampleIntervalsPredict(estimationResult=estimationResult, predictionData=predictionData, randomEffectsFormula=randomEffectsFormula)
+    predict = function(fixed_model_matrix, intervalH) {
+      estimatedValues <- rstan::extract(estimationResult)
+      intercept <- mean(estimatedValues$intercept)
+      alpha <- mean(estimatedValues$alpha)
+      fixed_effect <- colMeans(estimatedValues$fixed_effect)
+      
+      if (ncol(fixed_model_matrix) != length(fixed_effect))
+        stop("Model matrix must have the same number of columns as is length of the fixed_effect vector.")
+      
+      distanceKm <- exp(intercept + fixed_model_matrix %*% fixed_effect - alpha * log(intervalH))
+
       return(invisible(distanceKm))
     },
     
-    plotIntervalDistance = function(predictionData=data.frame(intervalH=seq(0, 12, by=0.1)), randomEffectsFormula=NA) {
+    plotIntervalDistance = function() {
       library(ggplot2)
-      p <- ggplot(intervals, aes(intervalH, distanceKm)) + geom_point() +
+      
+      p <- ggplot(intervals, aes(intervalH, distanceKm)) + geom_point(alpha=.3) +
         ylab("Distance / day (km)") + xlab("Sampling interval (h)") + theme_bw(18)  
       
       if (!inherits(estimationResult, "uninitializedField")) {
-        library(lme4)
-        predictionData$distanceKm <- exp(predict(predictionData=predictionData, randomEffectsFormula=randomEffectsFormula))
-        p <- p + geom_line(data=predictionData, aes(intervalH, distanceKm), color="red")
+        movementsFit <- data.frame(intervalH=predict_interval,
+                                   distanceKm=colMeans(rstan::extract(estimationResult)$predicted_distance),
+                                   distanceKm25=apply(rstan::extract(estimationResult)$predicted_distance, 2, quantile, .025),
+                                   distanceKm975=apply(rstan::extract(estimationResult)$predicted_distance, 2, quantile, .975))
+        p <- p + geom_line(data=movementsFit, aes(intervalH, distanceKm), color="red") +
+          geom_smooth(data=movementsFit, aes(ymin=distanceKm25, ymax=distanceKm975), stat="identity") + ylim(c(0, max(intervals$distanceKm)))
       }
       
       print(p)
+      
       return(invisible(p))
     },
     
@@ -160,27 +232,32 @@ FinlandMovementSampleIntervals <- setRefClass(
       return(invisible(.self))
     },
     
-    saveIntervalCovariates = function() {
+    saveIntervalCovariates = function(save=FALSE) {
       intervalsSP <- intervals
       coordinates(intervalsSP) <- ~ x+y
       proj4string(intervalsSP) <- study$studyArea$proj4string
-      saveCovariates(intervalsSP, save=FALSE)
+      saveCovariates(intervalsSP, save=save)
+      if (nrow(covariates) != nrow(intervals))
+        stop("Something wrong with covariates.")
       return(invisible(.self))
     },
     
     getDailyDistanceData = function() {
+      library(dplyr)
+      
       if (nrow(intervals) == 0)
         stop("Run get getSampleIntervals() first.")     
       if (nrow(covariates) == 0) saveIntervalCovariates()
-      dailyDistanceData <- merge(intervals, covariates, sort=F)
+      movements <- data.frame(intervals, select(covariates, -c(id,year)))
+      movements$sampleId <- with(movements, paste(individualId, date))
       
       # To avoid problems with log-transformation
-      dailyDistanceData$populationDensity <- dailyDistanceData$populationDensity + 1
-      dailyDistanceData$rrday <- dailyDistanceData$rrday + 1
-      dailyDistanceData$snow <- dailyDistanceData$snow + 1
-      dailyDistanceData$tday <- dailyDistanceData$tday + 100
+      #movements$populationDensity <- movements$populationDensity + 1
+      #movements$rrday <- movements$rrday + 1
+      #movements$snow <- movements$snow + 1
+      #movements$tday <- movements$tday + 100
       
-      return(dailyDistanceData)
+      return(movements)
     },
         
     predictDistances = function(model=log(distanceKm) ~ sqrt(populationDensity) + rrday + snow + tday + log(intervalH) + (1|individualId) + (1|thinId), predictCovariates, truncateDistance=30, thin=TRUE) {

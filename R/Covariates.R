@@ -132,12 +132,12 @@ FinlandCovariates <- setRefClass(
       x <- data.frame(raster::as.data.frame(xyt), breakDownDate(xyt$date))
       weatherCovariates <- ddply(x, .(year), function(x, proj4string) {
         year <- x$year[1]
-        message("Finding weather covariates for year ", year, "...")     
+        message("Finding weather covariates for year ", year, "...")  
         weather <- loadWeatherYear(year=year)
         
         points <- SpatialPoints(x[,c("x","y")], proj4string=CRS(proj4string))
-        weatherValues <- extract(weather, points)
-        x$month[x$month > 3] <- 3        
+        weatherValues <- raster::extract(weather, points)
+        x$month[x$month > 3] <- 3
 
         getColumn = function(variable) {
           columns <- paste("month", x$month, variable, sep="")
@@ -166,6 +166,7 @@ FinlandCovariates <- setRefClass(
     
     saveCovariates = function(xyt, cache=FALSE, fmiApiKey, impute=FALSE, save=TRUE) {
       library(raster)
+      library(dplyr)
       
       if (!inherits(xyt, "SpatialPoints"))
         stop("xyt must be a class of SpatialPointsDataFrame")
@@ -179,8 +180,8 @@ FinlandCovariates <- setRefClass(
       
       if (cache) cacheWeather(years=years, fmiApiKey=fmiApiKey)
       weatherCovariates <- getWeatherCovariates(xyt)
-            
-      covariates <<- merge(populationDensityCovariates, weatherCovariates, sort=FALSE)      
+      
+      covariates <<- data.frame(populationDensityCovariates, select(weatherCovariates, -c(year,id)))
       if (impute) imputeMissingCovariates(coordinates(xyt))
       
       if (save) save(covariates, file=getCovariatesFileName(covariatesName))

@@ -141,33 +141,6 @@ addDtDist <- function(tracksDF, .parallel=FALSE) {
   return(x)
 }
 
-
-DEPRECATED_addDtDist <- function(tracksDF, .parallel=FALSE) {
-  #library(plyr)
-  library(dplyr)
-  
-  if (any(!c("date", "id", "x", "y") %in% names(tracksDF)))
-    stop("Need to have x, y, date and id columns in the tracks data frame.")
-  tracksDF$year <- as.POSIXlt(tracksDF$date)$year + 1900
-  tracksDF$yday <- as.POSIXlt(tracksDF$date)$yday
-  tracksDF$burst <- paste(tracksDF$id, tracksDF$year, tracksDF$yday)
-  
-  tracksDF <- ddply(tracksDF, .(burst), function(x) {
-    n <- nrow(x)
-    if (n == 1) {
-      x$dt <- NA
-      x$dist <- NA
-      return(x)
-    }
-    n1 <- n-1
-    x$dt <- c(difftime(x$date[2:n], x$date[1:n1], units="secs"), NA)
-    x$dist <- c(euclidean(x[1:n1, c("x","y")], x[2:n, c("x","y")]), NA)
-    if (any(x$dt[!is.na(x$dt)] <= 0)) warning("dt <= 0, something wrong with the data...")
-    return(x)
-  }, .parallel=.parallel, .progress="text")
-  return(tracksDF)
-}
-
 transformDeviation <- function(mean, deviation, fun, ...) {
   x <- fun(mean, ...)
   y <- mean(abs(c(x-fun(mean-deviation, ...), x-fun(mean+deviation, ...))) / qnorm(c(0.975)))

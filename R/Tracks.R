@@ -147,54 +147,18 @@ Tracks <- setRefClass(
       return(invisible(distances))
     },
     
-    
-    # Note! Call this before randomizing observation days. Otherwise you'll lose details of the last movements.
-    DEPRECATED.getDistances = function() {
-      #warning("Spatial variation in distances not considered in vicinity of the survey routes.")
-      message("Finding distances...")
-      
-      tracksDF <- if (inherits(tracks, "ltraj")) addDtDist(ld(tracks)) else tracks
-      #tracksDF <- if (is.data.frame(tracks)) tracks else ld(tracks)
-      #d <- as.POSIXlt(tracksDF$date)
-      #tracksDF$yday <- d$yday
-      #tracksDF$year <- d$year
-      distances <- ddply(tracksDF, .(burst, year, id, yday), function(x) {
-        add <- if (is.na(x$dt[nrow(x)])) mean(x$dt, na.rm=T) else 0
-        if (is.na(add)) return(NA)
-        s <- (sum(x$dt, na.rm=T) + add) / 3600
-        if (s < 23 | s > 25) return(NA)
-        noNAIndex <- !(is.na(x$dist) | is.na(x$dt))
-        if (length(noNAIndex) == 0) return(NA)
-        return(sum(x$dist[noNAIndex]) / sum(x$dt[noNAIndex]) * 24 * 3600)
-      }, .parallel=TRUE, .inform=TRUE)$V1
-      
-      if (all(is.na(distances)))
-        stop("Unable to determine movement distance.")
-      
-      distances <- distances[!is.na(distances)]
-      if (any(distances > 50000)) {
-        warning("Unrealistic distances. Removing those...")
-        distances <- distances[distances<50000]
-      }
-      
-      message(sum(!is.na(distances)), " / ", length(distances), " of day movements used to determine mean movement distance = ", mean(distances, na.rm=T), " ± ", sd(distances, na.rm=T), ".")
-      distance <<- mean(distances, na.rm=T)
-      #distances <<- rep(distance, times=length(surveyRoutes$surveyRoutes))
-      return(invisible(distances))
-    },
-    
     getMeanDistance = function() {
       return(mean(getDistances(), na.rm=TRUE))
     },
     
     # Thinning strategies:
     # 
-    # xxxxxxxxxx
-    # x x x x x
-    # x   x   
-    # x
+    # xxxxxxxxxxx
+    # x x x x x x
+    # x   x   x
+    # x       x
     #
-    # xxxxxxxxxx <--- WRONG!
+    # xxxxxxxxxx
     # x x x x x
     # x  x  x  x
     # x   x   x
