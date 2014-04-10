@@ -410,6 +410,12 @@ FinlandSmoothModel <- setRefClass(
     initialize = function(...) {
       callSuper(modelName="SmoothModel", covariatesName="FinlandSmoothModelCovariates", ...)
       return(invisible(.self))
+    },
+    
+    saveMeshNodeCovariates = function(save=FALSE) {
+      meshNodeLocationsSP <- associateMeshLocationsWithDate()
+      saveCovariates(meshNodeLocationsSP, impute=TRUE, save=save)
+      return(invisible(.self))
     }
   )
 )

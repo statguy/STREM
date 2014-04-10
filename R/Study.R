@@ -173,9 +173,11 @@ FinlandWTCStudy <- setRefClass(
             
       model <- FinlandSmoothModel$new(study=.self)
       model$setup(intersections=intersections, meshParams=meshParams)
-      xyt <- model$associateMeshLocationsWithDate()
-      #model$saveCovariates(xyt, impute=FALSE, save=FALSE)
-      model$saveCovariates(xyt, impute=TRUE, save=TRUE)
+      model$saveMeshNodeCovariates()
+      
+      #xyt <- model$associateMeshLocationsWithDate()
+      ##model$saveCovariates(xyt, impute=FALSE, save=FALSE)
+      #model$saveCovariates(xyt, impute=TRUE, save=TRUE)
       
       if (!test) model$estimate(save=T, fileName=model$getEstimatesFileName())
       
