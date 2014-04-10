@@ -18,6 +18,8 @@ estimate <- function(study, iteration, test) {
     model$estimate()
     model$collectEstimates()
     
+    populationSize <- model$getPopulationSize(withHabitatWeights=FALSE); populationSize
+    
     #sum(model$node$mean[,1] * (inla.mesh.fem(model$mesh, order=1)$c1 %*% model$node$mean[,1]))
   }
   else {
@@ -43,7 +45,6 @@ print(args)
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores())
-
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
