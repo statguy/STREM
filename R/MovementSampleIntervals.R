@@ -115,7 +115,7 @@ MovementSampleIntervals <- setRefClass(
       return(dailyDistanceData)
     },
     
-    fit = function(covariatesFormula) {
+    fit = function(covariatesFormula, iterations=1000, chains=1) {
       library(rstan)
       set_cppo("fast")
       
@@ -176,7 +176,7 @@ MovementSampleIntervals <- setRefClass(
         fixed_model_matrix = fixed_model_matrix
       ))
       
-      estimationResult <<- stan(model_code=code, data=data, iter=1000, chains=1)
+      estimationResult <<- stan(model_code=code, data=data, iter=iterations, chains=chains)
       #estimationResult@sim$fnames_oi[grep("fixed_effect", estimationResult@sim$fnames_oi)] <<- colnames(fixed_model_matrix)      
       #estimationResult@sim$samples
       
@@ -200,13 +200,37 @@ MovementSampleIntervals <- setRefClass(
       
       return(invisible(distanceKm))
     },
-        
+    
+    getSampleIntervalsFileName = function() {
+      return(study$context$getFileName(dir=context$resultDataDirectory, "MovementSampleIntervals", response=study$response, region=study$studyArea$region))
+    },
+    
+    saveSampleIntervals = function(fileName=getSampleIntervalsFileName()) {
+      save(intervals, estimationResult, file=fileName)
+      return(invisible(.self))
+    },
+    
+    loadSampleIntervals = function(fileName=getSampleIntervalsFileName()) {
+      load(file=fileName, envir=as.environment(.self))
+      return(invisible(.self))
+    },
+    
     estimatedValuesSummary = function() {
       estimatedValues <- rstan::extract(estimationResult)
       intercept <- summaryStat(estimatedValues$intercept, "intercept")
       alpha <- summaryStat(estimatedValues$alpha, "alpha")
-      fixed_effect <- do.call("rbind", apply(estimatedValues$fixed_effect, 2, summaryStat, "fixed_effect"))
-      return(rbind(intercept, alpha, fixed_effect))
+      fixed_effect <- if (any("fixed_effect" == names(estimatedValues)))
+        do.call("rbind", apply(estimatedValues$fixed_effect, 2, summaryStat, "fixed_effect"))
+      else NULL
+      sigma <- summaryStat(estimatedValues$sigma, "sigma")
+      individual_sigma <- summaryStat(estimatedValues$individual_sigma, "individual_sigma")
+      sample_sigma <- summaryStat(estimatedValues$sample_sigma, "sample_sigma")
+      
+      print(rbind(intercept, alpha, fixed_effect, sigma, individual_sigma, sample_sigma))
+      cat("\n")
+      cat(paste("Log likelihood =", mean(estimatedValues$lp__)))
+      
+      return(invisible(.self))
     },
     
     plotIntervalDistance = function() {

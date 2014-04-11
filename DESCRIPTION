@@ -22,10 +22,9 @@ Collate:
   HabitatSelection.R
   TracksCollection.R
   Intersections.R
-  IntersectionsCollection.R
   MovementSampleIntervals.R
   SurveyRoutes.R
   InitialPopulation.R
   MovementSimulationScenario.R
   Model.R
-  ModelCollection.R
+

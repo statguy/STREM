@@ -244,23 +244,11 @@ FinlandWTCIntersections <- setRefClass(
       intersections <<- SpatialPointsDataFrame(xy[retainIndex,], data=wtc, proj4string=CRS("+init=epsg:2393"))
 
       save(intersections, file=getIntersectionsFileName())
+    },
+    
+    predictDistances = function(formula=study$getDistanceCovariatesModel(), intervalH=study$getTrackSampleInterval()) {
+      intersections$distance <<- study$predictDistances(formula=formula, data=covariates, intervalH=intervalH)      
+      return(invisible(.self))
     }
   )
 )
-
-# Debug code
-if (F) {
-if (nSurveyRoutes > 100) {
-  from <- c(round(seq(1, nSurveyRoutes, by=nSurveyRoutes/10)))
-  to <- c(from[-1], nSurveyRoutes+1)-1
-}
-else {
-  from <- 1
-  to <- nSurveyRoutes
-}
-
-for (i in 1:length(from)) {
-  x <- laply(from[i]:to[i], countIntersections, surveyRoutes=surveyRoutes, tracks=tracks, .drop=FALSE, .parallel=TRUE)
-  intersectionsMatrix <<- rbind(intersectionsMatrix, x)
-}
-}

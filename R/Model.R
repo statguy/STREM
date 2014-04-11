@@ -76,20 +76,23 @@ SmoothModel <- setRefClass(
       return(invisible(.self))
     },
     
-    setupInterceptPrior = function(populationSizeMean, populationSizeDeviation) {
+    setupInterceptPrior = function(priorParams) {
       # TODO: Find area from raster ignoring NA values if habitat weights are used
-      # TODO: Use correct link function (now using default)
+      # TODO: Link function is fixed, change if needed
       
       area <- study$studyArea$boundary@polygons[[1]]@area
       toTheta <- function(x, area) log(x / area)
       fromTheta <- function(x, area) exp(x) * area
+      
+      populationSizeMean <- priorParams$mean
+      populationSizeDeviation <- priorParams$sd
       
       x <- toTheta(populationSizeMean, area)
       y <- transformDeviation(populationSizeMean, populationSizeDeviation, toTheta, area=area)
       interceptPrior <<- list(mean=x, prec=1/y)
       
       z <- fromTheta(qnorm(c(0.025,0.5,0.975), x, y), area)
-      message("intercept 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
+      message("Intercept prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
       
       return(invisible(.self))
     },
@@ -301,12 +304,19 @@ SmoothModel <- setRefClass(
       library(plyr)
       library(fields)
       
+      #if (!inherits(xyt, "SpatialPointsDataFrame"))
+      #  stop("Argument xyt must be of class SpatialPointsDataFrame.")
+      #if (any(!c("year","date") %in% names(xyt)))
+      #  stop("Argument xyt must have data columns names year, date.")
+      #if (inherits(mesh, "uninitializedField"))
+      #  stop("Run setupMesh() first.")
+      
       nYears <- length(years)
       meshLocations <- getUnscaledMesh()$loc[,1:2]
       nMeshLocations <- nrow(meshLocations)
-      predictLocations <- repeatMatrix(meshLocations, nYears)      
-      id <- rep(1:nMeshLocations, nYears)
-      year <- rep(years, each=nMeshLocations)
+      #predictLocations <- repeatMatrix(meshLocations, nYears)      
+      #id <- rep(1:nMeshLocations, nYears)
+      #year <- rep(years, each=nMeshLocations)
       
       xyt <- ddply(data, .(year), function(x) {
         message("Finding the closest observations for mesh nodes for year ", x$year[1], "...")

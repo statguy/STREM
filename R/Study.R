@@ -104,6 +104,8 @@ FinlandWTCStudy <- setRefClass(
   Class = "FinlandWTCStudy",
   contains = "Study",
   fields = list(
+    distanceCovariatesModel = "formula",
+    trackSampleInterval = "numeric"
   ),
   methods = list(
     initialize = function(context, ...) {
@@ -121,8 +123,10 @@ FinlandWTCStudy <- setRefClass(
 
       intersections$saveIntersections()
       intersections$saveCovariates(intersections$intersections, cache=cacheCovariates, fmiApiKey=fmiApiKey)
-      
+            
       tracks$saveTracks()
+      
+      fitDistanceCorrectionModel(save=TRUE)
       
       if (findHabitatWeights) {
         habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=T)
@@ -146,9 +150,17 @@ FinlandWTCStudy <- setRefClass(
       return(FinlandWTCSurveyRoutes$new(study=.self)$loadSurveyRoutes())
     },
     
-    loadIntersections = function() {
-      intersections <- FinlandWTCIntersections$new(study=.self)$loadIntersections()
+    loadIntersections = function(predictDistances=TRUE) {
+      intersections <- FinlandWTCIntersections$new(study=.self)
+      intersections$loadIntersections()
       intersections$loadCovariates()
+      
+      if (predictDistances) intersections$predictDistances()
+      else {
+        tracks <- loadTracks()
+        intersections$intersections$distance <- tracks$getMeanDistance()
+      }
+      
       return(intersections)
     },
     
@@ -167,19 +179,18 @@ FinlandWTCStudy <- setRefClass(
       return(CORINEHabitatWeights$new(study=.self)$loadWeightsRaster())
     },
     
-    estimate = function(meshParams, test=FALSE) {
+    estimate = function(meshParams, interceptPriorParams, predictDistances=TRUE, save=FALSE, test=FALSE) {
       intersections <- loadIntersections()
-      intersections$intersections$distance <- 1
+      if (predictDistances) intersections$predictDistances()
+      else intersections$intersections$distance <- tracks$getMeanDistance()
             
       model <- FinlandSmoothModel$new(study=.self)
       model$setup(intersections=intersections, meshParams=meshParams)
       model$saveMeshNodeCovariates()
+      if (!missing(interceptPriorParams))
+        model$setupInterceptPrior(priorParams=interceptPriorParams)
       
-      #xyt <- model$associateMeshLocationsWithDate()
-      ##model$saveCovariates(xyt, impute=FALSE, save=FALSE)
-      #model$saveCovariates(xyt, impute=TRUE, save=TRUE)
-      
-      if (!test) model$estimate(save=T, fileName=model$getEstimatesFileName())
+      if (!test) model$estimate(save=save, fileName=model$getEstimatesFileName())
       
       return(model)
     },
@@ -190,15 +201,39 @@ FinlandWTCStudy <- setRefClass(
       return(estimates)
     },
 
-    #predictDistances = function(predictCovariates) {
-    #  intervals <- FinlandMovementSampleIntervals$new(study=.self)
-    #  distances <- intervals$predictDistances(predictCovariates=predictCovariates)
-    #  return(distances)
-    #},
-    
     getSampleIntervals = function() {
-      intervals <- FinlandMovementSampleIntervals$new(study=.self)
-      return(intervals)
+      return(FinlandMovementSampleIntervals$new(study=.self))
+    },
+    
+    loadSampleIntervals = function() {
+      return(getSampleIntervals()$loadSampleIntervals())
+    },
+    
+    getDistanceCovariatesModel = function() {
+      return(distanceCovariatesModel);
+    },
+    
+    getTrackSampleInterval = function() {
+      return(trackSampleInterval);
+    },
+    
+    fitDistanceCorrectionModel = function(iterations=1000, chains=1, save=TRUE) {
+      tracks <- loadTracks()
+      
+      sampleIntervals <- getSampleIntervals()
+      sampleIntervals$getThinnedTracksSampleIntervals(tracks=tracks)
+      sampleIntervals$saveTrackCovariates(save=FALSE)
+      sampleIntervals$fit(covariatesFormula=getDistanceCovariatesModel(), iterations=iterations, chains=chains)
+      if (save) sampleIntervals$saveSampleIntervals()
+      
+      return(sampleIntervals)
+    },
+    
+    predictDistances = function(formula, data, intervalH=2) {
+      sampleIntervals <- loadSampleIntervals()
+      fixed_model_matrix <- model.matrix(formula, data)
+      distances <- sampleIntervals$predict(fixed_model_matrix=fixed_model_matrix, intervalH=intervalH) * 1000
+      return(distances)
     },
     
     collectEstimates = function(withDistanceWeights=TRUE) {
