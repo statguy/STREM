@@ -175,7 +175,7 @@ SimulatedIntersections <- setRefClass(
       tracks <- study$loadTracks(iteration=iteration)
       intersections$distance <<- tracks$getMeanDistance() # Could add bias as distance not determined from the observation day tracks ATM
       model <- SimulatedSmoothModel$new(study=study, iteration=iteration)
-      model$setup(intersections=.self, meshParams=meshParams)
+      model$setup(intersections=.self, meshParams=meshParams, useCovariates=FALSE)
       model$estimate()
       return(model)
     }

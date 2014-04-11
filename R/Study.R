@@ -3,6 +3,7 @@ Study <- setRefClass(
   fields = list(
     context = "Context",
     response = "character",
+    prettyResponse = "character",
     studyArea = "StudyArea"
   ),
   methods = list(
@@ -111,7 +112,16 @@ FinlandWTCStudy <- setRefClass(
     initialize = function(context, ...) {
       callSuper(context=context, ...)
       studyArea <<- FinlandStudyArea$new(context=context)$newInstance()
+      prettyResponse <<- getPrettyResponse(response)
       return(invisible(.self))
+    },
+    
+    getPrettyResponse = function(response) {
+      x <- switch (response,
+        canis.lupus="Canis lupus",
+        lynx.lynx="Lynx lynx",
+        rangifer.tarandus.fennicus="Rangifer tarandus fennicus")
+      return(x)
     },
     
     preprocessResponse = function(response, maxDuration=1, cacheCovariates=TRUE, findHabitatWeights=TRUE, fmiApiKey) {
@@ -186,7 +196,6 @@ FinlandWTCStudy <- setRefClass(
             
       model <- FinlandSmoothModel$new(study=.self)
       model$setup(intersections=intersections, meshParams=meshParams)
-      model$saveMeshNodeCovariates()
       if (!missing(interceptPriorParams))
         model$setupInterceptPrior(priorParams=interceptPriorParams)
       

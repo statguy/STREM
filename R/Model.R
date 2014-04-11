@@ -97,45 +97,55 @@ SmoothModel <- setRefClass(
       return(invisible(.self))
     },
     
-    setup = function(intersections, meshParams, family="nbinomial") {
+    getObservedOffset = function(distance=data$distance) {
+      return(2/pi * data$length * data$duration * distance)
+    },
+    
+    getNodeOffset = function(distance=mean(data$distance)) {
+      # Put on approximately the same scale with observed crossings
+      return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years)))
+    },
+    
+    setup = function(intersections, meshParams, family="nbinomial", useCovariates=TRUE) {
       library(INLA)
       
       message("Constructing mesh...")
       
-      data <<- intersections$getData()
+      data <<- intersections$getData()      
       coordsScale <<- meshParams$coordsScale
       locations <<- intersections$getCoordinates() * coordsScale
       mesh <<- inla.mesh.create.helper(points.domain=locations,
                                        min.angle=meshParams$minAngle,
                                        max.edge=meshParams$maxEdge * coordsScale,
                                        cutoff=meshParams$cutOff * coordsScale)
-      
-      message("Number of nodes in the mesh = ", mesh$n)
-      
-      family <<- family
-      model <<- response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))
 
       years <<- as.integer(sort(unique(data$year)))
       nYears <- length(years)
-      groupYears <- as.integer(data$year - min(years) + 1)
-      
+      groupYears <- as.integer(data$year - min(years) + 1)      
+            
       spde <<- inla.spde2.matern(mesh)
       index <<- inla.spde.make.index("st", n.spde=mesh$n, n.group=nYears)
       
+      family <<- family
+      model <<- response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))
+      
+      if (useCovariates) saveMeshNodeCovariates() # TODO: separate setupMesh() and setupModel() and attach covariates in between
+      
+      message("Number of nodes in the mesh = ", mesh$n)
       message("Average survey route length = ", mean(data$length))
       message("Average count duration = ", mean(data$duration))
       message("Average animal track length = ", mean(data$distance))
-      
+  
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
       obsStack <<- inla.stack(data=list(response=data$intersections,
-                                        E=2/pi * data$length * data$duration * data$distance,
+                                        E=getObservedOffset(),
                                         link=1),
                                A=list(A),
                                effects=list(c(index, list(intercept=1))),
                                tag="observed")
       
       predStack <<- inla.stack(data=list(response=NA,
-                                         E=1, #rep(2/pi * 12000 * 1 * mean(data$distance), mesh$n * nYears),
+                                         E=getNodeOffset(),
                                          link=1),
                                A=list(1),
                                effects=list(c(index, list(intercept=1))),
@@ -171,9 +181,8 @@ SmoothModel <- setRefClass(
       }
     },
 
-    collectEstimates = function(weightsAtSurveyRoutes=1, weightsAtNodes=1, quick=FALSE) {
+    collectEstimates = function(weightsAtSurveyRoutes=1, weightsAtNodes=1, offsetOperator=elementWiseProduct, inverseOffsetOperator=elementWiseDivision) {
       library(INLA)
-      library(plyr)
       
       message("Processing fitted values...")
       
@@ -185,20 +194,59 @@ SmoothModel <- setRefClass(
       message("Fitted values sums all years:")
       stackData <- inla.stack.data(fullStack, tag="observed")
       message("observed = ", sum(data$intersections))
-      message("estimated = ", sum(data$fittedMean * stackData$E[indexObserved]))
+      message("estimated = ", sum(data$fittedMean))
+      message("estimated * offset = ", sum(data$fittedMean * stackData$E[indexObserved]))
       
       message("Processing random effects...")
         
-      yearsVector <- sort(unique(data$year))
       indexPredicted <- inla.stack.index(fullStack, "predicted")$data
-      node$mean <<- matrix(result$summary.fitted.values$mean[indexPredicted] / weightsAtNodes, nrow=mesh$n, ncol=length(yearsVector))
-      node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / weightsAtNodes^2, nrow=mesh$n, ncol=length(yearsVector))
-      node$spatialMean <<- matrix(result$summary.random$st$mean, nrow=mesh$n, ncol=length(yearsVector))
-      node$spatialSd <<- matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(yearsVector))
+      node$mean <<- matrix(result$summary.fitted.values$mean[indexPredicted] / weightsAtNodes, nrow=mesh$n, ncol=length(years))
+      node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / weightsAtNodes^2, nrow=mesh$n, ncol=length(years))
+      node$spatialMean <<- matrix(result$summary.random$st$mean, nrow=mesh$n, ncol=length(years))
+      node$spatialSd <<- matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(years))
+      nodeOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years))
       
       message("Fitted mean and SD sums at mesh nodes each year:")
       print(colSums(node$mean))
       print(colSums(node$sd))
+
+      #observedNoDistanceOffset <- 2/pi * data$length * data$duration
+      #nodeNoDistanceOffset <- matrix(rep(2/pi * 12000 * 1, mesh$n * length(years)), nrow=mesh$n, ncol=length(years))
+      
+      stat <- data.frame()
+      for (year in years) {
+        yearWhich <- data$year == year
+        yearIndex <- year - min(years) + 1
+        x <- data.frame(
+          Year=years[yearIndex],
+          
+          Observed=sum(data$intersections[yearWhich]),
+          EstimatedAtObserved=sum(data$fittedMean[yearWhich]),
+          EstimatedAtNodes=sum(node$mean[,yearIndex]),
+          
+          ObservedScaled=sum(inverseOffsetOperator(data$intersections[yearWhich], stackData$E[indexObserved][yearWhich])),
+          EstimatedAtObservedScaled=sum(offsetOperator(data$fittedMean[yearWhich], stackData$E[indexObserved][yearWhich])),
+          EstimatedAtNodesScaled=sum(offsetOperator(node$mean[,yearIndex], nodeOffset[,yearIndex])),
+          
+          ObservedOffset=mean(stackData$E[indexObserved][yearWhich]),
+          NodeOffset=mean(nodeOffset[,yearIndex]),
+          
+          #ObservedScaledNoDistance=sum(data$intersections[yearWhich] / observedNoDistanceOffset[yearWhich]),
+          #EstimatedAtObservedScaledNoDistance=sum(data$fittedMean[yearWhich] / observedNoDistanceOffset[yearWhich]),
+          #EstimatedAtNodesScaled=sum(node$mean[,yearIndex] / nodeNoDistanceOffset[,yearIndex]),
+          
+          Validated=NA) # TODO: add validation counts
+        stat <- rbind(stat, x)
+      }
+      
+      message("Year by year summary:")
+      print(stat)
+      message("Column sums:")
+      print(colSums(stat))
+      message("Column means:")
+      print(colMeans(stat))
+      message("Correlations:")
+      print(cor(stat[!colnames(stat) %in% c("Year")])) #,"ObservedOffset","NodeOffset")]))
       
       #a <- inla.emarginal(exp, result$marginals.fixed$intercept)
       #if (!all(a >= exp(result$summary.fixed["intercept","mean"])))
@@ -218,6 +266,8 @@ SmoothModel <- setRefClass(
     },
     
     collectHyperparameters = function() {
+      library(INLA)
+      
       message("Processing hyperparameters...")
       spdeResult <- inla.spde2.result(result, "st", spde)
       logKappa <- getINLAEstimates(spdeResult$marginals.log.kappa[[1]], coordsScale=1)
@@ -334,7 +384,11 @@ SmoothModel <- setRefClass(
                                     proj4string=study$studyArea$proj4string)
       return(xyt)
     },
-
+    
+    saveMeshNodeCovariates = function(save=FALSE) {
+      stop("Method saveMeshNodeCovariates unimplemented.")
+    },
+        
     plotMesh = function(surveyRoutes) {
       library(INLA)
       library(sp)
@@ -411,6 +465,23 @@ SimulatedSmoothModel <- setRefClass(
   )
 )
 
+SimulatedSmoothModelNoOffset <- setRefClass(
+  Class = "SimulatedSmoothModelNoOffset",
+  contains = c("SimulatedSmoothModel"),
+  fields = list(
+    iteration = "integer"
+  ),
+  methods = list(
+    getObservedOffset = function(distance) {
+      return(1)
+    },
+    
+    getNodeOffset = function(distance) {
+      return(1)
+    }
+  )
+)
+
 FinlandSmoothModel <- setRefClass(
   Class = "FinlandSmoothModel",
   contains = c("SmoothModel", "FinlandCovariates"),
@@ -422,10 +493,43 @@ FinlandSmoothModel <- setRefClass(
       return(invisible(.self))
     },
     
+    getNodeOffset = function(distance=covariates$distance) {
+      return(2/pi * 12000 * 1 * distance)
+    },
+    
     saveMeshNodeCovariates = function(save=FALSE) {
       meshNodeLocationsSP <- associateMeshLocationsWithDate()
       saveCovariates(meshNodeLocationsSP, impute=TRUE, save=save)
+      covariates$distance <<- predictDistances()
       return(invisible(.self))
+    },
+    
+    predictDistances = function(formula=study$getDistanceCovariatesModel(), intervalH=study$getTrackSampleInterval()) {
+      distances <- study$predictDistances(formula=formula, data=covariates, intervalH=intervalH)
+      return(distances)
     }
   )
 )
+
+FinlandSmoothModelNoDistances <- setRefClass(
+  Class = "FinlandSmoothModelNoDistances",
+  contains = c("SmoothModel", "FinlandCovariates"),
+  fields = list(
+  ),
+  methods = list(
+    initialize = function(...) {
+      callSuper(modelName="SmoothModel", covariatesName="FinlandSmoothModelCovariates", ...)
+      return(invisible(.self))
+    },
+
+    getObservedOffset = function(distance) {
+      return(callSuper(distance=1))
+    },
+    
+    getNodeOffset = function(distance) {
+      return(callSuper(distance=1))
+    }
+  )
+)
+
+

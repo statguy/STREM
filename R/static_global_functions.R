@@ -152,3 +152,6 @@ summaryStat <- function(x, rowname=NULL) {
   colnames(y) <- c("mean", "sd", "0.025quant", "0.5quant", "0.975quant")
   return(y)
 }
+
+elementWiseProduct <- function(a, b) a * b
+elementWiseDivision <- function(a, b) a / b
