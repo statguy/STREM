@@ -157,7 +157,8 @@ MovementSampleIntervals <- setRefClass(
       '
       
       #covariatesFormula <- ~populationDensity + rrday + snow + tday - 1
-      fixed_model_matrix <- if (missing(covariatesFormula)) matrix(0, nrow=nrow(movements), ncol=1)
+      movements <- getDailyDistanceData()
+      fixed_model_matrix <- if (missing(covariatesFormula)) matrix(0, nrow=nrow(movements), ncol=1) # Hack
       else model.matrix(covariatesFormula, movements)
       
       predict_interval <- seq(0, 12, by=0.1)
@@ -176,6 +177,8 @@ MovementSampleIntervals <- setRefClass(
       ))
       
       estimationResult <<- stan(model_code=code, data=data, iter=1000, chains=1)
+      #estimationResult@sim$fnames_oi[grep("fixed_effect", estimationResult@sim$fnames_oi)] <<- colnames(fixed_model_matrix)      
+      #estimationResult@sim$samples
       
       return(invisible(.self))
     },
@@ -184,14 +187,26 @@ MovementSampleIntervals <- setRefClass(
       estimatedValues <- rstan::extract(estimationResult)
       intercept <- mean(estimatedValues$intercept)
       alpha <- mean(estimatedValues$alpha)
-      fixed_effect <- colMeans(estimatedValues$fixed_effect)
       
-      if (ncol(fixed_model_matrix) != length(fixed_effect))
-        stop("Model matrix must have the same number of columns as is length of the fixed_effect vector.")
+      if (missing(fixed_model_matrix)) {
+        distanceKm <- exp(intercept - alpha * log(intervalH))
+      }
+      else {
+        fixed_effect <- colMeans(estimatedValues$fixed_effect)
+        if (ncol(fixed_model_matrix) != length(fixed_effect))
+          stop("Model matrix must have the same number of columns as is length of the fixed_effect vector.")
+        distanceKm <- exp(intercept + fixed_model_matrix %*% fixed_effect - alpha * log(intervalH))
+      }
       
-      distanceKm <- exp(intercept + fixed_model_matrix %*% fixed_effect - alpha * log(intervalH))
-
       return(invisible(distanceKm))
+    },
+        
+    estimatedValuesSummary = function() {
+      estimatedValues <- rstan::extract(estimationResult)
+      intercept <- summaryStat(estimatedValues$intercept, "intercept")
+      alpha <- summaryStat(estimatedValues$alpha, "alpha")
+      fixed_effect <- do.call("rbind", apply(estimatedValues$fixed_effect, 2, summaryStat, "fixed_effect"))
+      return(rbind(intercept, alpha, fixed_effect))
     },
     
     plotIntervalDistance = function() {
@@ -232,7 +247,7 @@ FinlandMovementSampleIntervals <- setRefClass(
       return(invisible(.self))
     },
     
-    saveIntervalCovariates = function(save=FALSE) {
+    saveTrackCovariates = function(save=FALSE) {
       intervalsSP <- intervals
       coordinates(intervalsSP) <- ~ x+y
       proj4string(intervalsSP) <- study$studyArea$proj4string

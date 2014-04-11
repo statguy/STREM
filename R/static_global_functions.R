@@ -146,3 +146,9 @@ transformDeviation <- function(mean, deviation, fun, ...) {
   y <- mean(abs(c(x-fun(mean-deviation, ...), x-fun(mean+deviation, ...))) / qnorm(c(0.975)))
   return(y)
 }
+
+summaryStat <- function(x, rowname=NULL) {
+  y <- data.frame(mean=mean(x), sd=sd(x), "0.025quant"=quantile(x, .025), "0.5quant"=quantile(x, .5), "0.975quant"=quantile(x, .975), row.names=rowname)
+  colnames(y) <- c("mean", "sd", "0.025quant", "0.5quant", "0.975quant")
+  return(y)
+}
