@@ -68,7 +68,8 @@ SmoothModel <- setRefClass(
   contains = "Model",
   fields = list(
     family = "character",
-    interceptPrior = "list"
+    interceptPrior = "list",
+    rhoPrior = "list"
   ),
   methods = list(
     initialize = function(...) {
@@ -96,6 +97,13 @@ SmoothModel <- setRefClass(
       
       return(invisible(.self))
     },
+
+    setupRhoPrior = function(priorParams) {
+      rhoPrior <<- list(theta=priorParams)
+      #z <- qnorm(c(0.025, 0.5, 0.975), priorParams$param[1], priorParams$param[2])
+      #message("Rho prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
+      return(invisible(.self))
+    },
     
     getObservedOffset = function(distance=data$distance) {
       return(2/pi * data$length * data$duration * distance)
@@ -106,7 +114,7 @@ SmoothModel <- setRefClass(
       return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years)))
     },
     
-    setup = function(intersections, meshParams, family="nbinomial", useCovariates=TRUE) {
+    setup = function(intersections, meshParams, family="nbinomial", useCovariates=TRUE, replicate=FALSE) {
       library(INLA)
       
       message("Constructing mesh...")
@@ -127,7 +135,15 @@ SmoothModel <- setRefClass(
       index <<- inla.spde.make.index("st", n.spde=mesh$n, n.group=nYears)
       
       family <<- family
-      model <<- response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))
+      model <<- response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1", hyper=rhoPrior))
+      A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
+      
+      if (replicate) {
+        model <<- response ~ -1 + intercept + f(st, model=spde, replicate=st.repl)
+        index <<- inla.spde.make.index("st", n.spde=mesh$n, n.repl=nYears)
+        id <- rep(1:nYears, each=max(as.integer(data$surveyRoute)))
+        A <<- inla.spde.make.A(mesh, loc=locations, index=id, repl=groupYears)
+      }
       
       if (useCovariates) saveMeshNodeCovariates() # TODO: separate setupMesh() and setupModel() and attach covariates in between
       
@@ -135,9 +151,7 @@ SmoothModel <- setRefClass(
       message("Average survey route length = ", mean(data$length))
       message("Average count duration = ", mean(data$duration))
       message("Average animal track length = ", mean(data$distance))
-  
-      # To avoid numerical problems, results are adjusted with offsets after estimation
-      A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
+      
       obsStack <<- inla.stack(data=list(response=data$intersections,
                                         E=1, #getObservedOffset(),
                                         link=1),
@@ -211,10 +225,7 @@ SmoothModel <- setRefClass(
       node$spatialMean <<- matrix(result$summary.random$st$mean, nrow=mesh$n, ncol=length(years))
       node$spatialSd <<- matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(years))
       predictedOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years)) * predictionWeights
-  
-      message("Fitted mean and SD sums at mesh nodes each year:")
-      print(colSums(node$mean))
-      print(colSums(node$sd))
+      
       
       stat <- data.frame()
       for (year in years) {
@@ -420,20 +431,47 @@ SmoothModel <- setRefClass(
       par(op)
     },
     
-    plotEstimatedMean = function(yearIndex=1) {
+    plotSpatialEstimatedMean = function(yearIndex=1) {
       plotProjection(variable=node$mean[,yearIndex], weights=prod(res(study$getTemplateRaster())))
     },
     
-    plotEstimatedSD = function(yearIndex=1) {
+    plotSpatialEstimatedSD = function(yearIndex=1) {
       plotProjection(variable=node$sd[,yearIndex], weights=prod(res(study$getTemplateRaster()))^2)
     },
 
-    plotRandomEffectMean = function(yearIndex=1) {
+    plotSpatialRandomEffectMean = function(yearIndex=1) {
       plotProjection(variable=node$spatialMean[,yearIndex])
     },
     
-    plotRandomEffectSD = function(yearIndex=1) {
+    plotSpatialRandomEffectSD = function(yearIndex=1) {
       plotProjection(variable=node$spatialSd[,yearIndex])
+    },
+    
+    plotTemporal = function(observationWeights=getObservedOffset()) {
+      library(ggplot2)
+      library(reshape2)
+      
+      indexObserved <- inla.stack.index(fullStack, "observed")$data
+      stackData <- inla.stack.data(fullStack, tag="observed")
+      observedOffset <- stackData$E[indexObserved] * observationWeights
+      
+      stat <- data.frame()
+      for (year in years) {
+        yearWhich <- data$year == year
+        yearIndex <- year - min(years) + 1
+        x <- data.frame(
+          Year=years[yearIndex],
+          Observed=sum(data$intersections[yearWhich]),
+          Estimated=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich])
+        )
+        stat <- rbind(x, stat)
+      }
+      
+      x <- melt(stat, id="Year")
+      p <- ggplot(x, aes(Year, value, group=variable, color=variable)) + geom_line()
+      print(p)
+      
+      return(invisible(p))
     }
   )
 )
