@@ -99,6 +99,7 @@ SmoothModel <- setRefClass(
     },
 
     setupRhoPrior = function(priorParams) {
+      warning("Prior for rho not in use.")
       rhoPrior <<- list(theta=priorParams)
       #z <- qnorm(c(0.025, 0.5, 0.975), priorParams$param[1], priorParams$param[2])
       #message("Rho prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
@@ -135,7 +136,7 @@ SmoothModel <- setRefClass(
       index <<- inla.spde.make.index("st", n.spde=mesh$n, n.group=nYears)
       
       family <<- family
-      model <<- response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1", hyper=rhoPrior))
+      model <<- response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))#, hyper=rhoPrior))
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
       
       if (replicate) {
@@ -209,7 +210,7 @@ SmoothModel <- setRefClass(
       data$eta <<- result$summary.linear.predictor$mean[indexObserved] - log(observationWeights)
       data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] / observationWeights
       data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] / observationWeights^2
-
+      
       stackData <- inla.stack.data(fullStack, tag="observed")
       observedOffset <- stackData$E[indexObserved] * observationWeights
       
@@ -218,7 +219,7 @@ SmoothModel <- setRefClass(
       message("estimated = ", sum(data$fittedMean * observedOffset))
       
       message("Processing random effects...")
-        
+      
       indexPredicted <- inla.stack.index(fullStack, "predicted")$data
       node$mean <<- matrix(result$summary.fitted.values$mean[indexPredicted] / predictionWeights, nrow=mesh$n, ncol=length(years))
       node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / predictionWeights^2, nrow=mesh$n, ncol=length(years))
@@ -490,7 +491,8 @@ SimulatedSmoothModel <- setRefClass(
     },
     
     getPopulationSize = function(tracks, withHabitatWeights) {
-      collectEstimates()
+      if (length(node) == 0)
+        stop("Run collectEstimates() first.")
       populationDensity <- getPopulationDensity(getSD=FALSE)
       
       if (mss$hasHabitatWeights()) {
