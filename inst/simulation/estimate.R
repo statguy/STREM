@@ -11,12 +11,17 @@ estimate <- function(study, iteration, test) {
     intersections <- study$loadIntersections(iteration=iteration)
     model <- SimulatedSmoothModel$new(study=study, iteration=iteration)
     #model <- SimulatedSmoothModelNoOffset$new(study=study, iteration=iteration)
+    #offsets <- SimulatedSmoothModel$new(study=study, iteration=iteration)
     meshParams <- list(maxEdge=c(.2e6, .3e6), cutOff=.2e6, coordsScale=1e-6)
     #meshParams <- list(maxEdge=c(.07e6, .2e6), cutOff=.01e6, coordsScale=1e-6)
+    interceptPriorParams <- list(mean=200, sd=199)
     model$setup(intersections=intersections, meshParams=meshParams, useCovariates=FALSE)
-    model$getObservedOffset(); model$getNodeOffset()
+    model$setupInterceptPrior(interceptPriorParams)
+    c(mean(model$getObservedOffset()),sd(model$getObservedOffset()))
+    c(mean(model$getPredictedOffset()),sd(model$getPredictedOffset()))
     model$estimate()
     model$collectEstimates()
+    #model$collectEstimates(weightsAtSurveyRoutes=offsets$getObservedOffset(), weightsAtNodes=offsets$getNodeOffset())
     
     populationSize <- model$getPopulationSize(withHabitatWeights=FALSE); populationSize
     populationSize$plotPopulationSize()

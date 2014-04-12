@@ -101,7 +101,7 @@ SmoothModel <- setRefClass(
       return(2/pi * data$length * data$duration * distance)
     },
     
-    getNodeOffset = function(distance=mean(data$distance)) {
+    getPredictedOffset = function(distance=mean(data$distance)) {
       # Put on approximately the same scale with observed crossings
       return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years)))
     },
@@ -136,16 +136,17 @@ SmoothModel <- setRefClass(
       message("Average count duration = ", mean(data$duration))
       message("Average animal track length = ", mean(data$distance))
   
+      # To avoid numerical problems, results are adjusted with offsets after estimation
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
       obsStack <<- inla.stack(data=list(response=data$intersections,
-                                        E=getObservedOffset(),
+                                        E=1, #getObservedOffset(),
                                         link=1),
                                A=list(A),
                                effects=list(c(index, list(intercept=1))),
                                tag="observed")
       
       predStack <<- inla.stack(data=list(response=NA,
-                                         E=getNodeOffset(),
+                                         E=1, #getPredictedOffset(),
                                          link=1),
                                A=list(1),
                                effects=list(c(index, list(intercept=1))),
@@ -183,37 +184,37 @@ SmoothModel <- setRefClass(
       }
     },
 
-    collectEstimates = function(weightsAtSurveyRoutes=1, weightsAtNodes=1, offsetOperator=elementWiseProduct, inverseOffsetOperator=elementWiseDivision) {
+    #collectEstimates = function(observationWeights=1, predictionWeights=1, useWeightsAsOffset=FALSE) {
+    # Correct missing offset with weights
+    collectEstimates = function(observationWeights=getObservedOffset(), predictionWeights=getPredictedOffset()) {
       library(INLA)
       
       message("Processing fitted values...")
       
       indexObserved <- inla.stack.index(fullStack, "observed")$data
-      data$eta <<- result$summary.linear.predictor$mean[indexObserved] - log(weightsAtSurveyRoutes)
-      data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] / weightsAtSurveyRoutes
-      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] / weightsAtSurveyRoutes^2
+      data$eta <<- result$summary.linear.predictor$mean[indexObserved] - log(observationWeights)
+      data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] / observationWeights
+      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] / observationWeights^2
 
-      message("Fitted values sums all years:")
       stackData <- inla.stack.data(fullStack, tag="observed")
+      observedOffset <- stackData$E[indexObserved] * observationWeights
+      
+      message("Fitted values sums all years:")
       message("observed = ", sum(data$intersections))
-      message("estimated = ", sum(data$fittedMean))
-      message("estimated * offset = ", sum(data$fittedMean * stackData$E[indexObserved]))
+      message("estimated = ", sum(data$fittedMean * observedOffset))
       
       message("Processing random effects...")
         
       indexPredicted <- inla.stack.index(fullStack, "predicted")$data
-      node$mean <<- matrix(result$summary.fitted.values$mean[indexPredicted] / weightsAtNodes, nrow=mesh$n, ncol=length(years))
-      node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / weightsAtNodes^2, nrow=mesh$n, ncol=length(years))
+      node$mean <<- matrix(result$summary.fitted.values$mean[indexPredicted] / predictionWeights, nrow=mesh$n, ncol=length(years))
+      node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / predictionWeights^2, nrow=mesh$n, ncol=length(years))
       node$spatialMean <<- matrix(result$summary.random$st$mean, nrow=mesh$n, ncol=length(years))
       node$spatialSd <<- matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(years))
-      nodeOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years))
-      
+      predictedOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years)) * predictionWeights
+  
       message("Fitted mean and SD sums at mesh nodes each year:")
       print(colSums(node$mean))
       print(colSums(node$sd))
-
-      #observedNoDistanceOffset <- 2/pi * data$length * data$duration
-      #nodeNoDistanceOffset <- matrix(rep(2/pi * 12000 * 1, mesh$n * length(years)), nrow=mesh$n, ncol=length(years))
       
       stat <- data.frame()
       for (year in years) {
@@ -223,15 +224,19 @@ SmoothModel <- setRefClass(
           Year=years[yearIndex],
           
           Observed=sum(data$intersections[yearWhich]),
-          EstimatedAtObserved=sum(data$fittedMean[yearWhich]),
-          EstimatedAtNodes=sum(node$mean[,yearIndex]),
+          EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich]),
+          EstimatedAtNodes=sum(node$mean[,yearIndex] * predictedOffset[,yearIndex]),
           
-          ObservedScaled=sum(inverseOffsetOperator(data$intersections[yearWhich], stackData$E[indexObserved][yearWhich])),
-          EstimatedAtObservedScaled=sum(offsetOperator(data$fittedMean[yearWhich], stackData$E[indexObserved][yearWhich])),
-          EstimatedAtNodesScaled=sum(offsetOperator(node$mean[,yearIndex], nodeOffset[,yearIndex])),
+          #ObservedScaled=sum(data$intersections[yearWhich] / stackData$E[indexObserved][yearWhich]),
+          #EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich] * stackData$E[indexObserved][yearWhich]),
+          #EstimatedAtNodesScaled=sum(node$mean[,yearIndex] * predictedOffset[,yearIndex]),
+
+          ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich]),
+          EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
+          EstimatedAtNodesScaled=sum(node$mean[,yearIndex]),
           
-          ObservedOffset=mean(stackData$E[indexObserved][yearWhich]),
-          NodeOffset=mean(nodeOffset[,yearIndex]),
+          ObservedOffset=mean(observedOffset[yearWhich]),
+          predictedOffset=mean(predictedOffset[,yearIndex]),
           
           #ObservedScaledNoDistance=sum(data$intersections[yearWhich] / observedNoDistanceOffset[yearWhich]),
           #EstimatedAtObservedScaledNoDistance=sum(data$fittedMean[yearWhich] / observedNoDistanceOffset[yearWhich]),
@@ -248,7 +253,7 @@ SmoothModel <- setRefClass(
       message("Column means:")
       print(colMeans(stat))
       message("Correlations:")
-      print(cor(stat[!colnames(stat) %in% c("Year")])) #,"ObservedOffset","NodeOffset")]))
+      print(cor(stat[!colnames(stat) %in% c("Year")])) #,"ObservedOffset","predictedOffset")]))
       
       #a <- inla.emarginal(exp, result$marginals.fixed$intercept)
       #if (!all(a >= exp(result$summary.fixed["intercept","mean"])))
@@ -260,7 +265,7 @@ SmoothModel <- setRefClass(
       #if (!all(b >= exp(result$summary.random$st$mean)))
       #  warning("Jensen's inequality does not hold for random effects.")
       #e <- a * b
-      #e.m <- matrix(e / weightsAtNodes, nrow=mesh$n, ncol=length(yearsVector))
+      #e.m <- matrix(e / predictionWeights, nrow=mesh$n, ncol=length(yearsVector))
       #if (!all(node$mean >= e.m))
       #  warning("Jensen's inequality does not hold for fitted values.")
       
@@ -478,7 +483,7 @@ SimulatedSmoothModelNoOffset <- setRefClass(
       return(1)
     },
     
-    getNodeOffset = function(distance) {
+    getPredictedOffset = function(distance) {
       return(1)
     }
   )
@@ -495,7 +500,7 @@ FinlandSmoothModel <- setRefClass(
       return(invisible(.self))
     },
     
-    getNodeOffset = function(distance=covariates$distance) {
+    getPredictedOffset = function(distance=covariates$distance) {
       return(2/pi * 12000 * 1 * distance)
     },
     
@@ -528,7 +533,7 @@ FinlandSmoothModelNoDistances <- setRefClass(
       return(callSuper(distance=1))
     },
     
-    getNodeOffset = function(distance) {
+    getPredictedOffset = function(distance) {
       return(callSuper(distance=1))
     }
   )
