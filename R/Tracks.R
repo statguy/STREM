@@ -6,7 +6,6 @@ Tracks <- setRefClass(
   fields = list(
     study = "Study",
     tracks = "ANY",
-    distance = "ANY",
     thinId = "integer"
   ),
   methods = list(
@@ -144,7 +143,7 @@ Tracks <- setRefClass(
       }
       
       message(sum(!is.na(distances)), " / ", length(distances), " of day movements used to determine mean movement distance = ", mean(distances, na.rm=T), " ± ", sd(distances, na.rm=T), ".")
-      distance <<- mean(distances, na.rm=T)
+      #distance <<- mean(distances, na.rm=T)
       return(invisible(distances))
     },
     
@@ -163,8 +162,8 @@ Tracks <- setRefClass(
         if (s < 23 | s > 25) return(as.numeric(NA))
         noNAIndex <- !(is.na(dist) | is.na(dt))
         if (length(noNAIndex) == 0) return(as.numeric(NA))
-        distance <- sum(dist[noNAIndex]) / sum(dt[noNAIndex]) * 24 * 3600
-        return(distance)
+        distances <- sum(dist[noNAIndex]) / sum(dt[noNAIndex]) * 24 * 3600
+        return(distances)
       }
       
       tracksDT[, distance:=.internal.getDistances(dt,dist), by=c("year","id","yday")]
@@ -190,7 +189,7 @@ Tracks <- setRefClass(
       }
       
       message(sum(!is.na(distances)), " / ", length(distances), " of day movements used to determine mean movement distance = ", mean(distances, na.rm=T), " ± ", sd(distances, na.rm=T), ".")
-      distance <<- mean(distances, na.rm=T)
+      #distance <<- mean(distances, na.rm=T)
       #distances <<- rep(distance, times=length(surveyRoutes$surveyRoutes))
       return(invisible(distances))
     },
@@ -274,7 +273,7 @@ SimulatedTracks <- setRefClass(
       message("Saving tracks to ", fileName)
       if (thinId != 1)
         stop("Saving thinned tracks unsupported.")
-      save(tracks, iteration, thinId, distance, file=fileName)
+      save(tracks, iteration, thinId, file=fileName)
       return(invisible(.self))
     },
     
