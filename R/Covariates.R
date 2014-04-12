@@ -166,7 +166,7 @@ FinlandCovariates <- setRefClass(
     
     saveCovariates = function(xyt, cache=FALSE, fmiApiKey, impute=FALSE, save=TRUE) {
       library(raster)
-      library(dplyr)
+      #library(dplyr)
       
       if (!inherits(xyt, "SpatialPoints"))
         stop("xyt must be a class of SpatialPointsDataFrame")
@@ -181,7 +181,8 @@ FinlandCovariates <- setRefClass(
       if (cache) cacheWeather(years=years, fmiApiKey=fmiApiKey)
       weatherCovariates <- getWeatherCovariates(xyt)
       
-      covariates <<- data.frame(populationDensityCovariates, select(weatherCovariates, -c(year,id)))
+      #covariates <<- data.frame(populationDensityCovariates, select(weatherCovariates, -c(year,id)))
+      covariates <<- data.frame(populationDensityCovariates, covariates[,!colnames(covariates) %in% c("id","year")])
       if (impute) imputeMissingCovariates(coordinates(xyt))
       
       if (save) save(covariates, file=getCovariatesFileName(covariatesName))

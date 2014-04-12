@@ -112,7 +112,7 @@ Tracks <- setRefClass(
     },
 
     # Note! Call this before randomizing observation days. Otherwise you'll lose details of the last movements.
-    getDistances = function() {
+    NEW_getDistances = function() {
       library(dplyr)
       message("Finding distances...")
       
@@ -147,6 +147,36 @@ Tracks <- setRefClass(
       return(invisible(distances))
     },
     
+    getDistances = function() {
+      library(plyr)
+      message("Finding distances...")
+      
+      tracksDF <- if (inherits(tracks, "ltraj")) addDtDist(ld(tracks)) else tracks
+      distances <- ddply(tracksDF, .(burst, year, id, yday), function(x) {
+        add <- if (is.na(x$dt[nrow(x)])) mean(x$dt, na.rm=T) else 0
+        if (is.na(add)) return(NA)
+        s <- (sum(x$dt, na.rm=T) + add) / 3600
+        if (s < 23 | s > 25) return(NA)
+        noNAIndex <- !(is.na(x$dist) | is.na(x$dt))
+        if (length(noNAIndex) == 0) return(NA)
+        return(sum(x$dist[noNAIndex]) / sum(x$dt[noNAIndex]) * 24 * 3600)
+      }, .parallel=TRUE, .inform=TRUE)$V1
+      
+      if (all(is.na(distances)))
+        stop("Unable to determine movement distance.")
+      
+      distances <- distances[!is.na(distances)]
+      if (any(distances > 50000)) {
+        warning("Unrealistic distances. Removing those...")
+        distances <- distances[distances<50000]
+      }
+      
+      message(sum(!is.na(distances)), " / ", length(distances), " of day movements used to determine mean movement distance = ", mean(distances, na.rm=T), " ± ", sd(distances, na.rm=T), ".")
+      distance <<- mean(distances, na.rm=T)
+      #distances <<- rep(distance, times=length(surveyRoutes$surveyRoutes))
+      return(invisible(distances))
+    },
+
     getMeanDistance = function() {
       return(mean(getDistances(), na.rm=TRUE))
     },

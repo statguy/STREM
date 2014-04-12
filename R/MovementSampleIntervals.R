@@ -282,12 +282,13 @@ FinlandMovementSampleIntervals <- setRefClass(
     },
     
     getDailyDistanceData = function() {
-      library(dplyr)
+      #library(dplyr)
       
       if (nrow(intervals) == 0)
         stop("Run get getSampleIntervals() first.")     
       if (nrow(covariates) == 0) saveIntervalCovariates()
-      movements <- data.frame(intervals, select(covariates, -c(id,year)))
+      #movements <- data.frame(intervals, select(covariates, -c(id,year)))
+      movements <- data.frame(intervals, covariates[,!colnames(covariates) %in% c("id","year")])
       movements$sampleId <- with(movements, paste(individualId, date))
       
       # To avoid problems with log-transformation
