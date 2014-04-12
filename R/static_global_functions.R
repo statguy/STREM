@@ -142,6 +142,33 @@ NEW_addDtDist <- function(tracksDF, .parallel=FALSE) {
 }
 
 addDtDist <- function(tracksDF, .parallel=TRUE) {
+  library(data.table)
+  
+  if (any(!c("date", "id", "x", "y") %in% names(tracksDF)))
+    stop("Need to have x, y, date and id columns in the tracks data frame.")
+
+  tracksDF$year <- as.POSIXlt(tracksDF$date)$year + 1900
+  tracksDF$yday <- as.POSIXlt(tracksDF$date)$yday
+  tracksDF$burst <- paste(tracksDF$id, tracksDF$year, tracksDF$yday)
+  tracksDT <- data.table(tracksDF)
+  
+  getDtDist <- function(date,x,y) {
+    n <- length(date)
+    if (n == 1) return(as.numeric(NA))
+    date <- as.POSIXct(date, origin="1900-01-01 00:00:00")
+    n1 <- n-1
+    dt <- c(difftime(date[2:n], date[1:n1], units="secs"), NA)
+    if (any(dt[!is.na(dt)] <= 0)) warning("dt <= 0, something wrong with the data...")
+    dist <- c(euclidean(cbind(x[1:n1], y[1:n1]), cbind(x[2:n], y[2:n])), NA)
+    return(list(dt=dt, dist=dist))
+  }
+  
+  tracksDT[,c("dt","dist") := getDtDist(date,x,y), by=burst]
+  
+  return(as.data.frame(tracksDT))
+}
+
+OLD_addDtDist <- function(tracksDF, .parallel=TRUE) {
   library(plyr)
   
   if (any(!c("date", "id", "x", "y") %in% names(tracksDF)))

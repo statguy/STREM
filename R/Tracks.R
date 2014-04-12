@@ -24,13 +24,13 @@ Tracks <- setRefClass(
       return(study$context$getFileName(getTracksDirectory(), name="Tracks", response=study$response, region=study$studyArea$region))
     },
     
-    saveTracks = function() {
+    saveTracks = function(fileName=getTracksFileName()) {
       stop("Override saveData() method.")
     },
     
-    loadTracks = function(addColumns=TRUE) {
+    loadTracks = function(fileName=getTracksFileName(), addColumns=TRUE) {
       library(adehabitatLT)
-      load(getTracksFileName(), envir=as.environment(.self))
+      load(fileName, envir=as.environment(.self))
       
       if (is.data.frame(tracks)) {
         if (any(!names(tracks) %in% c("year","yday","burst"))) {
@@ -45,6 +45,7 @@ Tracks <- setRefClass(
           }
         }
       }
+      
       return(invisible(.self))
     },
     

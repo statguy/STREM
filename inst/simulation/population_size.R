@@ -9,7 +9,13 @@ population_size <- function(mss, iteration, test) {
     study <- mss$study
     estimates <- study$loadEstimates(iteration=iteration)
     estimates$collectEstimates()
-      
+    estimates$collectHyperparameters()
+    populationSize <- estimates$getPopulationSize(withHabitatWeights=mss$hasHabitatWeights())
+    populationSize$loadValidationData()
+    populationSize
+    colSums(populationSize$sizeData[,-1])
+    colMeans(populationSize$sizeData[,-1])
+    populationSize$plotPopulationSize()
   }
   else {
     study <- mss$study
