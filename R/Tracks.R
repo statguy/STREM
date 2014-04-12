@@ -149,19 +149,35 @@ Tracks <- setRefClass(
     },
     
     getDistances = function() {
-      library(plyr)
+      #library(plyr)
+      library(data.table)
       message("Finding distances...")
       
-      tracksDF <- if (inherits(tracks, "ltraj")) addDtDist(ld(tracks)) else tracks
-      distances <- ddply(tracksDF, .(burst, year, id, yday), function(x) {
-        add <- if (is.na(x$dt[nrow(x)])) mean(x$dt, na.rm=T) else 0
+      #tracksDF <- if (inherits(tracks, "ltraj")) addDtDist(ld(tracks)) else tracks
+      tracksDT <- if (inherits(tracks, "ltraj")) data.table(addDtDist(ld(tracks))) else data.table(tracks)
+      
+      .internal.getDistances <- function(dt,dist) {
+        add <- if (is.na(last(dt))) mean(dt, na.rm=T) else 0
         if (is.na(add)) return(NA)
-        s <- (sum(x$dt, na.rm=T) + add) / 3600
+        s <- (sum(dt, na.rm=T) + add) / 3600
         if (s < 23 | s > 25) return(NA)
-        noNAIndex <- !(is.na(x$dist) | is.na(x$dt))
+        noNAIndex <- !(is.na(dist) | is.na(dt))
         if (length(noNAIndex) == 0) return(NA)
-        return(sum(x$dist[noNAIndex]) / sum(x$dt[noNAIndex]) * 24 * 3600)
-      }, .parallel=TRUE, .inform=TRUE)$V1
+        return(sum(dist[noNAIndex]) / sum(dt[noNAIndex]) * 24 * 3600)        
+      }
+      
+      tracksDT[, distance:=.internal.getDistances(dt,dist), by=c(year,id,yday)]
+      distances <- tracksDT$distance
+      
+      #distances <- ddply(tracksDF, .(burst, year, id, yday), function(x) {
+      #  add <- if (is.na(x$dt[nrow(x)])) mean(x$dt, na.rm=T) else 0
+      #  if (is.na(add)) return(NA)
+      #  s <- (sum(x$dt, na.rm=T) + add) / 3600
+      #  if (s < 23 | s > 25) return(NA)
+      #  noNAIndex <- !(is.na(x$dist) | is.na(x$dt))
+      #  if (length(noNAIndex) == 0) return(NA)
+      #  return(sum(x$dist[noNAIndex]) / sum(x$dt[noNAIndex]) * 24 * 3600)
+      #}, .parallel=TRUE, .inform=TRUE)$V1
       
       if (all(is.na(distances)))
         stop("Unable to determine movement distance.")

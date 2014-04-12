@@ -10,7 +10,7 @@ estimate <- function(study, iteration, test) {
   if (test) {
     intersections <- study$loadIntersections(iteration=iteration)
     model <- SimulatedSmoothModel$new(study=study, iteration=iteration)
-    model <- SimulatedSmoothModelNoOffset$new(study=study, iteration=iteration)
+    #model <- SimulatedSmoothModelNoOffset$new(study=study, iteration=iteration)
     meshParams <- list(maxEdge=c(.2e6, .3e6), cutOff=.2e6, coordsScale=1e-6)
     #meshParams <- list(maxEdge=c(.07e6, .2e6), cutOff=.01e6, coordsScale=1e-6)
     model$setup(intersections=intersections, meshParams=meshParams, useCovariates=FALSE)
@@ -25,7 +25,8 @@ estimate <- function(study, iteration, test) {
   }
   else {
     meshParams <- list(maxEdge=c(.1e6, .2e6), cutOff=.05e6, coordsScale=1e-6)
-    study$estimate(iteration=iteration, meshParams=meshParams, useCovariates=FALSE)
+    interceptPriorParams <- list(mean=200, sd=199)
+    study$estimate(iteration=iteration, meshParams=meshParams, interceptPriorParams=interceptPriorParams, useCovariates=FALSE)
   }
 }
 

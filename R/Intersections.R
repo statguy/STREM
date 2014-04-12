@@ -35,10 +35,6 @@ Intersections <- setRefClass(
     
     getSurveyLocations = function() {
       return(SpatialPoints(unique(coordinates(intersections)), proj4string=intersections@proj4string))
-    },
-    
-    estimate = function() {
-      stop("Unimplemented method.")
     }
   )
 )
@@ -169,15 +165,6 @@ SimulatedIntersections <- setRefClass(
     saveIntersections = function(fileName=getIntersectionsFileName()) {
       message("Saving intersections to ", fileName)
       save(intersections, intersectionsMatrix, iteration, file=fileName)
-    },
-    
-    estimate = function(meshParams) {
-      tracks <- study$loadTracks(iteration=iteration)
-      intersections$distance <<- tracks$getMeanDistance() # Could add bias as distance not determined from the observation day tracks ATM
-      model <- SimulatedSmoothModel$new(study=study, iteration=iteration)
-      model$setup(intersections=.self, meshParams=meshParams, useCovariates=FALSE)
-      model$estimate()
-      return(model)
     }
   )
 )

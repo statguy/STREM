@@ -85,9 +85,12 @@ SimulationStudy <- setRefClass(
       return(invisible(intersections))
     },
     
-    estimate = function(iteration, meshParams) {
+    estimate = function(iteration, meshParams, interceptPriorParams) {
       intersections <- study$loadIntersections(iteration=iteration)
-      model <- intersections$estimate(meshParams=meshParams)
+      model <- SimulatedSmoothModel$new(study=study, iteration=iteration)
+      model$setup(intersections=.self, meshParams=meshParams, useCovariates=FALSE)
+      if (!missing(interceptPriorParams)) model$setupInterceptPrior(interceptPriorParams)
+      model$estimate()
       model$saveEstimates()
       return(invisible(model))
     },
@@ -193,7 +196,7 @@ FinlandWTCStudy <- setRefClass(
       intersections <- loadIntersections()
       if (predictDistances) intersections$predictDistances()
       else intersections$intersections$distance <- tracks$getMeanDistance()
-            
+      
       model <- FinlandSmoothModel$new(study=.self)
       model$setup(intersections=intersections, meshParams=meshParams)
       if (!missing(interceptPriorParams))

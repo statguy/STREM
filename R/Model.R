@@ -164,6 +164,8 @@ SmoothModel <- setRefClass(
          list(mean=list(intercept=interceptPrior$mean), prec=list(intercept=interceptPrior$prec))
       else NULL
       
+      library("Estimating population density...")
+      
       result <<- inla(model,
                       family=family,
                       data=inla.stack.data(fullStack, spde=spde),
