@@ -31,7 +31,7 @@ estimate <- function(study, iteration, test) {
   else {
     meshParams <- list(maxEdge=c(.1e6, .2e6), cutOff=.05e6, coordsScale=1e-6)
     interceptPriorParams <- list(mean=200, sd=199)
-    study$estimate(iteration=iteration, meshParams=meshParams, interceptPriorParams=interceptPriorParams, useCovariates=FALSE)
+    study$estimate(iteration=iteration, meshParams=meshParams, interceptPriorParams=interceptPriorParams)
   }
 }
 
