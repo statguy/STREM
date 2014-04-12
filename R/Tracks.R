@@ -158,15 +158,16 @@ Tracks <- setRefClass(
       
       .internal.getDistances <- function(dt,dist) {
         add <- if (is.na(last(dt))) mean(dt, na.rm=T) else 0
-        if (is.na(add)) return(NA)
+        if (is.na(add)) return(as.numeric(NA))
         s <- (sum(dt, na.rm=T) + add) / 3600
-        if (s < 23 | s > 25) return(NA)
+        if (s < 23 | s > 25) return(as.numeric(NA))
         noNAIndex <- !(is.na(dist) | is.na(dt))
-        if (length(noNAIndex) == 0) return(NA)
-        return(sum(dist[noNAIndex]) / sum(dt[noNAIndex]) * 24 * 3600)        
+        if (length(noNAIndex) == 0) return(as.numeric(NA))
+        distance <- sum(dist[noNAIndex]) / sum(dt[noNAIndex]) * 24 * 3600
+        return(distance)
       }
       
-      tracksDT[, distance:=.internal.getDistances(dt,dist), by=c(year,id,yday)]
+      tracksDT[, distance:=.internal.getDistances(dt,dist), by=c("year","id","yday")]
       distances <- tracksDT$distance
       
       #distances <- ddply(tracksDF, .(burst, year, id, yday), function(x) {
