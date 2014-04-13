@@ -117,10 +117,18 @@ SmoothModel <- setRefClass(
     
     setup = function(intersections, meshParams, family="nbinomial", useCovariates=TRUE) {
       library(INLA)
+      data <<- intersections$getData()
+      
+      p <- ddply(data, .(year), function(x) {
+        data.frame(pzero=sum(x$intersections==0)/length(x$intersections), mean=mean(x$intersections))
+      })
+      message("Proportion of zeros, mean each year:")
+      print(p)
+      message("Proportion of intersections:")
+      print(prop.table(table(data$intersections)))
       
       message("Constructing mesh...")
       
-      data <<- intersections$getData()      
       coordsScale <<- meshParams$coordsScale
       locations <<- intersections$getCoordinates() * coordsScale
       mesh <<- inla.mesh.create.helper(points.domain=locations,
@@ -130,7 +138,7 @@ SmoothModel <- setRefClass(
 
       years <<- as.integer(sort(unique(data$year)))
       nYears <- length(years)
-      groupYears <- as.integer(data$year - min(years) + 1)      
+      groupYears <- as.integer(data$year - min(years) + 1)
             
       spde <<- inla.spde2.matern(mesh)
       index <<- inla.spde.make.index("st", n.spde=mesh$n, n.group=nYears)

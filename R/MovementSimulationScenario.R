@@ -378,6 +378,9 @@ MovementSimulationScenarioCombined <- setRefClass(
           intersections.i <- SimulatedIntersections$new(study=sourceStudy, iteration=as.integer(i))$loadIntersections()
           if (nrow(intersections.combined$intersections) == 0) intersections.combined$intersections <- intersections.i$intersections
           else intersections.combined$intersections$intersections <- intersections.combined$intersections$intersections + intersections.i$intersections$intersections
+          
+          if (any(intersections.combined$intersections$getCoordinates() != intersections.i$intersections$getCoordinates()))
+            warning("Coordinates mismatch!")
         }
         intersections.combined$saveIntersections()
         
