@@ -147,7 +147,7 @@ SmoothModel <- setRefClass(
       message("Average animal track length = ", mean(data$distance))
       
       obsStack <<- inla.stack(data=list(response=data$intersections,
-                                        E=1, #getObservedOffset(),
+                                        E=getObservedOffset(),
                                         link=1),
                                A=list(A),
                                effects=list(c(index, list(intercept=1))),
@@ -192,9 +192,9 @@ SmoothModel <- setRefClass(
       }
     },
 
-    #collectEstimates = function(observationWeights=1, predictionWeights=1, useWeightsAsOffset=FALSE) {
+    collectEstimates = function(observationWeights=1, predictionWeights=1, useWeightsAsOffset=FALSE) {
     # Correct missing offset with weights
-    collectEstimates = function(observationWeights=getObservedOffset(), predictionWeights=getPredictedOffset()) {
+    #collectEstimates = function(observationWeights=getObservedOffset(), predictionWeights=getPredictedOffset()) {
       library(INLA)
       
       message("Processing fitted values...")
@@ -205,7 +205,8 @@ SmoothModel <- setRefClass(
       data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] / observationWeights^2
       
       stackData <- inla.stack.data(fullStack, tag="observed")
-      observedOffset <- stackData$E[indexObserved] * observationWeights
+      #observedOffset <- stackData$E[indexObserved] * observationWeights
+      observedOffset <- stackData$E[indexObserved]
       
       message("Fitted values sums all years:")
       message("observed = ", sum(data$intersections))
@@ -218,7 +219,8 @@ SmoothModel <- setRefClass(
       node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / predictionWeights^2, nrow=mesh$n, ncol=length(years))
       node$spatialMean <<- matrix(result$summary.random$st$mean, nrow=mesh$n, ncol=length(years))
       node$spatialSd <<- matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(years))
-      predictedOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years)) * predictionWeights
+      #predictedOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years)) * predictionWeights
+      predictedOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years)) * getPredictedOffset()
       
       
       stat <- data.frame()
@@ -232,22 +234,13 @@ SmoothModel <- setRefClass(
           EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich]),
           EstimatedAtNodes=sum(node$mean[,yearIndex] * predictedOffset[,yearIndex]),
           
-          #ObservedScaled=sum(data$intersections[yearWhich] / stackData$E[indexObserved][yearWhich]),
-          #EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich] * stackData$E[indexObserved][yearWhich]),
-          #EstimatedAtNodesScaled=sum(node$mean[,yearIndex] * predictedOffset[,yearIndex]),
-
           ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich]),
           EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
           EstimatedAtNodesScaled=sum(node$mean[,yearIndex]),
           
           ObservedOffset=mean(observedOffset[yearWhich]),
-          predictedOffset=mean(predictedOffset[,yearIndex]),
-          
-          #ObservedScaledNoDistance=sum(data$intersections[yearWhich] / observedNoDistanceOffset[yearWhich]),
-          #EstimatedAtObservedScaledNoDistance=sum(data$fittedMean[yearWhich] / observedNoDistanceOffset[yearWhich]),
-          #EstimatedAtNodesScaled=sum(node$mean[,yearIndex] / nodeNoDistanceOffset[,yearIndex]),
-          
-          Validated=NA) # TODO: add validation counts
+          predictedOffset=mean(predictedOffset[,yearIndex])
+        )
         stat <- rbind(stat, x)
       }
       
@@ -483,12 +476,12 @@ SimulatedSmoothModel <- setRefClass(
       return(study$context$getLongFileName(study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
     },
     
-    getPopulationSize = function(tracks, withHabitatWeights) {
+    getPopulationSize = function(tracks, withHabitatWeights=FALSE) {
       if (length(node) == 0)
         stop("Run collectEstimates() first.")
       populationDensity <- getPopulationDensity(getSD=FALSE)
       
-      if (mss$hasHabitatWeights()) {
+      if (withHabitatWeights) {
         habitatWeights <- CORINEHabitatWeights$new(study=study)
         if (missing(tracks)) tracks <- study$loadTracks(iteration=iteration)
         habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=FALSE) # TODO: save

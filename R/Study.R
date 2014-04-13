@@ -85,21 +85,21 @@ SimulationStudy <- setRefClass(
       return(invisible(intersections))
     },
     
-    estimate = function(iteration, meshParams, interceptPriorParams) {
+    estimate = function(iteration, meshParams, interceptPriorParams, save=TRUE) {
       intersections <- loadIntersections(iteration=iteration)
       model <- SimulatedSmoothModel$new(study=.self, iteration=iteration)
       model$setup(intersections=intersections, meshParams=meshParams, useCovariates=FALSE)
       if (!missing(interceptPriorParams)) model$setupInterceptPrior(interceptPriorParams)
       model$estimate()
-      model$saveEstimates()
+      if (save) model$saveEstimates()
       return(invisible(model))
     },
     
-    getPopulationSize = function(iteration, withHabitatWeights=FALSE) {
+    getPopulationSize = function(iteration, withHabitatWeights=FALSE, save=TRUE) {
       estimates <- loadEstimates(iteration=iteration)
       estimates$collectEstimates()
       populationSize <- estimates$getPopulationSize(withHabitatWeights=withHabitatWeights)
-      populationSize$savePopulationSize()
+      if (save) populationSize$savePopulationSize()
       return(invisible(populationSize))
     }
   )

@@ -29,16 +29,17 @@ Tracks <- setRefClass(
     
     loadTracks = function(fileName=getTracksFileName(), addColumns=TRUE) {
       library(adehabitatLT)
+      library(data.table)
       load(fileName, envir=as.environment(.self))
       
       if (is.data.frame(tracks)) {
-        if (any(!names(tracks) %in% c("year","yday","burst"))) {
+        if (any(!c("year","yday","burst") %in% names(tracks))) {
           message("Breaking down dates...")
           tracks <<- data.frame(tracks, breakDownDate(tracks$date))
           tracks$burst <<- with(tracks, paste(id,year))
         }
         if (addColumns) {
-          if (any(!names(tracks) %in% c("dt","dist"))) {
+          if (any(!c("dt","dist") %in% names(tracks))) {
             message("Finding sample intervals and distances...")
             tracks <<- addDtDist(tracks)
           }
@@ -147,13 +148,15 @@ Tracks <- setRefClass(
       return(invisible(distances))
     },
     
-    getDistances = function() {
+    getDistances = function(fromSample=TRUE) {
       #library(plyr)
       library(data.table)
       message("Finding distances...")
-      
-      #tracksDF <- if (inherits(tracks, "ltraj")) addDtDist(ld(tracks)) else tracks
-      tracksDT <- if (inherits(tracks, "ltraj")) data.table(addDtDist(ld(tracks))) else data.table(tracks)
+
+      tracksDT <- if (inherits(tracks, "ltraj")) data.table(addDtDist(ld(tracks))) else {
+        if (fromSample) data.table(tracks[1:10000,]) # TODO: taking random sample would be better, but it has to be taken without breaking the days
+        else data.table(tracks)
+      }
       
       .internal.getDistances <- function(dt,dist) {
         add <- if (is.na(last(dt))) mean(dt, na.rm=T) else 0
@@ -247,7 +250,8 @@ SimulatedTracks <- setRefClass(
   Class = "SimulatedTracks",
   contains = "Tracks",
   fields = list(
-    iteration = "integer"
+    iteration = "integer",
+    truePopulationSize = "data.frame"
   ),
   methods = list(
     initialize = function(xy, id, date, dt, dist, burst, year, yday, preprocessData=FALSE, ...) {
@@ -268,12 +272,18 @@ SimulatedTracks <- setRefClass(
       return(study$context$getLongFileName(dir=getTracksDirectory(), name="Tracks", response=study$response, region=study$studyArea$region, tag=iteration))
     },
     
-    saveTracks = function() {
-      fileName <- getTracksFileName()
+    loadTracks = function(fileName=getTracksFileName(), addColumns=TRUE) {
+      callSuper(fileName=fileName, addColumns=addColumns)
+      if (inherits(truePopulationSize, "uninitializedField") | nrow(truePopulationSize) == 0)
+        setTruePopulationSize()
+      return(invisible(.self))
+    },
+    
+    saveTracks = function(fileName=getTracksFileName()) {
       message("Saving tracks to ", fileName)
       if (thinId != 1)
         stop("Saving thinned tracks unsupported.")
-      save(tracks, iteration, thinId, file=fileName)
+      save(tracks, iteration, thinId, truePopulationSize, file=fileName)
       return(invisible(.self))
     },
     
@@ -320,11 +330,16 @@ SimulatedTracks <- setRefClass(
       return(thinnedTracks)
     },
     
-    getTruePopulationSize = function() {
+    setTruePopulationSize = function() {
       library(plyr)
-      populationSize <- ddply(tracks, .(year), function(x) return(data.frame(Observed=length(unique(x$id)))))
-      names(populationSize) <- c("Year","Observed")
-      return(populationSize)
+      message("Finding true population size...")
+      truePopulationSize <<- ddply(tracks, .(year), function(x) return(data.frame(Observed=length(unique(x$id)))))
+      names(truePopulationSize) <<- c("Year","Observed")
+      return(invisible(.self))
+    },
+    
+    getTruePopulationSize = function() {
+      return(truePopulationSize)
     }
   )
 )
