@@ -86,8 +86,8 @@ SimulationStudy <- setRefClass(
     },
     
     estimate = function(iteration, meshParams, interceptPriorParams) {
-      intersections <- study$loadIntersections(iteration=iteration)
-      model <- SimulatedSmoothModel$new(study=study, iteration=iteration)
+      intersections <- loadIntersections(iteration=iteration)
+      model <- SimulatedSmoothModel$new(study=.self, iteration=iteration)
       model$setup(intersections=intersections, meshParams=meshParams, useCovariates=FALSE)
       if (!missing(interceptPriorParams)) model$setupInterceptPrior(interceptPriorParams)
       model$estimate()
@@ -95,11 +95,33 @@ SimulationStudy <- setRefClass(
       return(invisible(model))
     },
     
-    findPopulationSize = function(iteration, withHabitatWeights=FALSE) {
-      estimates <- study$loadEstimates(iteration=iteration)
+    getPopulationSize = function(iteration, withHabitatWeights=FALSE) {
+      estimates <- loadEstimates(iteration=iteration)
+      estimates$collectEstimates()
       populationSize <- estimates$getPopulationSize(withHabitatWeights=withHabitatWeights)
       populationSize$savePopulationSize()
       return(invisible(populationSize))
+    }
+  )
+)
+
+SimulationStudySubset <- setRefClass(
+  Class = "SimulationStudySubset",
+  contains = "SimulationStudy",
+  fields = list(
+    years = "integer"
+  ),
+  methods = list(
+    loadTracks = function(iteration, addColumns=TRUE) {
+      tracks <- callSuper(iteration=iteration, addColumns=addColumns)
+      tracks$tracks <- subset(tracks$tracks, year %in% years)
+      return(tracks)
+    },
+    
+    loadIntersections = function(iteration) {
+      intersections <- callSuper(iteration=iteration)
+      intersections$intersections <- subset(intersections$intersections, year %in% years)
+      return(intersections)
     }
   )
 )

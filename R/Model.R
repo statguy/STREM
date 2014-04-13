@@ -115,7 +115,7 @@ SmoothModel <- setRefClass(
       return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years)))
     },
     
-    setup = function(intersections, meshParams, family="nbinomial", useCovariates=TRUE, replicate=FALSE) {
+    setup = function(intersections, meshParams, family="nbinomial", useCovariates=TRUE) {
       library(INLA)
       
       message("Constructing mesh...")
@@ -138,13 +138,6 @@ SmoothModel <- setRefClass(
       family <<- family
       model <<- response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))#, hyper=rhoPrior))
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
-      
-      if (replicate) {
-        model <<- response ~ -1 + intercept + f(st, model=spde, replicate=st.repl)
-        index <<- inla.spde.make.index("st", n.spde=mesh$n, n.repl=nYears)
-        id <- rep(1:nYears, each=max(as.integer(data$surveyRoute)))
-        A <<- inla.spde.make.A(mesh, loc=locations, index=id, repl=groupYears)
-      }
       
       if (useCovariates) saveMeshNodeCovariates() # TODO: separate setupMesh() and setupModel() and attach covariates in between
       
