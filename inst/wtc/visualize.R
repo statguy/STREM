@@ -234,31 +234,31 @@ weatherRaster$plotLayer("temp", boundary=T, plotTitle="January 2000", legendTitl
 ### Predicted distance histograms and rasters
 ######
 
-intervals <- list()
-for (response in responses) {
-  study <- FinlandWTCStudy$new(context=context, response=response)
-  intervals[[response]] <- study$getSampleIntervals()
-  tracks <- study$loadTracks()
-  intervals[[response]]$getThinnedTracksSampleIntervals(tracks=tracks)
-}
+#intervals <- list()
+#for (response in responses) {
+#  study <- FinlandWTCStudy$new(context=context, response=response)
+#  intervals[[response]] <- study$getSampleIntervals()
+#  tracks <- study$loadTracks()
+#  intervals[[response]]$getThinnedTracksSampleIntervals(tracks=tracks)
+#}
 
 distances <- data.frame()
 distanceRasters <- list()
 for (response in responses) {
-  study <- FinlandWTCStudy$new(context=context, response=response)
+  study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
   estimates <- study$loadEstimates()
   # TODO: add index estimates$index$st
-  predictedDistances <- intervals[[response]]$predictDistances(predictCovariates=estimates$covariates, thin=FALSE)
+  predictedDistances <- estimates$predictDistances() / 1000
   
   x <- data.frame(estimates$getUnscaledMeshCoordinates(), distance=predictedDistances, response=response)
   x$year <- rep(estimates$years, each=estimates$mesh$n)
   distances <- rbind(distances, x)
-  #x <- subset(x, year==year)
+
   for (year in estimates$years) {
     distanceRasters[[response]] <- SpatioTemporalRaster$new(study=study, ext="svg")
     distancesYear <- subset(x, year==year)
     distanceRasters[[response]]$interpolate(distancesYear, transform=sqrt, inverseTransform=square, layerNames=year)
-    distanceRasters[[response]]$plotLayer(paste("X", year, sep=""), boundary=TRUE, plotTitle=paste(response, year), legendTitle="Distance (km/day)", save=TRUE, name="DistanceRaster")
+    distanceRasters[[response]]$plotLayer(paste("X", year, sep=""), boundary=TRUE, plotTitle=paste(study$prettyResponse, year), legendTitle="Distance (km/day)", save=TRUE, name="DistanceRaster")
   }
 }
 

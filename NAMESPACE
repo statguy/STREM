@@ -1,1 +1,3 @@
+useDynLib(WTC)
 exportPattern("^[[:alpha:]]+")
+importFrom(Rcpp, evalCpp)

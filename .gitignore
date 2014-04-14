@@ -5,6 +5,8 @@
 *-Ex.R
 .Rproj.user
 .RData
+.o
+.so
 
 test/
 setup/

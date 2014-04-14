@@ -56,6 +56,7 @@ Tracks <- setRefClass(
         
     getSpatialLines = function(variables=.(burst)) {
       library(sp)
+      message("Converting tracks to SP object...")
       if (is.data.frame(tracks)) {
         library(plyr)
         lines <- dlply(tracks, variables, function(x, variables) {
