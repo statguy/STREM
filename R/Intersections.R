@@ -54,6 +54,7 @@ SimulatedIntersections <- setRefClass(
     
     findIntersections = function(tracks, surveyRoutes, ...) {
       tracksSP <- tracks$getSpatialLines()
+      message("Counting intersections...")
       findIntersectionsMatrix(tracksSP, surveyRoutes$surveyRoutes, ...)
       nSurveyRoutes <- length(surveyRoutes$surveyRoutes)
       nTracks <- length(tracksSP)
@@ -72,6 +73,7 @@ SimulatedIntersections <- setRefClass(
       #intersectionsMatrix <<- matrix(0, nrow=nSurveyRoutes, ncol=nTracks)
       
       if (dimension == 1) {
+        # Assumes that the survey routes are the same every year
         countIntersections <- function(i, surveyRoutes, tracks) {
           library(plyr)
           #library(rgeos)

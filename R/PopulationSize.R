@@ -27,7 +27,7 @@ PopulationSize <- setRefClass(
       stop("Unimplemented method.")
     },
     
-    loadValidationData = function(fileName=getValidationDataFileName()) {
+    loadValidationData = function(tracks, fileName=getValidationDataFileName()) {
       load(fileName)
       setValidationSizeData(validationSizeData)
       return(invisible(.self))
@@ -96,8 +96,8 @@ SimulationPopulationSize <- setRefClass(
       return(context$getLongFileName(dir=context$resultDataDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region, tag=iteration))
     },
     
-    loadValidationData = function(fileName) {
-      tracks <- study$loadTracks(iteration=iteration, addColumns=FALSE)
+    loadValidationData = function(tracks, fileName) {
+      if (missing(tracks)) tracks <- study$loadTracks(iteration=iteration, addColumns=FALSE)
       truePopulationSize <- tracks$getTruePopulationSize()
       setValidationSizeData(truePopulationSize)
       return(invisible(.self))

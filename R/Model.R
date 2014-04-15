@@ -117,6 +117,8 @@ SmoothModel <- setRefClass(
     
     setup = function(intersections, meshParams, family="nbinomial", useCovariates=TRUE) {
       library(INLA)
+      library(plyr)
+      
       data <<- intersections$getData()
       
       p <- ddply(data, .(year), function(x) {
@@ -171,7 +173,7 @@ SmoothModel <- setRefClass(
       return(invisible(.self))
     },
     
-    estimate = function(save=FALSE, fileName=getEstimatesFileName()) {
+    estimate = function(save=FALSE, fileName=getEstimatesFileName(), verbose=TRUE) {
       library(INLA)
       
       fullStack <<- inla.stack(obsStack, predStack)
@@ -187,7 +189,7 @@ SmoothModel <- setRefClass(
                       family=family,
                       data=inla.stack.data(fullStack, spde=spde),
                       E=stackData$E,
-                      verbose=TRUE,
+                      verbose=verbose,
                       control.fixed=control.fixed,
                       control.predictor=list(A=inla.stack.A(fullStack), link=stackData$link, compute=TRUE),
                       control.compute=list(cpo=FALSE, dic=TRUE))
@@ -499,7 +501,8 @@ SimulatedSmoothModel <- setRefClass(
       }
       
       populationSize <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration))
-      populationSize$loadValidationData()
+      if (missing(tracks)) populationSize$loadValidationData
+      else populationSize$loadValidationData(tracks=tracks)
       
       return(invisible(populationSize))
     }

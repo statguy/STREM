@@ -340,6 +340,8 @@ SimulatedTracks <- setRefClass(
     },
     
     getTruePopulationSize = function() {
+      if (nrow(truePopulationSize) == 0)
+        setTruePopulationSize()
       return(truePopulationSize)
     }
   )
