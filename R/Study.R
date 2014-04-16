@@ -64,7 +64,7 @@ SimulationStudy <- setRefClass(
     },
     
     loadPopulationSize = function(iteration) {
-      populationSize <- SimulationPopulationSize$new(study=.self, iteration=iteration)$loadPopulationSize()
+      populationSize <- SimulationPopulationSize$new(study=.self, iteration=iteration)$loadPopulationSize()$loadValidationData()
       return(populationSize)
     },
     

@@ -17,7 +17,7 @@ estimate <- function(study, iteration, test) {
     meshParams <- list(maxEdge=c(.2e6, .3e6), cutOff=.2e6, coordsScale=1e-6)
     #meshParams <- list(maxEdge=c(.07e6, .2e6), cutOff=.01e6, coordsScale=1e-6)
     interceptPriorParams <- list(mean=200, sd=199)
-    #rhoPriorParams <- list(initial=0, param=c(0, 1))
+    rhoPriorParams <- list(initial=0, param=c(0, 0.5))
     model$setup(intersections=intersections, meshParams=meshParams, useCovariates=FALSE)
     model$setupInterceptPrior(interceptPriorParams)
     model$setupRhoPrior(rhoPriorParams)
@@ -35,6 +35,7 @@ estimate <- function(study, iteration, test) {
     #sum(model$node$mean[,1] * (inla.mesh.fem(model$mesh, order=1)$c1 %*% model$node$mean[,1]))
   }
   else if (test=="spatial") {
+    message("Spatial test...")
     meshParams <- list(maxEdge=c(.1e6, .2e6), cutOff=.05e6, coordsScale=1e-6)
     interceptPriorParams <- list(mean=200, sd=199)
     study <- SimulationStudySubset$new(response="A", years=as.integer(2001:2001))$newInstance(context=context)
