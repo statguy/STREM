@@ -278,7 +278,7 @@ SmoothModel <- setRefClass(
       #if (!all(node$mean >= e.m))
       #  warning("Jensen's inequality does not hold for fitted values.")
       
-      return(invisible(.self))
+      return(invisible(stat))
     },
     
     collectHyperparameters = function() {
