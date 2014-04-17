@@ -292,8 +292,8 @@ FinlandWTCStudy <- setRefClass(
       return(estimates)
     },
     
-    getPopulationDensity = function(withHabitatWeights=TRUE, withDistanceWeights=TRUE, saveDensityPlots=FALSE, getSD=FALSE) {
-      estimates <- collectEstimates(withDistanceWeights=withDistanceWeights)
+    getPopulationDensity = function(withHabitatWeights=TRUE, saveDensityPlots=FALSE, getSD=FALSE) {
+      estimates <- collectEstimates()
       
       habitatWeights <- if (withHabitatWeights) loadHabitatWeightsRaster() else HabitatWeights$new(study=study)$getWeightsRaster()
       populationDensity <- estimates$getPopulationDensity(templateRaster=habitatWeights, getSD=getSD)
@@ -307,8 +307,8 @@ FinlandWTCStudy <- setRefClass(
       return(populationDensity)
     },
     
-    getPopulationSize = function(withHabitatWeights=TRUE, withDistanceWeights=TRUE, saveDensityPlots=FALSE) {
-      populationDensity <- getPopulationDensity(withHabitatWeights=withHabitatWeights, withDistanceWeights=withDistanceWeights, saveDensityPlots=saveDensityPlots)
+    getPopulationSize = function(withHabitatWeights=TRUE, saveDensityPlots=FALSE) {
+      populationDensity <- getPopulationDensity(withHabitatWeights=withHabitatWeights, saveDensityPlots=saveDensityPlots)
       populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study))
       return(populationSize)
     },
