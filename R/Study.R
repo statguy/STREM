@@ -270,24 +270,24 @@ FinlandWTCStudy <- setRefClass(
       return(distances)
     },
     
-    collectEstimates = function(withDistanceWeights=TRUE) {
-      intervals <- getSampleIntervals()
+    collectEstimates = function() { #withDistanceWeights=TRUE) {
+      #intervals <- getSampleIntervals()
       
-      message("Predictions for survey routes...")
-      intersections <- loadIntersections()
-      distancesAtSurveyRoutes <- if (withDistanceWeights)
-        subset(intervals$predictDistances(predictCovariates=intersections$covariates), Variable=="Predicted", select="Value", drop=TRUE)
-      else
-        mean(loadTracks()$getDistances(), na.rm=T)
+      #message("Predictions for survey routes...")
+      #intersections <- loadIntersections()
+      #distancesAtSurveyRoutes <- if (withDistanceWeights)
+      #  subset(intervals$predictDistances(predictCovariates=intersections$covariates), Variable=="Predicted", select="Value", drop=TRUE)
+      #else
+      #  mean(loadTracks()$getDistances(), na.rm=T)
       
-      message("Predictions for mesh nodes...")
+      #message("Predictions for mesh nodes...")
       estimates <- loadEstimates()
-      distancesAtNodes <- if (withDistanceWeights)
-        subset(intervals$predictDistances(predictCovariates=estimates$covariates), Variable=="Predicted", select="Value", drop=TRUE)
-      else
-        mean(loadTracks()$getDistances(), na.rm=T)
+      #distancesAtNodes <- if (withDistanceWeights)
+      #  subset(intervals$predictDistances(predictCovariates=estimates$covariates), Variable=="Predicted", select="Value", drop=TRUE)
+      #else
+      #  mean(loadTracks()$getDistances(), na.rm=T)
       
-      estimates$collectEstimates(weightsAtSurveyRoutes=distancesAtSurveyRoutes, weightsAtNodes=distancesAtNodes)
+      estimates$collectEstimates()
       
       return(estimates)
     },
