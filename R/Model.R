@@ -149,7 +149,8 @@ SmoothModel <- setRefClass(
       model <<- response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))#, hyper=rhoPrior))
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
       
-      if (useCovariates) saveMeshNodeCovariates() # TODO: separate setupMesh() and setupModel() and attach covariates in between
+      # Useless:
+      #if (useCovariates) saveMeshNodeCovariates() # TODO: separate setupMesh() and setupModel() and attach covariates in between      
       
       message("Number of nodes in the mesh = ", mesh$n)
       message("Average survey route length = ", mean(data$length))

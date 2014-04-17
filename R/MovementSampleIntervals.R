@@ -240,6 +240,7 @@ MovementSampleIntervals <- setRefClass(
         ylab("Distance / day (km)") + xlab("Sampling interval (h)") + theme_bw(18)  
       
       if (!inherits(estimationResult, "uninitializedField")) {
+        predict_interval <- seq(0, 12, by=0.1)
         movementsFit <- data.frame(intervalH=predict_interval,
                                    distanceKm=colMeans(rstan::extract(estimationResult)$predicted_distance),
                                    distanceKm25=apply(rstan::extract(estimationResult)$predicted_distance, 2, quantile, .025),
