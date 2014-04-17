@@ -525,6 +525,7 @@ FinlandSmoothModel <- setRefClass(
     getPredictedOffset = function(distance=covariates$distance) {
       if (length(distance) == 0) {
         saveMeshNodeCovariates()
+        distance <- covariates$distance
         #tracks <- study$loadTracks()
         #distance <- tracks$getMeanDistance()
       }
