@@ -149,8 +149,8 @@ SmoothModel <- setRefClass(
       model <<- response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))#, hyper=rhoPrior))
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
       
-      # Useless:
-      #if (useCovariates) saveMeshNodeCovariates() # TODO: separate setupMesh() and setupModel() and attach covariates in between      
+      # TODO: not really needed here
+      if (useCovariates) saveMeshNodeCovariates() # TODO: separate setupMesh() and setupModel() and attach covariates in between      
       
       message("Number of nodes in the mesh = ", mesh$n)
       message("Average survey route length = ", mean(data$length))
@@ -203,7 +203,7 @@ SmoothModel <- setRefClass(
       }
     },
 
-    collectEstimates = function(observationWeights=1, predictionWeights=1, useWeightsAsOffset=FALSE) {
+    collectEstimates = function(observationWeights=1, predictionWeights=1) {
     # Correct missing offset with weights
     #collectEstimates = function(observationWeights=getObservedOffset(), predictionWeights=getPredictedOffset()) {
       library(INLA)
@@ -216,7 +216,6 @@ SmoothModel <- setRefClass(
       data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] / observationWeights^2
       
       stackData <- inla.stack.data(fullStack, tag="observed")
-      #observedOffset <- stackData$E[indexObserved] * observationWeights
       observedOffset <- stackData$E[indexObserved]
       
       message("Fitted values sums all years:")
@@ -230,7 +229,6 @@ SmoothModel <- setRefClass(
       node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / predictionWeights^2, nrow=mesh$n, ncol=length(years))
       node$spatialMean <<- matrix(result$summary.random$st$mean, nrow=mesh$n, ncol=length(years))
       node$spatialSd <<- matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(years))
-      #predictedOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years)) * predictionWeights
       predictedOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years)) * getPredictedOffset()
       
       
@@ -263,20 +261,6 @@ SmoothModel <- setRefClass(
       print(colMeans(stat))
       message("Correlations:")
       print(cor(stat[!colnames(stat) %in% c("Year")])) #,"ObservedOffset","predictedOffset")]))
-      
-      #a <- inla.emarginal(exp, result$marginals.fixed$intercept)
-      #if (!all(a >= exp(result$summary.fixed["intercept","mean"])))
-      #  warning("Jensen's inequality does not hold for fixed effects.")
-      #b <- numeric(length(result$marginals.random$st))
-      #for (i in 1:length(result$marginals.random$st)) {
-      #  b[i] <- inla.emarginal(exp, result$marginals.random$st[[i]])
-      #}
-      #if (!all(b >= exp(result$summary.random$st$mean)))
-      #  warning("Jensen's inequality does not hold for random effects.")
-      #e <- a * b
-      #e.m <- matrix(e / predictionWeights, nrow=mesh$n, ncol=length(yearsVector))
-      #if (!all(node$mean >= e.m))
-      #  warning("Jensen's inequality does not hold for fitted values.")
       
       return(invisible(stat))
     },
@@ -539,6 +523,11 @@ FinlandSmoothModel <- setRefClass(
     },
     
     getPredictedOffset = function(distance=covariates$distance) {
+      if (length(distance) == 0) {
+        saveMeshNodeCovariates()
+        #tracks <- study$loadTracks()
+        #distance <- tracks$getMeanDistance()
+      }
       return(2/pi * 12000 * 1 * distance)
     },
     

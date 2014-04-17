@@ -264,6 +264,8 @@ FinlandWTCStudy <- setRefClass(
     },
     
     predictDistances = function(formula, data, intervalH=2) {
+      if (is.null(formula) | length(intervalH) == 0)
+        stop("Argument missing.")
       sampleIntervals <- loadSampleIntervals()
       fixed_model_matrix <- model.matrix(formula, data)
       distances <- sampleIntervals$predict(fixed_model_matrix=fixed_model_matrix, intervalH=intervalH) * 1000
