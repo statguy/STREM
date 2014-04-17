@@ -202,7 +202,7 @@ MovementSampleIntervals <- setRefClass(
     },
     
     getSampleIntervalsFileName = function() {
-      return(study$context$getFileName(dir=context$resultDataDirectory, "MovementSampleIntervals", response=study$response, region=study$studyArea$region))
+      return(study$context$getFileName(dir=study$context$resultDataDirectory, "MovementSampleIntervals", response=study$response, region=study$studyArea$region))
     },
     
     saveSampleIntervals = function(fileName=getSampleIntervalsFileName()) {
