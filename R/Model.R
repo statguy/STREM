@@ -204,8 +204,6 @@ SmoothModel <- setRefClass(
     },
 
     collectEstimates = function(observationWeights=1, predictionWeights=1) {
-    # Correct missing offset with weights
-    #collectEstimates = function(observationWeights=getObservedOffset(), predictionWeights=getPredictedOffset()) {
       library(INLA)
       
       message("Processing fitted values...")
@@ -229,8 +227,7 @@ SmoothModel <- setRefClass(
       node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / predictionWeights^2, nrow=mesh$n, ncol=length(years))
       node$spatialMean <<- matrix(result$summary.random$st$mean, nrow=mesh$n, ncol=length(years))
       node$spatialSd <<- matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(years))
-      predictedOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years)) * getPredictedOffset()
-      
+      predictedOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years)) * matrix(getPredictedOffset(), nrow=mesh$n, ncol=length(years))
       
       stat <- data.frame()
       for (year in years) {
@@ -529,6 +526,7 @@ FinlandSmoothModel <- setRefClass(
         #tracks <- study$loadTracks()
         #distance <- tracks$getMeanDistance()
       }
+      if (length(distance) == 1) distance <- rep(distance, nrow(data))
       return(2/pi * 12000 * 1 * distance)
     },
     
