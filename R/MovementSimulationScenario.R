@@ -172,12 +172,13 @@ MovementSimulationScenario <- setRefClass(
     },
     
     randomizeBCRWTracks = function(iteration) {
+      library(raster)
       library(plyr)
       library(maptools)
       library(rgdal)
       
       initialLocations <- initialPopulation$randomize(nAgents)
-      habitatTypes <- extract(study$studyArea$habitat, initialLocations)
+      habitatTypes <- raster::extract(study$studyArea$habitat, initialLocations)
       if (any(is.na(habitatTypes))) stop("Invalid initial coordinates.")
       
       nProposal <<- if (inherits(habitatWeights, "uninitializedField") | is.null(habitatWeights)) as.integer(1) else as.integer(10)
@@ -295,8 +296,8 @@ MovementSimulationScenarioA <- setRefClass(
   Class = "MovementSimulationScenarioA",
   contains = "MovementSimulationScenario",
   methods = list(
-    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, runParallel=T, ...) {
-      callSuper(years=years, nAgents=nAgents, nIterations=nIterations, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=0.8, runParallel=runParallel, ...)
+    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.8, runParallel=T, ...) {
+      callSuper(years=years, nAgents=nAgents, nIterations=nIterations, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, runParallel=runParallel, ...)
       return(invisible(.self))
     },
     

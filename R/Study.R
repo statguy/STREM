@@ -88,7 +88,7 @@ SimulationStudy <- setRefClass(
     estimate = function(iteration, meshParams, interceptPriorParams, save=TRUE) {
       intersections <- loadIntersections(iteration=iteration)
       model <- SimulatedSmoothModel$new(study=.self, iteration=iteration)
-      model$setup(intersections=intersections, meshParams=meshParams, useCovariates=FALSE)
+      model$setup(intersections=intersections, meshParams=meshParams)
       if (!missing(interceptPriorParams)) model$setupInterceptPrior(interceptPriorParams)
       model$estimate()
       if (save) model$saveEstimates()

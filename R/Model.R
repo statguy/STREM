@@ -78,7 +78,7 @@ SmoothModel <- setRefClass(
     },
     
     setupInterceptPrior = function(priorParams) {
-      # TODO: Find area from raster ignoring NA values if habitat weights are used
+      # TODO: Find area from raster ignoring NA values if habitat weights are used (raster area sligtly different from the boundary area)
       # TODO: Link function is fixed, change if needed
       
       area <- study$studyArea$boundary@polygons[[1]]@area
@@ -115,7 +115,7 @@ SmoothModel <- setRefClass(
       return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years)))
     },
     
-    setup = function(intersections, meshParams, family="nbinomial", useCovariates=TRUE) {
+    setup = function(intersections, meshParams, family="nbinomial") {
       library(INLA)
       library(plyr)
       
@@ -148,9 +148,6 @@ SmoothModel <- setRefClass(
       family <<- family
       model <<- response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))#, hyper=rhoPrior))
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
-      
-      # TODO: not really needed here
-      if (useCovariates) saveMeshNodeCovariates() # TODO: separate setupMesh() and setupModel() and attach covariates in between      
       
       message("Number of nodes in the mesh = ", mesh$n)
       message("Average survey route length = ", mean(data$length))
@@ -195,7 +192,7 @@ SmoothModel <- setRefClass(
                       control.predictor=list(A=inla.stack.A(fullStack), link=stackData$link, compute=TRUE),
                       control.compute=list(cpo=FALSE, dic=TRUE))
       
-      if (is.null(result$ok) || result$ok == FALSE) {
+      if (is.null(result$ok) | result$ok == FALSE) {
         warning("INLA failed to run.")
       }
       else {
@@ -213,8 +210,9 @@ SmoothModel <- setRefClass(
       data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] / observationWeights
       data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] / observationWeights^2
       
-      stackData <- inla.stack.data(fullStack, tag="observed")
-      observedOffset <- stackData$E[indexObserved]
+      #stackData <- inla.stack.data(fullStack, tag="observed")
+      #observedOffset <- stackData$E[indexObserved]
+      observedOffset <- getObservedOffset()
       
       message("Fitted values sums all years:")
       message("observed = ", sum(data$intersections))
@@ -227,7 +225,8 @@ SmoothModel <- setRefClass(
       node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / predictionWeights^2, nrow=mesh$n, ncol=length(years))
       node$spatialMean <<- matrix(result$summary.random$st$mean, nrow=mesh$n, ncol=length(years))
       node$spatialSd <<- matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(years))
-      predictedOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years)) * matrix(getPredictedOffset(), nrow=mesh$n, ncol=length(years))
+      #predictedOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years)) * matrix(getPredictedOffset(), nrow=mesh$n, ncol=length(years))
+      predictedOffset <- matrix(getPredictedOffset(), nrow=mesh$n, ncol=length(years))
       
       stat <- data.frame()
       for (year in years) {
@@ -280,10 +279,11 @@ SmoothModel <- setRefClass(
                  range=range)
       if (any(rownames(result$summary.hyperpar)=="GroupRho for st"))
         x <- rbind(x, rho=result$summary.hyperpar["GroupRho for st",])
-            
+      
       return(x)
     },
-
+    
+    # TODO: fix?
     getPredictedIntersections = function() {
       x <- data
       indexObserved <- inla.stack.index(fullStack, "observed")$data
@@ -310,13 +310,12 @@ SmoothModel <- setRefClass(
       
       return(invisible(projectionRaster))
     },
-  
+    
     getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
       if (length(node) == 0)
         stop("Did you forgot to run collectEstimates() first?")
       
       library(raster)
-      #library(ST)
 
       meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)
       sdPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)
@@ -330,16 +329,10 @@ SmoothModel <- setRefClass(
         message("Processing year ", year, "...")
         
         meanRaster <- project(projectValues=node$mean[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon, weights=cellArea)
-        #meanRaster <- rasterInterpolate(subset(xyzMean, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea        
-        #if (!(missing(maskPolygon) | is.null(maskPolygon)))
-          #meanRaster <- mask(meanRaster, maskPolygon)
         meanPopulationDensityRaster$addLayer(meanRaster, year)
         
         if (getSD) {
           sdRaster <- project(projectValues=node$sd[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon, weights=cellArea)
-          #sdRaster <- rasterInterpolate(subset(xyzSD, Year == year)[,-1], templateRaster=templateRaster, transform=sqrt, inverseTransform=square) * cellArea
-          #if (!(missing(maskPolygon) | is.null(maskPolygon)))
-            #sdRaster <- mask(sdRaster, maskPolygon)
           sdPopulationDensityRaster$addLayer(sdRaster, year)
         }
       }
@@ -385,7 +378,7 @@ SmoothModel <- setRefClass(
     saveMeshNodeCovariates = function(save=FALSE) {
       stop("Method saveMeshNodeCovariates unimplemented.")
     },
-        
+    
     plotMesh = function(surveyRoutes) {
       library(INLA)
       library(sp)
@@ -526,7 +519,7 @@ FinlandSmoothModel <- setRefClass(
         #tracks <- study$loadTracks()
         #distance <- tracks$getMeanDistance()
       }
-      if (length(distance) == 1) distance <- rep(distance, nrow(data))
+      if (length(distance) == 1) distance <- rep(distance, mesh$n * length(years))
       return(2/pi * 12000 * 1 * distance)
     },
     
@@ -564,5 +557,3 @@ FinlandSmoothModelNoDistances <- setRefClass(
     }
   )
 )
-
-
