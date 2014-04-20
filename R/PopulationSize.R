@@ -59,6 +59,11 @@ PopulationSize <- setRefClass(
       return(invisible(.self))
     },
     
+    match = function(model=Validation ~ -1 + Estimated) {
+      result <- lm(model, data=sizeData)
+      return(result)
+    },
+    
     show = function() {
       print(sizeData)
       return(invisible(.self))
