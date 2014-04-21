@@ -233,23 +233,27 @@ MovementSampleIntervals <- setRefClass(
       return(invisible(.self))
     },
     
-    plotIntervalDistance = function() {
+    getDistanceCurve = function(predict_interval=seq(0, 12, by=0.1)) {
+      movementsFit <- data.frame(intervalH=predict_interval,
+                                 distanceKm=colMeans(rstan::extract(estimationResult)$predicted_distance),
+                                 distanceKm25=apply(rstan::extract(estimationResult)$predicted_distance, 2, quantile, .025),
+                                 distanceKm975=apply(rstan::extract(estimationResult)$predicted_distance, 2, quantile, .975))
+      return(movementsFit)      
+    },
+    
+    plotIntervalDistance = function(plot=FALSE) {
       library(ggplot2)
       
       p <- ggplot(intervals, aes(intervalH, distanceKm)) + geom_point(alpha=.3) +
-        ylab("Distance / day (km)") + xlab("Sampling interval (h)") + theme_bw(18)  
+        ylab("Distance / day (km)") + xlab("Sampling interval (h)")
       
       if (!inherits(estimationResult, "uninitializedField")) {
-        predict_interval <- seq(0, 12, by=0.1)
-        movementsFit <- data.frame(intervalH=predict_interval,
-                                   distanceKm=colMeans(rstan::extract(estimationResult)$predicted_distance),
-                                   distanceKm25=apply(rstan::extract(estimationResult)$predicted_distance, 2, quantile, .025),
-                                   distanceKm975=apply(rstan::extract(estimationResult)$predicted_distance, 2, quantile, .975))
+        movementsFit <- getDistanceCurve()
         p <- p + geom_line(data=movementsFit, aes(intervalH, distanceKm), color="red") +
           geom_smooth(data=movementsFit, aes(ymin=distanceKm25, ymax=distanceKm975), stat="identity") + ylim(c(0, max(intervals$distanceKm)))
       }
       
-      print(p)
+      if (plot) print(p)
       
       return(invisible(p))
     },

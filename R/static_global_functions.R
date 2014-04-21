@@ -70,9 +70,9 @@ inverseDistanceWeightningImpute <- function(data, varname, formula=as.formula(pa
   return(rbind(data.full, data.na))
 }
 
-theme_raster <- function(base_size=12, ...) {
+theme_raster <- function(base_size=12, base_family="", ...) {
+  theme_minimal(base_size=base_size, base_family=base_family) %+replace%
   theme(
-    ...,
     panel.background=element_rect(fill="transparent", colour=NA),
     panel.grid.minor=element_blank(), 
     panel.grid.major=element_blank(),
@@ -90,6 +90,16 @@ theme_raster <- function(base_size=12, ...) {
     axis.ticks=element_blank(),
     strip.background=element_blank(),
     plot.margin=unit(c(0,0,-1,-1), "lines"),
+    legend.position="none",
+    ...
+  )
+}
+
+theme_presentation <- function(base_size=20, base_family="", ...) {
+  theme_minimal(base_size=base_size, base_family=base_family) %+replace%
+  theme(
+    ...,
+    axis.line=element_line(size=1),
     legend.position="none"
   )
 }

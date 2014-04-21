@@ -119,6 +119,13 @@ CORINEHabitatWeights <- setRefClass(
     getWeightsRaster = function(save=FALSE) { # TODO: determine aggregation scale automatically
       library(raster)
       
+      aggfun <- function(habitatValue, na.rm) {
+        x <- getWeights(habitatValue)
+        #x <- x[!is.na(x)]
+        x <- x[x!=0] # TODO: fix problem at the edges (do not count pixels outside the boundary)
+        mean(x, na.rm=na.rm)
+      }
+      
       if (save) {
         fileName <- getWeightsRasterFileName()
         
@@ -126,15 +133,12 @@ CORINEHabitatWeights <- setRefClass(
         weightsRaster <- aggregate(study$studyArea$habitat,
                                    aggregationScale=100, # TODO: get this from template raster
                                    filename=fileName, overwrite=TRUE,
-                                   fun=function(habitatValue, na.rm)
-                                     mean(getWeights(habitatValue), na.rm=na.rm),
-                                   na.rm=T)
+                                   fun=aggfun, na.rm=T)
       }
       else {
         weightsRaster <- aggregate(study$studyArea$habitat,
                                    aggregationScale=100,
-                                   fun=function(habitatValue, na.rm)
-                                     mean(getWeights(habitatValue), na.rm=na.rm), na.rm=T)
+                                   fun=aggfun, na.rm=T)
       }
       
       return(weightsRaster)

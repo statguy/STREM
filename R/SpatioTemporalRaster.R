@@ -44,23 +44,27 @@ SpatioTemporalRaster <- setRefClass(
       ggsave(p, filename=getRasterFileName(name=name, layerName=layerName), width=width0, height=height)
     },
     
-    plotLayer = function(layerName, plotTitle, legendTitle, boundary=FALSE, save=FALSE, name) {
+    plotLayer = function(layerName, plotTitle, legendTitle, digits=2, breaks=round(seq(minValue(rasterStack[[layerName]]), maxValue(rasterStack[[layerName]]), length.out=7), digits=digits), boundary=FALSE, plot=FALSE, save=FALSE, name) {
       library(ggplot2)
       library(raster)
       library(rasterVis)
 
       layer <- crop(rasterStack[[layerName]], extent(study$studyArea$boundary))
-      p <- gplot(layer) + geom_raster(aes(fill=value)) + coord_equal()
+      p <- gplot(layer) + geom_raster(aes(fill=value)) + coord_equal() +
         #scale_fill_gradientn(colours=terrain.colors(99), na.value=NA)
+        scale_fill_gradient(low="white", high="steelblue", na.value=NA, breaks=breaks)
       p <- if (!missing(legendTitle)) p + theme_raster(legend.position="right") + guides(fill=guide_legend(title=legendTitle))
       else p + theme_raster()
-      if (boundary) {
-        boundaryDF <- ggplot2::fortify(study$studyArea$boundary)
-        p <- p + geom_polygon(data=boundaryDF, aes(long, lat), colour="white", fill=NA)
+      
+      if (!missing(boundary)) {
+        boundaryDF <- if (class(boundary) == "logical") ggplot2::fortify(study$studyArea$boundary)
+        else boundary
+        p <- p + geom_polygon(data=boundaryDF, aes(long, lat), colour="black", fill=NA)
       }
+      
       if (!missing(plotTitle)) p <- p + ggtitle(plotTitle)
       
-      print(p)
+      if (plot) print(p)
       if (save) saveRasterFile(p=p, layer=layer, name=name, layerName=layerName)
       
       return(invisible(p))
