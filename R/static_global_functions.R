@@ -94,7 +94,7 @@ theme_raster <- function(base_size=12, ...) {
   )
 }
 
-saveFigure <- function(p, filename, width=8, height=6, dimensions) {
+saveFigure <- function(p, filename, width=8, height=6, dimensions, ...) {
   library(ggplot2)
   if (missing(p) | missing(filename))
     stop("Argument p or filename missing.")
@@ -104,7 +104,7 @@ saveFigure <- function(p, filename, width=8, height=6, dimensions) {
     aspectRatio <- dimensions[1] / dimensions[2]
     height <- width * aspectRatio
   }
-  ggsave(p, filename=filename, width=width, height=height)
+  ggsave(p, filename=filename, width=width, height=height, ...)
 }
 
 NEW_addDtDist <- function(tracksDF, .parallel=FALSE) {

@@ -3,7 +3,6 @@ Study <- setRefClass(
   fields = list(
     context = "Context",
     response = "character",
-    prettyResponse = "character",
     studyArea = "StudyArea"
   ),
   methods = list(
@@ -68,14 +67,14 @@ SimulationStudy <- setRefClass(
       return(populationSize)
     },
     
-    loadSurveyRoutes = function(n=800, random=TRUE, save=FALSE) {
+    loadSurveyRoutes = function(n=800, random=TRUE, save=FALSE, findLengths=TRUE) {
       surveyRoutes <- if (random) {
         surveyRoutes <- FinlandRandomWTCSurveyRoutes$new(study=.self)
         if (save) surveyRoutes$randomizeSurveyRoutes(nSurveyRoutes=n, save=TRUE)
-        return(surveyRoutes$loadSurveyRoutes())
+        return(surveyRoutes$loadSurveyRoutes(findLengths=findLengths))
       }
       else {
-        return(FinlandWTCSurveyRoutes$new(study=.self)$loadSurveyRoutes())
+        return(FinlandWTCSurveyRoutes$new(study=.self)$loadSurveyRoutes(findLengths=findLengths))
       }
     },
     
@@ -137,16 +136,16 @@ FinlandWTCStudy <- setRefClass(
     initialize = function(context, ...) {
       callSuper(context=context, ...)
       studyArea <<- FinlandStudyArea$new(context=context)$newInstance()
-      prettyResponse <<- getPrettyResponse(response)
       return(invisible(.self))
     },
     
     getPrettyResponse = function(response) {
-      x <- switch (response,
+      x <- if (missing(response)) .self$response else response
+      y <- switch (x,
         canis.lupus="Canis lupus",
         lynx.lynx="Lynx lynx",
         rangifer.tarandus.fennicus="Rangifer tarandus fennicus")
-      return(x)
+      return(y)
     },
     
     preprocessResponse = function(response, maxDuration=1, cacheCovariates=TRUE, findHabitatWeights=TRUE, fmiApiKey) {
@@ -181,8 +180,8 @@ FinlandWTCStudy <- setRefClass(
       return(FinlandWTCTracks$new(study=.self)$loadTracks())
     },
     
-    loadSurveyRoutes = function() {
-      return(FinlandWTCSurveyRoutes$new(study=.self)$loadSurveyRoutes())
+    loadSurveyRoutes = function(findLengths=TRUE) {
+      return(FinlandWTCSurveyRoutes$new(study=.self)$loadSurveyRoutes(findLengths=findLengths))
     },
     
     loadIntersections = function(predictDistances=TRUE) {

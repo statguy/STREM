@@ -24,8 +24,9 @@ SurveyRoutes <- setRefClass(
       return(invisible(.self))
     },
 
-    saveSurveyRoutes = function(fileName=getSurveyRoutesFileName()) {
+    saveSurveyRoutes = function(fileName=getSurveyRoutesFileName(), findLengths=TRUE) {
       save(surveyRoutes, centroids, lengths, file=fileName)
+      if (findLengths) getLengths()
       return(invisible(.self))
     },
     
@@ -97,13 +98,13 @@ FinlandWTCSurveyRoutes <- setRefClass(
       return(invisible(.self))
     },
     
-    loadSurveyRoutes = function(fileName=getSurveyRoutesFileName()) {
+    loadSurveyRoutes = function(fileName=getSurveyRoutesFileName(), findLengths=TRUE) {
       intersections <- FinlandWTCIntersections$new(study=study)$loadIntersections()
       centroids <<- intersections$getSurveyLocations()
       # Angles are unknown, randomize. TODO: Find the most likely angles given the landscape.
       angles <- runif(length(centroids), 0, 2 * pi)
       surveyRoutes <<- getTriangles(centroids, angles, 4000)
-      getLengths()
+      if (findLengths) getLengths()
       return(invisible(.self))
     },
     

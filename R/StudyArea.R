@@ -18,9 +18,8 @@ StudyArea <- setRefClass(
       return(.self)
     },
     
-    newInstance = function(prepareHabitatRaster=FALSE, rawRasterFile)
-    {
-      loadBoundary()
+    newInstance = function(thin=TRUE, prepareHabitatRaster=FALSE, rawRasterFile) {
+      loadBoundary(thin=thin)
       if (prepareHabitatRaster) {
         if (missing(rawRasterFile)) stop("rawRasterFile parameter missing.")
         prepareHabitatRaster(rawRasterFile=rawRasterFile)
@@ -30,7 +29,7 @@ StudyArea <- setRefClass(
       return(.self)
     },
     
-    loadBoundary = function() {
+    loadBoundary = function(thin, tolerance) {
       stop("Override loadBoundary().")
     },
     
@@ -207,7 +206,7 @@ TestStudyArea <- setRefClass(
       return(.self)
     },
     
-    loadBoundary = function() {
+    loadBoundary = function(thin, tolerance) {
       x <- -5
       boundary <<- SpatialPolygons(list(Polygons(list(Polygon(matrix(c(325+x,700, 325+x,712, 338+x,712, 338+x,700, 325+x,700)*10000, ncol=2, byrow=T))), ID=1)), proj4string=proj4string)      
     },
@@ -236,8 +235,8 @@ FinlandStudyArea <- setRefClass(
       return(.self)
     },
     
-    loadBoundary = function() {
-      loadBoundaryGADM(country="FIN", thin=TRUE, tolerance=0.1)
+    loadBoundary = function(thin=TRUE, tolerance=0.1) {
+      loadBoundaryGADM(country="FIN", thin=thin, tolerance=tolerance)
     },
     
     getHabitatRasterFile = function() {
