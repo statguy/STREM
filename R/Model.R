@@ -200,7 +200,7 @@ SmoothModel <- setRefClass(
       }
     },
 
-    collectEstimates = function(observationWeights=1, predictionWeights=1) {
+    collectEstimates = function(observationWeights=1, predictionWeights=1, predictAtNodesOnOriginalScale=FALSE) {
       library(INLA)
       
       message("Processing fitted values...")
@@ -226,26 +226,41 @@ SmoothModel <- setRefClass(
       node$spatialMean <<- matrix(result$summary.random$st$mean, nrow=mesh$n, ncol=length(years))
       node$spatialSd <<- matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(years))
       #predictedOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years)) * matrix(getPredictedOffset(), nrow=mesh$n, ncol=length(years))
-      predictedOffset <- matrix(getPredictedOffset(), nrow=mesh$n, ncol=length(years))
+      if (predictAtNodesOnOriginalScale) predictedOffset <- matrix(getPredictedOffset(), nrow=mesh$n, ncol=length(years))
       
       stat <- data.frame()
       for (year in years) {
         yearWhich <- data$year == year
         yearIndex <- year - min(years) + 1
-        x <- data.frame(
-          Year=years[yearIndex],
-          
-          Observed=sum(data$intersections[yearWhich]),
-          EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich]),
-          EstimatedAtNodes=sum(node$mean[,yearIndex] * predictedOffset[,yearIndex]),
-          
-          ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich]),
-          EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
-          EstimatedAtNodesScaled=sum(node$mean[,yearIndex]),
-          
-          ObservedOffset=mean(observedOffset[yearWhich]),
-          predictedOffset=mean(predictedOffset[,yearIndex])
-        )
+        x <- if (predictAtNodesOnOriginalScale) 
+          data.frame(
+            Year=years[yearIndex],
+            
+            Observed=sum(data$intersections[yearWhich]),
+            EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich]),
+            EstimatedAtNodes=sum(node$mean[,yearIndex] * predictedOffset[,yearIndex]),
+            
+            ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich]),
+            EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
+            EstimatedAtNodesScaled=sum(node$mean[,yearIndex]),
+            
+            ObservedOffset=mean(observedOffset[yearWhich]),
+            predictedOffset=mean(predictedOffset[,yearIndex])
+          )
+        else
+          data.frame(
+            Year=years[yearIndex],
+            
+            Observed=sum(data$intersections[yearWhich]),
+            EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich]),
+            
+            ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich]),
+            EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
+            EstimatedAtNodesScaled=sum(node$mean[,yearIndex]),
+            
+            ObservedOffset=mean(observedOffset[yearWhich])
+          )
+        
         stat <- rbind(stat, x)
       }
       
@@ -256,7 +271,7 @@ SmoothModel <- setRefClass(
       message("Column means:")
       print(colMeans(stat))
       message("Correlations:")
-      print(cor(stat[!colnames(stat) %in% c("Year")])) #,"ObservedOffset","predictedOffset")]))
+      print(cor(stat[!colnames(stat) %in% c("Year")]))
       
       return(invisible(stat))
     },

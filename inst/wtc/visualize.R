@@ -8,7 +8,8 @@ library(reshape2)
 library(plyr)
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-study <- FinlandWTCStudy$new(context=context)
+study <- FinlandWTCStudy$new(context=context, response="canis.lupus")
+study$studyArea$loadBoundary(thin=TRUE, tolerance=0.001)
 boundaryDF <- ggplot2::fortify(study$studyArea$boundary)
 responses <- c("canis.lupus", "lynx.lynx", "rangifer.tarandus.fennicus")
 
@@ -16,20 +17,25 @@ responses <- c("canis.lupus", "lynx.lynx", "rangifer.tarandus.fennicus")
 ### Survey routes
 ######
 
-surveyRoutes <- study$loadSurveyRoutes()
+surveyRoutes <- study$loadSurveyRoutes(findLengths=FALSE)
 surveyRoutesSP <- SpatialLinesDataFrame(surveyRoutes$surveyRoutes, data=data.frame(x=1:length(surveyRoutes$surveyRoutes)), match.ID=FALSE)
 surveyRoutesDF <- ggplot2::fortify(surveyRoutesSP)
 p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_polygon(colour="black", fill=NA) +
   geom_polygon(data=surveyRoutesDF, aes(long, lat, group=group), colour="blue") +
   coord_equal() + theme_raster()
 print(p)
-saveFigure(p, filename="SurveyRoutes.svg")
+saveFigure(p, filename="SurveyRoutes.svg", bg="transparent")
+
+surveyRouteDF <- ggplot2::fortify(surveyRoutesSP[1,])
+p <- ggplot(surveyRouteDF, aes(long, lat, group=group)) + geom_polygon(colour="blue", fill=NA) + coord_equal() + theme_raster()
+print(p)
+saveFigure(p, filename="SurveyRoute.svg", bg="transparent", width=4, height=4)
 
 ######
 ### Intersections
 ######
 
-intersections <- study$loadIntersections()
+intersections <- study$loadIntersections(predictDistances=FALSE)
 x <- ddply(as.data.frame(intersections$intersections), .(year), nrow)
 mean(x$V1)
 
@@ -52,7 +58,7 @@ getTracks <- function(responses, context) {
     tracks$loadTracks()
     tracksSP <- tracks$getSpatialLines()
     tracksDF <- ggplot2::fortify(tracksSP)
-    tracksDF$response <- response
+    tracksDF$response <- study$getPrettyResponse(response)
     return(tracksDF)
   }, context=context)
   return(x)
@@ -75,9 +81,9 @@ getIntersectionsRate <- function(responses, context) {
   library(plyr)
   x <- ldply(responses, function(response, context) {
     study <- FinlandWTCStudy$new(context=context, response=response)
-    intersections <- study$loadIntersections()
+    intersections <- study$loadIntersections(predictDistances=FALSE)
     x <- ddply(intersections$intersections@data, .(year), function(x, response) {
-      data.frame(intersections=sum(x$intersections / (x$length/1000) / x$duration) / nrow(x), response=response)
+      data.frame(intersections=sum(x$intersections / (x$length/1000) / x$duration) / nrow(x), response=study$getPrettyResponse(response))
     }, response=response)
     return(x)
   }, context=context)
@@ -85,8 +91,8 @@ getIntersectionsRate <- function(responses, context) {
 }
 
 intersectionsRate <- getIntersectionsRate(responses, context)
-p <- ggplot(intersectionsRate, aes(year, intersections)) + geom_line() + facet_grid(~response) +
-  xlab("Year") + ylab("Intersections rate") + theme_economist()
+p <- ggplot(intersectionsRate, aes(year, intersections)) + geom_line(size=1) + facet_grid(~response) +
+  xlab("Year") + ylab("Intersections rate") + theme_presentation()
 print(p)
 saveFigure(p, filename="IntersectionsRate.svg")
 
@@ -98,14 +104,14 @@ getIntersectionsDistribution <- function(responses, context, zeros=TRUE) {
   library(plyr)
   x <- ldply(responses, function(response, context, zeros) {
     study <- FinlandWTCStudy$new(context=context, response=response)
-    intersections <- study$loadIntersections()
+    intersections <- study$loadIntersections(predictDistances=FALSE)
     intersections <- if (zeros == TRUE) table(intersections$intersections@data$intersections)
     else table(intersections$intersections@data$intersections[intersections$intersections@data$intersections>0])
     x <- as.data.frame(intersections)
     x$Freq <- x$Freq / sum(x$Freq)
     names(x) <- c("intersections", "proportion")
     x$intersections <- as.integer(as.character(x$intersections))
-    x$response <- response
+    x$response <- study$getPrettyResponse(response)
     return(x)
   }, context=context, zeros=zeros)
   return(x)
@@ -113,13 +119,13 @@ getIntersectionsDistribution <- function(responses, context, zeros=TRUE) {
 
 intersectionsDistribution <- getIntersectionsDistribution(responses, context)
 p <- ggplot(intersectionsDistribution, aes(intersections, proportion)) + geom_bar(stat="identity") +
-  facet_grid(~response, scales="free_x") + xlab("Number of intersections") + ylab("Proportion") + theme_economist()
+  facet_grid(~response, scales="free_x") + xlab("Number of intersections") + ylab("Proportion") + theme_presentation()
 print(p)
 saveFigure(p, filename="IntersectionsDistribution.svg")
 
 intersectionsDistribution <- getIntersectionsDistribution(responses, context, zeros=FALSE)
 p <- ggplot(intersectionsDistribution, aes(intersections, proportion)) + geom_bar(stat="identity") +
-  facet_grid(~response, scales="free_x") + xlab("Number of intersections (>0)") + ylab("Proportion") + theme_economist()
+  facet_grid(~response, scales="free_x") + xlab("Number of intersections (>0)") + ylab("Proportion") + theme_presentation()
 print(p)
 saveFigure(p, filename="IntersectionsDistributionNoZero.svg")
 
@@ -127,8 +133,10 @@ saveFigure(p, filename="IntersectionsDistributionNoZero.svg")
 ### CORINE habitat types
 ######
 
+colortable <- study$studyArea$habitat@legend@colortable
+colortable[colortable=="#000000"] <- "#FFFFFF"
 p <- gplot(study$studyArea$habitat, maxpixels=50000*10) + geom_raster(aes(fill=as.factor(value))) +
-  scale_fill_manual(values=study$studyArea$habitat@legend@colortable) +
+  scale_fill_manual(values=colortable) +
   coord_equal() + theme_raster()
 print(p)
 saveFigure(p, filename="CORINE.svg", dimensions=dim(study$studyArea$habitat))
@@ -145,7 +153,7 @@ getHabitatWeights <- function(responses, context) {
     n <- names(weights)
     print(n)
     weights <- data.frame(habitat=factor(n, levels=n), weights)
-    weights$response <- response
+    weights$response <- study$getPrettyResponse(response)
     return(weights)
   }, context=context)
   return(x)
@@ -154,7 +162,7 @@ getHabitatWeights <- function(responses, context) {
 weights <- getHabitatWeights(responses=responses, context=context)
 p <- ggplot(weights, aes(habitat, weights, fill=habitat)) +
   geom_bar(stat="identity") + facet_grid(~response) + scale_fill_manual(values=c("#beaed4","#ffff99","#7fc97f","#fdc086","#386cb0")) +
-  xlab("") + ylab("Weight") + theme_economist() + theme(legend.position="none", axis.text.x=element_text(angle=90, hjust=1)) #+ theme(strip.text.x=element_blank())
+  xlab("") + ylab("Weight") + theme_presentation(axis.text.x=element_text(angle=90, hjust=1))
 print(p)
 saveFigure(p, filename="HabitatWeights.svg")
 
@@ -166,7 +174,10 @@ for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   weightsRaster <- study$loadHabitatWeightsRaster()
   weightsRaster <- SpatioTemporalRaster$new(study=study, layerList=list(weightsRaster), ext="svg")
-  weightsRaster$plotLayer(layerName=1, save=TRUE, name="HabitatWeights")
+  p <- weightsRaster$plotLayer(layerName=1, plotTitle=study$getPrettyResponse(response), legendTitle="Weight")
+  p <- p + theme(legend.position=c(0.1,0.7), legend.background=element_rect(color="grey"), text=element_text(size=20))
+  print(p)
+  saveFigure(p, filename=paste("HabitatWeights-", response, ".svg", sep=""))
 }
 
 ######
@@ -178,16 +189,14 @@ for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   tracks <- study$loadTracks()
   intervals <- tracks$getSampleIntervals()
-  distances <- rbind(distances, data.frame(distance=intervals$intervals$dist, response=response))  
+  distances <- rbind(distances, data.frame(distance=intervals$intervals$dist, logDistance=log(intervals$intervals$dist), response=study$getPrettyResponse(response)))
 }
 
 stat <- ddply(distances, .(response), summarize, mean=mean(distance), sd=sd(distance), min=min(distance), max=max(distance))
 print(stat)
 
-distances$distance <- log(distances$distance)
-
-p <- ggplot(distances, aes(distance)) + geom_histogram(aes(y = ..density..), binwidth=density(distances$distance)$bw) +
-  facet_grid(~response) + xlab("log Distance (km/day)") + ylab("Proportion") + theme_economist()
+p <- ggplot(distances, aes(logDistance)) + geom_histogram(aes(y = ..density../sum(..density..)), binwidth=density(distances$logDistance)$bw) +
+  facet_grid(~response) + xlab("log Distance (km/day)") + ylab("Proportion") + theme_presentation()
 print(p)
 saveFigure(p, filename="DistanceDistributions.svg")
 
@@ -195,70 +204,87 @@ saveFigure(p, filename="DistanceDistributions.svg")
 ### Power law fit for simulated data
 ######
 
-study <- SimulationStudy$new(response="Intensive")$newInstance(context=context)
-tracks <- study$loadTracks(iteration=as.integer(1))
-tracks$tracks <- subset(tracks$tracks, id<5 & yday<5)
-intervals <- MovementSampleIntervals$new(study=study)
-thinnedTracks <- intervals$getThinnedTracksSampleIntervals(tracks=tracks)
-intervals$fit()
-p <- intervals$plotIntervalDistance() + theme_economist()
-print(p)
-saveFigure(p, filename="DistancePowerLaw.svg")
+for (response in responses) {
+  study <- FinlandWTCStudy$new(context=context, response=response)
+  intervals <- study$loadSampleIntervals()
+  distances <- intervals$getDistanceCurve()
+  
+  p <- ggplot(intervals$intervals, aes(intervalH, distanceKm)) + geom_point(alpha=.3) +
+    ylab("Distance / day (km)") + xlab("Sampling interval (h)") +
+    geom_line(data=distances, aes(intervalH, distanceKm), color="red", size=1) +
+    geom_smooth(data=distances, aes(ymin=distanceKm25, ymax=distanceKm975), stat="identity") +
+    ylim(c(0, max(intervals$intervals$distanceKm))) +
+    theme_presentation() + ggtitle(study$getPrettyResponse(response))
+  
+  plot(p)
+  saveFigure(p, filename=paste("DistanceCorrection-", response, ".svg", sep=""))
+  # Fixed effects: populationDensity + rrday + snow + tday
+  intervals$estimatedValuesSummary()  
+}
 
 ######
 ### Distance covariates
 ######
 
-boundaryDF <- ggplot2::fortify(study$studyArea$boundary)
-
+year <- 2000
 covariates <- FinlandCovariates$new(study=study)
-populationDensity <- covariates$loadPopulationDensityYear(2000)
+populationDensity <- covariates$loadPopulationDensityYear(year)
 area <- prod(res(populationDensity) / 1000)
+to <- projectExtent(populationDensity, study$studyArea$proj4string)
+x <- projectRaster(populationDensity, to)
 
-p <- gplot(populationDensity) + geom_raster(aes(fill=as.numeric(value))) + coord_equal() +
-  scale_fill_gradientn(colours=terrain.colors(99), na.value=NA, guide=guide_legend(title=bquote(paste("Humans /"~.(area)~km^2)))) +
-  theme_raster(legend.position="right")
+p <- gplot(x) + geom_raster(aes(fill=log(as.numeric(value))+1)) + coord_equal() +
+  scale_fill_gradient(low="white", high="steelblue", na.value=NA,
+                      breaks=round(seq(log(minValue(populationDensity)), log(maxValue(populationDensity)), length.out=7)),
+                      guide=guide_legend(title=bquote(paste("Log density"~.(area)~km^-2)))) +
+  geom_polygon(data=boundaryDF, aes(long, lat, group=group), color="black", fill=NA) +
+  theme_raster(20, legend.position="right") + ggtitle(paste("Homo erectus", year))
 print(p)
-saveFigure(p, filename="HumanPopulationDensity.svg")
+saveFigure(p, filename="HumanPopulationDensity.svg", bg="transparent")
 
-weather <- covariates$loadWeatherYear(2000)
+weather <- covariates$loadWeatherYear(year)
 weatherRaster <- SpatioTemporalRaster$new(study=study, ext="svg")
 weatherRaster$addLayer(weather$month1snow, "snowcover")
 weatherRaster$addLayer(weather$month1rrday, "precip")
 weatherRaster$addLayer(weather$month1tday, "temp")
-weatherRaster$plotLayer("snowcover", boundary=T, plotTitle="January 2000", legendTitle="Snow depth (cm)", save=TRUE, name="Weather")
-weatherRaster$plotLayer("precip", boundary=T, plotTitle="January 2000", legendTitle="Precipitation (?)", save=TRUE, name="Weather")
-weatherRaster$plotLayer("temp", boundary=T, plotTitle="January 2000", legendTitle="Temperature (°C)", save=TRUE, name="Weather")
+p <- weatherRaster$plotLayer("snowcover", boundary=boundaryDF, digits=0, plotTitle="January 2000", legendTitle="Snow depth (cm)") +
+  theme_raster(20, legend.position="right")
+plot(p)
+saveFigure(p, filename="WeatherSnowCover.svg", bg="transparent")
+p <- weatherRaster$plotLayer("precip", boundary=boundaryDF, digits=0, plotTitle="January 2000", legendTitle="Precipitation (?)") +
+  theme_raster(20, legend.position="right")
+plot(p)
+saveFigure(p, filename="WeatherPrecipitation.svg", bg="transparent")
+p <- weatherRaster$plotLayer("temp", boundary=boundaryDF, digits=0, plotTitle="January 2000", legendTitle="Temperature (°C)") +
+  theme_raster(20, legend.position="right")
+plot(p)
+saveFigure(p, filename="WeatherTemperature.svg", bg="transparent")
+
 
 ######
 ### Predicted distance histograms and rasters
 ######
 
-#intervals <- list()
-#for (response in responses) {
-#  study <- FinlandWTCStudy$new(context=context, response=response)
-#  intervals[[response]] <- study$getSampleIntervals()
-#  tracks <- study$loadTracks()
-#  intervals[[response]]$getThinnedTracksSampleIntervals(tracks=tracks)
-#}
-
 distances <- data.frame()
 distanceRasters <- list()
 for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
+  intervals <- study$loadSampleIntervals()
   estimates <- study$loadEstimates()
-  # TODO: add index estimates$index$st
   predictedDistances <- estimates$predictDistances() / 1000
   
-  x <- data.frame(estimates$getUnscaledMeshCoordinates(), distance=predictedDistances, response=response)
+  x <- data.frame(estimates$getUnscaledMeshCoordinates(), distance=predictedDistances, logDistance=log(predictedDistances), response=study$getPrettyResponse(response))
   x$year <- rep(estimates$years, each=estimates$mesh$n)
   distances <- rbind(distances, x)
-
+  
   for (year in estimates$years) {
     distanceRasters[[response]] <- SpatioTemporalRaster$new(study=study, ext="svg")
     distancesYear <- subset(x, year==year)
     distanceRasters[[response]]$interpolate(distancesYear, transform=sqrt, inverseTransform=square, layerNames=year)
-    distanceRasters[[response]]$plotLayer(paste("X", year, sep=""), boundary=TRUE, plotTitle=paste(study$prettyResponse, year), legendTitle="Distance (km/day)", save=TRUE, name="DistanceRaster")
+    p <- distanceRasters[[response]]$plotLayer(paste("X", year, sep=""), boundary=boundaryDF, digits=0, plotTitle=paste(study$getPrettyResponse(response), year), legendTitle="Distance (km/day)")
+    p <- p + theme_raster(20, legend.position="right")
+    plot(p)
+    saveFigure(p, filename=paste("DistanceRaster-", year, "-", response, ".svg", sep=""), bg="transparent")
   }
 }
 
@@ -266,15 +292,13 @@ stat <- ddply(distances, .(response, year), summarize, mean=mean(distance), sd=s
 print(stat)
 
 limits <- aes(ymax=mean+sd, ymin=mean-sd)
-p <- ggplot(stat, aes(year, mean)) + geom_line() + geom_errorbar(limits) + facet_grid(~response) +
-  xlab("Year") + ylab("Distance (km/day)") + theme_economist()
+p <- ggplot(stat, aes(year, mean)) + geom_line(size=1) + geom_errorbar(limits, size=1) + facet_grid(~response) +
+  xlab("Year") + ylab("Distance (km/day)") + theme_presentation()
 print(p)
 saveFigure(p, filename="PredictedDistanceTimeSeries.svg")
 
-distances$distance <- log(distances$distance)
-
-p <- ggplot(distances, aes(distance)) + geom_histogram(aes(y = ..density..), binwidth=density(distances$distance)$bw) +
-  facet_grid(~response) + xlab("log Distance (km/day)") + ylab("Proportion") + theme_economist()
+p <- ggplot(distances, aes(logDistance)) + geom_histogram(aes(y=..density../sum(..density..)), binwidth=density(distances$logDistance)$bw) +
+  facet_grid(~response) + xlab("log Distance (km/day)") + ylab("Proportion") + theme_presentation()
 print(p)
 saveFigure(p, filename="PredictedDistanceDistributions.svg")
 
@@ -286,16 +310,16 @@ saveFigure(p, filename="PredictedDistanceDistributions.svg")
 getPopulationDensity <- function(responses, context, withHabitatWeights=FALSE, withDistanceWeights=FALSE) {
   populationDensity <- list()
   for (response in responses) {
-    study <- FinlandWTCStudy$new(context=context, response=response)
-    populationDensity[[response]] <- study$getPopulationDensity(withHabitatWeights=withHabitatWeights, withDistanceWeights=withDistanceWeights)
+    study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
+    populationDensity[[response]] <- study$getPopulationDensity(withHabitatWeights=withHabitatWeights)
   }
   return(populationDensity)
 }
 
-# TODO: standard deviation, include RTF when data available
-populationDensity <- getPopulationDensity(responses=responses[1:2], context=context)
+# TODO: standard deviation, include all focal species when data available
+populationDensity <- getPopulationDensity(responses=responses[1], context=context)
 
-for (response in responses[1:2]) {
+for (response in responses[1]) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   
   populationDensity[[response]]$mean$ext="svg"
@@ -322,20 +346,21 @@ for (response in responses[1:2]) {
 ######
 
 populationSize <- data.frame()
-for (response in responses[1:2]) {
+for (response in responses[1]) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   x <- populationDensity[[response]]$mean$integrate(volume=FinlandPopulationSize$new(study=study))
   x$loadValidationData()
   y <- x$sizeData
-  y$response <- response
-  if (response == "canis.lupus") y$Estimated <- y$Estimated * .3 + 50 # TODO: fix
-  if (response == "lynx.lynx") y$Estimated <- y$Estimated * .15 + 400 # TODO: fix
+  y$response <- study$getPrettyResponse(response)
+  #if (response == "canis.lupus") y$Estimated <- y$Estimated * .3 + 50 # TODO: fix
+  #if (response == "lynx.lynx") y$Estimated <- y$Estimated * .15 + 400 # TODO: fix
   populationSize <- rbind(populationSize, y)
 }
 
 populationSize <- melt(populationSize, id.vars=c("Year","response"), variable.name="Variable")
-p <- ggplot(populationSize, aes(Year, value, group=Variable, colour=Variable)) + geom_line() + facet_wrap(~response) +
-  xlab("Year") + ylab("Population size") + theme_economist() + theme(axis.text.x=element_text(angle=90, hjust=1))
+
+p <- ggplot(populationSize, aes(Year, value, group=Variable, colour=Variable)) + geom_line(size=1) + facet_wrap(~response) +
+  xlab("Year") + ylab("Population size") + theme_presentation() + theme(axis.text.x=element_text(angle=90, hjust=1))
 print(p)
 saveFigure(p, filename="PopulationSize.svg")
 
