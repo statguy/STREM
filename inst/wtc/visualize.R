@@ -370,7 +370,7 @@ saveFigure(p, filename="PopulationSize.svg")
 
 
 ######
-### Straight-line-distance error
+### Straight-line distance error
 ######
 
 study <- SimulationStudy$new(response="Intensive")$newInstance(context=context)
@@ -404,6 +404,11 @@ saveFigure(p, filename="StraightLineDistanceError.svg", bg="transparent")
 
 
 ######
-### Habitat weights
+### Habitat usage sampling
 ######
 
+usage <- HabitatSelection$new(study=study)
+tracks <- study$loadTracks()
+p <- usage$plotSampleSteps(tracks=tracks, index=0:3+800-69)
+print(p)
+saveFigure(p, filename="HabitatUsageSampling.svg", bg="transparent")

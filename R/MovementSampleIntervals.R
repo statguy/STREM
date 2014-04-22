@@ -26,9 +26,10 @@ MovementSampleIntervals <- setRefClass(
         
     # Determines sampling intervals of the recorded movements for each day
     getSampleIntervals = function(tracks) {
+      library(adehabitatLT)
       library(plyr)
       
-      tracksDF <- if (is.data.frame(tracks$tracks)) tracks$tracks else ld(tracks$tracks)
+      tracksDF <- if (inherits(tracks$tracks, "ltraj")) ld(tracks$tracks) else tracks$tracks
       tracksDF <- data.frame(tracksDF, breakDownDate(tracksDF$date))
 
       intervals <<- ddply(tracksDF, .(burst, yday, year), function(x) {
