@@ -175,7 +175,7 @@ for (response in responses) {
   weightsRaster <- study$loadHabitatWeightsRaster()
   weightsRaster <- SpatioTemporalRaster$new(study=study, layerList=list(weightsRaster), ext="svg")
   p <- weightsRaster$plotLayer(layerName=1, plotTitle=study$getPrettyResponse(response), legendTitle="Weight")
-  p <- p + theme(legend.position=c(0.1,0.7), legend.background=element_rect(color="grey"), text=element_text(size=20))
+  p <- p + theme(20, legend.position=c(0.1,0.7), legend.background=element_rect(color="grey")) #, text=element_text(size=20))
   print(p)
   saveFigure(p, filename=paste("HabitatWeights-", response, ".svg", sep=""))
 }
@@ -260,7 +260,6 @@ p <- weatherRaster$plotLayer("temp", boundary=boundaryDF, digits=0, plotTitle="J
 plot(p)
 saveFigure(p, filename="WeatherTemperature.svg", bg="transparent")
 
-
 ######
 ### Predicted distance histograms and rasters
 ######
@@ -269,19 +268,30 @@ distances <- data.frame()
 distanceRasters <- list()
 for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
+  #intersections <- study$loadIntersections()
+  #intersections$predictDistances()
+  #predictedDistances <- intersections$intersections$distance / 1000
+
   intervals <- study$loadSampleIntervals()
   estimates <- study$loadEstimates()
-  predictedDistances <- estimates$predictDistances() / 1000
+  estimates$saveMeshNodeCovariates()
+  predictedDistances <- estimates$covariates$distance / 1000
+  coords <- repeatMatrix(estimates$getUnscaledMeshCoordinates(), length(estimates$years))
   
-  x <- data.frame(estimates$getUnscaledMeshCoordinates(), distance=predictedDistances, logDistance=log(predictedDistances), response=study$getPrettyResponse(response))
-  x$year <- rep(estimates$years, each=estimates$mesh$n)
+  x <- data.frame(year=estimates$covariates$year, distance=predictedDistances, logDistance=log(predictedDistances), response=study$getPrettyResponse(response))
+  #x <- data.frame(estimates$locations, distance=predictedDistances, logDistance=log(predictedDistances), response=study$getPrettyResponse(response))
+  #x$year <- intersections$intersections$year
+  #x$year <- rep(estimates$years, each=estimates$mesh$n)
   distances <- rbind(distances, x)
   
   for (year in estimates$years) {
     distanceRasters[[response]] <- SpatioTemporalRaster$new(study=study, ext="svg")
-    distancesYear <- subset(x, year==year)
-    distanceRasters[[response]]$interpolate(distancesYear, transform=sqrt, inverseTransform=square, layerNames=year)
-    p <- distanceRasters[[response]]$plotLayer(paste("X", year, sep=""), boundary=boundaryDF, digits=0, plotTitle=paste(study$getPrettyResponse(response), year), legendTitle="Distance (km/day)")
+    distancesYear <- x[x$year==year,]
+    y <- estimates$project(distancesYear$distance)
+    names(y) <- year
+    distanceRasters[[response]]$rasterStack <- stack(y)
+    #distanceRasters[[response]]$interpolate(distancesYear, transform=sqrt, inverseTransform=square, layerNames=year) # TODO: doesn't work well
+    p <- distanceRasters[[response]]$plotLayer(paste("X", year, sep=""), boundary=boundaryDF, digits=1, plotTitle=paste(study$getPrettyResponse(response), year), legendTitle="Distance (km/day)")
     p <- p + theme_raster(20, legend.position="right")
     plot(p)
     saveFigure(p, filename=paste("DistanceRaster-", year, "-", response, ".svg", sep=""), bg="transparent")
@@ -293,12 +303,12 @@ print(stat)
 
 limits <- aes(ymax=mean+sd, ymin=mean-sd)
 p <- ggplot(stat, aes(year, mean)) + geom_line(size=1) + geom_errorbar(limits, size=1) + facet_grid(~response) +
-  xlab("Year") + ylab("Distance (km/day)") + theme_presentation()
+  xlab("Year") + ylab("Predicted distance (km/day), interval = 2h") + theme_presentation()
 print(p)
 saveFigure(p, filename="PredictedDistanceTimeSeries.svg")
 
 p <- ggplot(distances, aes(logDistance)) + geom_histogram(aes(y=..density../sum(..density..)), binwidth=density(distances$logDistance)$bw) +
-  facet_grid(~response) + xlab("log Distance (km/day)") + ylab("Proportion") + theme_presentation()
+  facet_grid(~response, scales="free_x") + xlab("log Predicted distance (km/day), interval = 2h") + ylab("Proportion") + theme_presentation()
 print(p)
 saveFigure(p, filename="PredictedDistanceDistributions.svg")
 
@@ -307,7 +317,7 @@ saveFigure(p, filename="PredictedDistanceDistributions.svg")
 ### Population density
 ######
 
-getPopulationDensity <- function(responses, context, withHabitatWeights=FALSE, withDistanceWeights=FALSE) {
+getPopulationDensity <- function(responses, context, withHabitatWeights=FALSE) {
   populationDensity <- list()
   for (response in responses) {
     study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
@@ -318,27 +328,18 @@ getPopulationDensity <- function(responses, context, withHabitatWeights=FALSE, w
 
 # TODO: standard deviation, include all focal species when data available
 populationDensity <- getPopulationDensity(responses=responses[1], context=context)
+weightedPopulationDensity <- getPopulationDensity(responses=responses[1], context=context, withHabitatWeights=TRUE)
 
 for (response in responses[1]) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   
-  populationDensity[[response]]$mean$ext="svg"
-  populationDensity[[response]]$mean$animate(name="PopulationDensity", delay=50)
-  
-  habitatWeights <- study$loadHabitatWeightsRaster()
-  # TODO: use copy() instead
-  x <- SpatioTemporalRaster$new(study=study)
-  x$width <- populationDensity[[response]]$mean$width
-  x$ext <- populationDensity[[response]]$mean$ext
-  x$rasterStack <- populationDensity[[response]]$mean$rasterStack
-  x$weight(habitatWeights)
-  x$ext="svg"
-  x$animate(name="PopulationDensityHabitatWeights", delay=50)
-  
-  # TODO: Weight each year
-  distanceWeights <- distanceRasters[[response]]$rasterStack[[1]]
-  x$weight(distanceWeights)
-  x$animate(name="PopulationDensityAllWeights", delay=50)
+  popdens <- populationDensity[[response]]$mean
+  popdens$ext="svg"
+  popdens$animate(name="PopulationDensity", delay=50, ggfun=function(p) p + theme_raster(20))
+
+  wpopdens <- weightedPopulationDensity[[response]]$mean
+  wpopdens$ext="svg"
+  wpopdens$animate(name="WeightedPopulationDensity", delay=50, ggfun=function(p) p + theme_raster(20))
 }
 
 ######
@@ -346,23 +347,27 @@ for (response in responses[1]) {
 ######
 
 populationSize <- data.frame()
+
 for (response in responses[1]) {
   study <- FinlandWTCStudy$new(context=context, response=response)
-  x <- populationDensity[[response]]$mean$integrate(volume=FinlandPopulationSize$new(study=study))
+  x <- weightedPopulationDensity[[response]]$mean$integrate(volume=FinlandPopulationSize$new(study=study))
   x$loadValidationData()
   y <- x$sizeData
   y$response <- study$getPrettyResponse(response)
-  #if (response == "canis.lupus") y$Estimated <- y$Estimated * .3 + 50 # TODO: fix
-  #if (response == "lynx.lynx") y$Estimated <- y$Estimated * .15 + 400 # TODO: fix
+  print(coef(x$match()))
+  if (response == "canis.lupus") y$"Transformed estimated" <- y$Estimated * .4
+  #if (response == "lynx.lynx") y$Estimated <- y$Estimated * .15
   populationSize <- rbind(populationSize, y)
 }
 
-populationSize <- melt(populationSize, id.vars=c("Year","response"), variable.name="Variable")
-
-p <- ggplot(populationSize, aes(Year, value, group=Variable, colour=Variable)) + geom_line(size=1) + facet_wrap(~response) +
-  xlab("Year") + ylab("Population size") + theme_presentation() + theme(axis.text.x=element_text(angle=90, hjust=1))
+x <- melt(populationSize, id.vars=c("Year","response"), variable.name="Variable")
+p <- ggplot(x, aes(Year, value, group=Variable, colour=Variable)) + geom_line(size=1) + facet_wrap(~response) +
+  scale_colour_manual(values=c("steelblue","violetred1","steelblue1")) +
+  xlab("Year") + ylab("Population size") +
+  theme_presentation(20, axis.text.x=element_text(angle=90, hjust=1)) + theme(legend.position="bottom")
 print(p)
 saveFigure(p, filename="PopulationSize.svg")
+
 
 ######
 ### Straight-line-distance error
@@ -370,23 +375,35 @@ saveFigure(p, filename="PopulationSize.svg")
 
 study <- SimulationStudy$new(response="Intensive")$newInstance(context=context)
 tracks <- study$loadTracks(iteration=as.integer(1))
-tracks$tracks <- subset(tracks$tracks, id == 1 & yday<1)
+tracks$tracks <- subset(tracks$tracks, id == 1 & year == 2001 & month == 1 & day %in% c(2,3))
 intervals <- MovementSampleIntervals$new(study=study)
 thinnedTracks <- intervals$getThinnedTracksSampleIntervals(tracks=tracks)
 
 plotTracks <- data.frame()
-for (i in seq(1, 15, by=5)) {
+for (i in seq(1, 11, by=5)) {
   x <- thinnedTracks$tracksList[[i]]$tracks
   x$thin <- i 
-  x <- subset(x, date < as.POSIXct("2001-01-01 03:40:00") & id == 1)
-  #x <- subset(x, date < as.POSIXct("2001-01-01 12:00:00"))
+  x <- subset(x, date >= as.POSIXct("2001-01-03 00:00:00") & date <= as.POSIXct("2001-01-03 03:40:00"))
   plotTracks <- rbind(plotTracks, x)
 }
 plotTracks$thin <- factor(plotTracks$thin)
 plotTracks$dt <- factor(plotTracks$dt / 60)
 
-p <- ggplot(plotTracks, aes(x, y, group=dt, colour=dt)) + geom_path(size=2) + geom_point(size=4) +
-  theme_raster(legend.position="right") + 
-  guides(colour=guide_legend(title=expression(paste(Delta, "t (min)"))))
+segment <- aes(x=x, y=y, xend=c(tail(x, n=-1), NA), yend=c(tail(y, n=-1), NA), group=dt, colour=dt)
+ending <- arrow(length=unit(0.7, "cm"))
+p <- ggplot(plotTracks, mapping=segment) +
+  theme_raster(20, legend.position=c(0.5,0.85), legend.background=element_rect(color="grey")) + 
+  #guides(colour=guide_legend(title=expression(paste(Delta, "t (min)")))) +
+  guides(colour=guide_legend(title="Sampling interval (min)")) +
+  scale_colour_manual(values=c("#4054de","#8094de","#b0c4de")) +
+  ggtitle("Straight-line distance error") +
+  geom_path(size=2, arrow=ending) + geom_point(size=4)
+  #geom_segment(size=2, arrow=ending) # doesn't work with grouping
 print(p)
-saveFigure(p, filename="StraightLineDistanceError.svg")
+saveFigure(p, filename="StraightLineDistanceError.svg", bg="transparent")
+
+
+######
+### Habitat weights
+######
+

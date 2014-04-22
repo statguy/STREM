@@ -225,13 +225,13 @@ Tracks <- setRefClass(
       #tracksDFThinned <- ddply(tracksDF, .variables=.(id, burst, year, yday), .fun=function(x, by) {
       tracksDFThinned <- ddply(tracksDF, .variables=.(burst), .fun=function(x, by) {
         n <- nrow(x)
-        if (n == 1 | n < 2*by) return(NULL)
+        if (n == 1 | n < 2 * by) return(NULL)
         retainIndex <- seq(1, n, by=by)
         return(x[retainIndex,])
       }, by=by, .parallel=TRUE)
       
       if (nrow(tracksDFThinned) == 0) return(NULL)
-      tracksDFThinned <- tracksDFThinned[,c("x","y","id","date","year","yday","burst","dt","dist")]
+      tracksDFThinned <- tracksDFThinned[,c("x","y","id","date","year","month","day","yday","burst","dt","dist")]
       tracksDFThinned <- addDtDist(tracksDFThinned)
       
       newDt <- mean(tracksDFThinned$dt, na.rm=T)

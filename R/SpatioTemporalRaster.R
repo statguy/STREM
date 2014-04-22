@@ -29,22 +29,21 @@ SpatioTemporalRaster <- setRefClass(
       return(invisible(.self))
     },
     
-    getRasterFileName = function(name, layerName, ext) {
-      ext0 <- if (missing(ext)) .self$ext else ext
-      return(context$getFileName(dir=study$context$figuresDirectory, name=paste(name, layerName, sep="-"), response=study$response, region=study$studyArea$region, ext=paste(".", ext0, sep="")))
+    getRasterFileName = function(name, layerName, ext=.self$ext) {
+      return(context$getFileName(dir=study$context$figuresDirectory, name=paste(name, layerName, sep="-"), response=study$response, region=study$studyArea$region, ext=paste(".", ext, sep="")))
     },
     
-    saveRasterFile = function(p, layer, name, layerName) {
+    saveRasterFile = function(p, layer, name, layerName, ext=.self$ext, ...) {
       if (missing(p) | missing(name) | missing(layerName))
         stop("Argument p, name or layerName missing.")
       aspectRatio <- dim(layer)[1] / dim(layer)[2]
       height <- 12
       if (aspectRatio > 1) width0 <- height / aspectRatio
       else height <- width * aspectRatio
-      ggsave(p, filename=getRasterFileName(name=name, layerName=layerName), width=width0, height=height)
+      ggsave(p, filename=getRasterFileName(name=name, layerName=layerName, ext=ext), width=width0, height=height, ...)
     },
     
-    plotLayer = function(layerName, plotTitle, legendTitle, digits=2, breaks=round(seq(minValue(rasterStack[[layerName]]), maxValue(rasterStack[[layerName]]), length.out=7), digits=digits), boundary=FALSE, plot=FALSE, save=FALSE, name) {
+    plotLayer = function(layerName, plotTitle, legendTitle, digits=2, breaks=round(seq(minValue(rasterStack[[layerName]]), maxValue(rasterStack[[layerName]]), length.out=7), digits=digits), boundary=FALSE, plot=FALSE, save=FALSE, name, ...) {
       library(ggplot2)
       library(raster)
       library(rasterVis)
@@ -65,7 +64,7 @@ SpatioTemporalRaster <- setRefClass(
       if (!missing(plotTitle)) p <- p + ggtitle(plotTitle)
       
       if (plot) print(p)
-      if (save) saveRasterFile(p=p, layer=layer, name=name, layerName=layerName)
+      if (save) saveRasterFile(p=p, layer=layer, name=name, layerName=layerName, ...)
       
       return(invisible(p))
     },
@@ -84,7 +83,7 @@ SpatioTemporalRaster <- setRefClass(
       return(invisible(.self))
     },
     
-    animate = function(name, delay=100, boundary=FALSE, sameScale=TRUE) {
+    animate = function(name, delay=100, boundary=FALSE, sameScale=TRUE, convertCmd="convert", ggfun, ...) {
       if (missing(name)) stop("Argument name missing.")
       
       library(ggplot2)
@@ -104,24 +103,23 @@ SpatioTemporalRaster <- setRefClass(
         p <- if (sameScale) p + scale_fill_gradientn(colours=terrain.colors(99), breaks=seq(vmin, vmax, length.out=100), na.value=NA)
         else p + scale_fill_gradientn(colours=terrain.colors(99), na.value=NA)
         if (boundary) p <- p + geom_polygon(data=boundaryDF, aes(long, lat), colour="white", fill=NA)
+        if (!missing(ggfun)) {
+          ggfun <- match.fun(ggfun)
+          p <- ggfun(p)
+        }
         print(p)
 
-        saveRasterFile(p=p, layer=layer, name=name, layerName=layerName)
-        if (ext == "svg") {
-          inputFile <- getRasterFileName(name=name, layerName=layerName)
-          outputFile <- getRasterFileName(name=name, layerName=layerName, ext="png")
-          cmd <- paste("inkscape -z -e ", outputFile, " -w ", dim(layer)[2]," -h ", dim(layer)[1]," ", inputFile, sep="")
-          message(cmd)
-          system(cmd)
-        }
+        saveRasterFile(p=p, layer=layer, name=name, layerName=layerName, ...)
+        if (ext != "png") saveRasterFile(p=p, layer=layer, name=name, layerName=layerName, ext="png", ...)
       }
       
       message("Converting...")
       outputFile <- context$getFileName(dir=study$context$figuresDirectory, name=name, response=study$response, region=study$studyArea$region, ext=".gif")
       layerFileNameMask <- getRasterFileName(name=name, layerName="*", ext="png")
-      cmd <- paste("convert -loop 0 -delay ", delay, " ", layerFileNameMask, " ", outputFile, sep="")
+      cmd <- paste(convertCmd, " -loop 0 -delay ", delay, " ", layerFileNameMask, " ", outputFile, sep="")
       message(cmd)
-      system(cmd)
+      x <- system(cmd)
+      if (x > 0) stop("System command failed.")
       
       return(invisible(.self))
     },
