@@ -37,7 +37,7 @@ saveFigure(p, filename="SurveyRoute.svg", bg="transparent", width=4, height=4)
 
 intersections <- study$loadIntersections(predictDistances=FALSE)
 x <- ddply(as.data.frame(intersections$intersections), .(year), nrow)
-mean(x$V1)
+mean(x$V1); sd(x$V1)
 
 # TODO
 
@@ -68,9 +68,9 @@ tracks <- getTracks(responses=responses, context=context)
 
 p <- ggplot(tracks, aes(long, lat, group=group, colour=response)) +
   geom_polygon(data=boundaryDF,  colour="white") + coord_equal() +
-  geom_path() + facet_grid(~response) + theme_raster()
+  geom_path() + facet_grid(~response) + theme_raster(20)
 print(p)
-saveFigure(p, filename="GPS.svg")
+saveFigure(p, filename="GPS.svg", bg="transparent")
 
 
 ######
@@ -92,9 +92,9 @@ getIntersectionsRate <- function(responses, context) {
 
 intersectionsRate <- getIntersectionsRate(responses, context)
 p <- ggplot(intersectionsRate, aes(year, intersections)) + geom_line(size=1) + facet_grid(~response) +
-  xlab("Year") + ylab("Intersections rate") + theme_presentation()
+  xlab("Year") + ylab("Intersections rate") + theme_presentation(16)
 print(p)
-saveFigure(p, filename="IntersectionsRate.svg")
+saveFigure(p, filename="IntersectionsRate.svg", bg="transparent")
 
 ######
 ### Crossing distributions (D > 1 removed)
@@ -119,27 +119,27 @@ getIntersectionsDistribution <- function(responses, context, zeros=TRUE) {
 
 intersectionsDistribution <- getIntersectionsDistribution(responses, context)
 p <- ggplot(intersectionsDistribution, aes(intersections, proportion)) + geom_bar(stat="identity") +
-  facet_grid(~response, scales="free_x") + xlab("Number of intersections") + ylab("Proportion") + theme_presentation()
+  facet_grid(~response, scales="free_x") + xlab("Number of intersections") + ylab("Proportion") + theme_presentation(16)
 print(p)
-saveFigure(p, filename="IntersectionsDistribution.svg")
+saveFigure(p, filename="IntersectionsDistribution.svg", bg="transparent")
 
 intersectionsDistribution <- getIntersectionsDistribution(responses, context, zeros=FALSE)
 p <- ggplot(intersectionsDistribution, aes(intersections, proportion)) + geom_bar(stat="identity") +
-  facet_grid(~response, scales="free_x") + xlab("Number of intersections (>0)") + ylab("Proportion") + theme_presentation()
+  facet_grid(~response, scales="free_x") + xlab("Number of intersections (>0)") + ylab("Proportion") + theme_presentation(16)
 print(p)
-saveFigure(p, filename="IntersectionsDistributionNoZero.svg")
+saveFigure(p, filename="IntersectionsDistributionNoZero.svg", bg="transparent")
 
 ######
 ### CORINE habitat types
 ######
 
-colortable <- study$studyArea$habitat@legend@colortable
-colortable[colortable=="#000000"] <- "#FFFFFF"
-p <- gplot(study$studyArea$habitat, maxpixels=50000*10) + geom_raster(aes(fill=as.factor(value))) +
-  scale_fill_manual(values=colortable) +
-  coord_equal() + theme_raster()
-print(p)
-saveFigure(p, filename="CORINE.svg", dimensions=dim(study$studyArea$habitat))
+#colortable <- study$studyArea$habitat@legend@colortable
+#colortable[colortable=="#000000"] <- "#FFFFFF"
+#p <- gplot(study$studyArea$habitat, maxpixels=50000*10) + geom_raster(aes(fill=as.factor(value))) +
+#  scale_fill_manual(values=colortable) +
+#  coord_equal() + theme_raster()
+#print(p)
+#saveFigure(p, filename="CORINE.svg", dimensions=dim(study$studyArea$habitat), bg="transparent")
 
 ######
 ### Habitat weights
@@ -162,9 +162,9 @@ getHabitatWeights <- function(responses, context) {
 weights <- getHabitatWeights(responses=responses, context=context)
 p <- ggplot(weights, aes(habitat, weights, fill=habitat)) +
   geom_bar(stat="identity") + facet_grid(~response) + scale_fill_manual(values=c("#beaed4","#ffff99","#7fc97f","#fdc086","#386cb0")) +
-  xlab("") + ylab("Weight") + theme_presentation(axis.text.x=element_text(angle=90, hjust=1))
+  xlab("") + ylab("Weight") + theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1))
 print(p)
-saveFigure(p, filename="HabitatWeights.svg")
+saveFigure(p, filename="HabitatWeights.svg", bg="transparent")
 
 ######
 ### Habitat weights rasters
@@ -172,13 +172,20 @@ saveFigure(p, filename="HabitatWeights.svg")
 
 for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)
+  
+  habitatPreferences <- HabitatSelection$new(study=study)$loadHabitatSelection()
+  habitatWeights <- CORINEHabitatWeights$new(study=study)$setHabitatSelectionWeights(habitatPreferences)
+  rawHabitat <- raster(file.path(context$scratchDirectory, "clc2006_fi25m.tif"))
+  habitatWeights$getWeightsRaster(habitat=rawHabitat, save=TRUE)
+  
   weightsRaster <- study$loadHabitatWeightsRaster()
   weightsRaster <- SpatioTemporalRaster$new(study=study, layerList=list(weightsRaster), ext="svg")
   p <- weightsRaster$plotLayer(layerName=1, plotTitle=study$getPrettyResponse(response), legendTitle="Weight")
-  p <- p + theme(20, legend.position=c(0.1,0.7), legend.background=element_rect(color="grey")) #, text=element_text(size=20))
+  p <- p + theme_raster(16, legend.position=c(0.1,0.6), legend.background=element_rect(color="grey")) #, text=element_text(size=20))
   print(p)
-  saveFigure(p, filename=paste("HabitatWeights-", response, ".svg", sep=""))
+  saveFigure(p, filename=paste("HabitatWeights-", response, ".svg", sep=""), bg="transparent")
 }
+
 
 ######
 ### Distance distributions
@@ -196,9 +203,9 @@ stat <- ddply(distances, .(response), summarize, mean=mean(distance), sd=sd(dist
 print(stat)
 
 p <- ggplot(distances, aes(logDistance)) + geom_histogram(aes(y = ..density../sum(..density..)), binwidth=density(distances$logDistance)$bw) +
-  facet_grid(~response) + xlab("log Distance (km/day)") + ylab("Proportion") + theme_presentation()
+  facet_grid(~response) + xlab("log Distance (km/day)") + ylab("Proportion") + theme_presentation(16)
 print(p)
-saveFigure(p, filename="DistanceDistributions.svg")
+saveFigure(p, filename="DistanceDistributions.svg", bg="transparent")
 
 ######
 ### Power law fit for simulated data
@@ -217,7 +224,7 @@ for (response in responses) {
     theme_presentation() + ggtitle(study$getPrettyResponse(response))
   
   plot(p)
-  saveFigure(p, filename=paste("DistanceCorrection-", response, ".svg", sep=""))
+  saveFigure(p, filename=paste("DistanceCorrection-", response, ".svg", sep=""), bg="transparent")
   # Fixed effects: populationDensity + rrday + snow + tday
   intervals$estimatedValuesSummary()  
 }
@@ -303,12 +310,12 @@ print(stat)
 
 limits <- aes(ymax=mean+sd, ymin=mean-sd)
 p <- ggplot(stat, aes(year, mean)) + geom_line(size=1) + geom_errorbar(limits, size=1) + facet_grid(~response) +
-  xlab("Year") + ylab("Predicted distance (km/day), interval = 2h") + theme_presentation()
+  xlab("Year") + ylab("Predicted distance (km/day), interval = 2h") + theme_presentation(16)
 print(p)
 saveFigure(p, filename="PredictedDistanceTimeSeries.svg")
 
 p <- ggplot(distances, aes(logDistance)) + geom_histogram(aes(y=..density../sum(..density..)), binwidth=density(distances$logDistance)$bw) +
-  facet_grid(~response, scales="free_x") + xlab("log Predicted distance (km/day), interval = 2h") + ylab("Proportion") + theme_presentation()
+  facet_grid(~response, scales="free_x") + xlab("log Predicted distance (km/day), interval = 2h") + ylab("Proportion") + theme_presentation(16)
 print(p)
 saveFigure(p, filename="PredictedDistanceDistributions.svg")
 
@@ -326,6 +333,7 @@ getPopulationDensity <- function(responses, context, withHabitatWeights=FALSE) {
   return(populationDensity)
 }
 
+# TODO: legend
 # TODO: standard deviation, include all focal species when data available
 populationDensity <- getPopulationDensity(responses=responses[1], context=context)
 weightedPopulationDensity <- getPopulationDensity(responses=responses[1], context=context, withHabitatWeights=TRUE)
@@ -364,9 +372,9 @@ x <- melt(populationSize, id.vars=c("Year","response"), variable.name="Variable"
 p <- ggplot(x, aes(Year, value, group=Variable, colour=Variable)) + geom_line(size=1) + facet_wrap(~response) +
   scale_colour_manual(values=c("steelblue","violetred1","steelblue1")) +
   xlab("Year") + ylab("Population size") +
-  theme_presentation(20, axis.text.x=element_text(angle=90, hjust=1)) + theme(legend.position="bottom")
+  theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1)) + theme(legend.position="bottom")
 print(p)
-saveFigure(p, filename="PopulationSize.svg")
+saveFigure(p, filename="PopulationSize.svg", bg="transparent")
 
 
 ######

@@ -21,10 +21,10 @@ HabitatWeights <- setRefClass(
       study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeightsRaster", response=study$response, region=study$studyArea$region, ext="")
     },
 
-    getWeightsRaster = function(save=FALSE) { # TODO: determine aggregation scale automatically
+    getWeightsRaster = function(habitat=study$getTemplateRaster(), aggregationScale=100, save=FALSE) { # TODO: determine aggregation scale automatically
       if (save) stop("Saving unsupported.")
       library(raster)
-      weightsRaster <- study$getTemplateRaster()
+      weightsRaster <- habitat
       weightsRaster[] <- 1
       return(weightsRaster)
     },
@@ -116,13 +116,12 @@ CORINEHabitatWeights <- setRefClass(
       return(p)
     },
     
-    getWeightsRaster = function(save=FALSE) { # TODO: determine aggregation scale automatically
+    getWeightsRaster = function(habitat=study$studyArea$habitat, aggregationScale=100, save=FALSE) { # TODO: determine aggregation scale automatically
       library(raster)
       
       aggfun <- function(habitatValue, na.rm) {
         x <- getWeights(habitatValue)
-        #x <- x[!is.na(x)]
-        x <- x[x!=0] # TODO: fix problem at the edges (do not count pixels outside the boundary)
+        x <- x[x!=0]
         mean(x, na.rm=na.rm)
       }
       
@@ -130,14 +129,14 @@ CORINEHabitatWeights <- setRefClass(
         fileName <- getWeightsRasterFileName()
         
         message("Saving habitat weights raster to ", fileName, ".grd...")
-        weightsRaster <- aggregate(study$studyArea$habitat,
-                                   aggregationScale=100, # TODO: get this from template raster
+        weightsRaster <- aggregate(habitat,
+                                   fact=aggregationScale, # TODO: get this from template raster
                                    filename=fileName, overwrite=TRUE,
                                    fun=aggfun, na.rm=T)
       }
       else {
-        weightsRaster <- aggregate(study$studyArea$habitat,
-                                   aggregationScale=100,
+        weightsRaster <- aggregate(habitat,
+                                   fact=aggregationScale,
                                    fun=aggfun, na.rm=T)
       }
       
