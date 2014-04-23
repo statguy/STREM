@@ -507,11 +507,11 @@ SimulatedSmoothModelNoOffset <- setRefClass(
   ),
   methods = list(
     getObservedOffset = function(distance) {
-      return(1)
+      return(rep(1, nrow(data)))
     },
     
     getPredictedOffset = function(distance) {
-      return(1)
+      return(rep(1, mesh$n * length(years)))
     }
   )
 )
@@ -534,7 +534,7 @@ FinlandSmoothModel <- setRefClass(
         #tracks <- study$loadTracks()
         #distance <- tracks$getMeanDistance()
       }
-      if (length(distance) == 1) distance <- rep(distance, mesh$n * length(years))
+      #if (length(distance) == 1) distance <- rep(distance, mesh$n * length(years))
       return(2/pi * 12000 * 1 * distance)
     },
     
@@ -564,11 +564,11 @@ FinlandSmoothModelNoDistances <- setRefClass(
     },
 
     getObservedOffset = function(distance) {
-      return(callSuper(distance=1))
+      return(rep(1, nrow(data)))
     },
     
     getPredictedOffset = function(distance) {
-      return(callSuper(distance=1))
+      return(rep(1, mesh$n * length(years)))
     }
   )
 )

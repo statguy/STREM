@@ -19,7 +19,7 @@ SurveyRoutes <- setRefClass(
       return(context$getFileName(dir=context$resultDataDirectory, name="SurveyRoutes", response=study$response, region=study$studyArea$region))
     },
     
-    loadSurveyRoutes = function(fileName=getSurveyRoutesFileName()) {
+    loadSurveyRoutes = function(fileName=getSurveyRoutesFileName(), findLengths) {
       load(fileName, env=as.environment(.self))
       return(invisible(.self))
     },
