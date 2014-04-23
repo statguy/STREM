@@ -113,3 +113,30 @@ FinlandWTCSurveyRoutes <- setRefClass(
     }
   )
 )
+
+TestSurveyRoutes <- setRefClass(
+  Class = "TestSurveyRoutes",
+  contains = "SurveyRoutes",
+  fields = list(
+  ),
+  methods = list(
+    initialize = function(...) {
+      callSuper(...)
+      return(invisible(.self))
+    },
+    
+    randomizeSurveyRoutes = function(nSurveyRoutes, save=FALSE) {
+      initialPopulation <- RandomInitialPopulation$new(studyArea=study$studyArea)
+      centroids <<- initialPopulation$randomize(nSurveyRoutes)
+      angles <- runif(length(centroids), 0, 2*pi)
+      surveyRoutes <<- getTriangles(centroids, angles, 4000)
+      getLengths()
+      if (save) saveSurveyRoutes()
+      return(invisible(.self))
+    },
+    
+    getSurveyRoutesFileName = function() {
+      return(context$getFileName(dir=context$resultDataDirectory, name="SurveyRoutes", response="Random", region=study$studyArea$region))
+    }
+  )
+)

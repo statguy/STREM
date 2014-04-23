@@ -173,10 +173,10 @@ saveFigure(p, filename="HabitatWeights.svg", bg="transparent")
 for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   
-  habitatPreferences <- HabitatSelection$new(study=study)$loadHabitatSelection()
-  habitatWeights <- CORINEHabitatWeights$new(study=study)$setHabitatSelectionWeights(habitatPreferences)
-  rawHabitat <- raster(file.path(context$scratchDirectory, "clc2006_fi25m.tif"))
-  habitatWeights$getWeightsRaster(habitat=rawHabitat, save=TRUE)
+  #habitatPreferences <- HabitatSelection$new(study=study)$loadHabitatSelection()
+  #habitatWeights <- CORINEHabitatWeights$new(study=study)$setHabitatSelectionWeights(habitatPreferences)
+  #rawHabitat <- raster(file.path(context$scratchDirectory, "clc2006_fi25m.tif"))
+  #habitatWeights$getWeightsRaster(habitat=rawHabitat, save=TRUE)
   
   weightsRaster <- study$loadHabitatWeightsRaster()
   weightsRaster <- SpatioTemporalRaster$new(study=study, layerList=list(weightsRaster), ext="svg")

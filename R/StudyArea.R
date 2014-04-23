@@ -208,7 +208,8 @@ TestStudyArea <- setRefClass(
     
     loadBoundary = function(thin, tolerance) {
       x <- -5
-      boundary <<- SpatialPolygons(list(Polygons(list(Polygon(matrix(c(325+x,700, 325+x,712, 338+x,712, 338+x,700, 325+x,700)*10000, ncol=2, byrow=T))), ID=1)), proj4string=proj4string)      
+      boundary <<- SpatialPolygons(list(Polygons(list(Polygon(matrix(c(325+x,700, 325+x,712, 338+x,712, 338+x,700, 325+x,700)*10000, ncol=2, byrow=T))), ID=1)), proj4string=proj4string)
+      return(invisible(.self))
     },
     
     loadHabitatRaster = function() {
@@ -216,7 +217,8 @@ TestStudyArea <- setRefClass(
       library(raster)
       habitat <<- crop(habitat, boundary)
       habitat <<- readAll(habitat)
-      habitat[is.na(habitat[])] <<- 44      
+      habitat[is.na(habitat[])] <<- 44
+      return(invisible(.self))
     },
     
     getHabitatRasterFile = function() {
