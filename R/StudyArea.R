@@ -18,8 +18,8 @@ StudyArea <- setRefClass(
       return(.self)
     },
     
-    newInstance = function(thin=TRUE, prepareHabitatRaster=FALSE, rawRasterFile) {
-      loadBoundary(thin=thin)
+    newInstance = function(thin=TRUE, tolerance=0.1, prepareHabitatRaster=FALSE, rawRasterFile) {
+      loadBoundary(thin=thin, tolerance=tolerance)
       if (prepareHabitatRaster) {
         if (missing(rawRasterFile)) stop("rawRasterFile parameter missing.")
         prepareHabitatRaster(rawRasterFile=rawRasterFile)

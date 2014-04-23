@@ -135,7 +135,7 @@ FinlandWTCStudy <- setRefClass(
   methods = list(
     initialize = function(context, ...) {
       callSuper(context=context, ...)
-      studyArea <<- FinlandStudyArea$new(context=context)$newInstance()
+      studyArea <<- FinlandStudyArea$new(context=context)$newInstance(tolerance=0.001)
       return(invisible(.self))
     },
     
