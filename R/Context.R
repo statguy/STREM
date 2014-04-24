@@ -5,11 +5,12 @@ Context <- setRefClass(
     processedDataDirectory = "ANY",
     rawDataDirectory = "ANY",
     scratchDirectory = "ANY",
-    figuresDirectory = "ANY"
+    figuresDirectory = "ANY",
+    verbose = "logical"
   ),
   methods = list(
-    initialize = function(resultDataDirectory=NA, processedDataDirectory=NA, rawDataDirectory=NA, scratchDirectory=NA, figuresDirectory=NA) {
-      callSuper(resultDataDirectory=resultDataDirectory, processedDataDirectory=processedDataDirectory, rawDataDirectory=rawDataDirectory, scratchDirectory=scratchDirectory, figuresDirectory=figuresDirectory)
+    initialize = function(resultDataDirectory=NA, processedDataDirectory=NA, rawDataDirectory=NA, scratchDirectory=NA, figuresDirectory=NA, verbose=FALSE) {
+      callSuper(resultDataDirectory=resultDataDirectory, processedDataDirectory=processedDataDirectory, rawDataDirectory=rawDataDirectory, scratchDirectory=scratchDirectory, figuresDirectory=figuresDirectory, verbose=verbose)
     },
     
     getFileName = function(dir, name, response, region, ext=".RData") {
@@ -19,7 +20,7 @@ Context <- setRefClass(
         file.path(dir, paste(name, "-", region, ext, sep=""))
       else
         file.path(dir, paste(name, "-", response, "-", region, ext, sep=""))
-      message("File = ", fileName)
+      if (verbose) message("File = ", fileName)
       return(fileName)
     },
     
