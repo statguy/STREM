@@ -80,7 +80,7 @@ SimulatedIntersections <- setRefClass(
 
           nSurveyRoutes <- length(surveyRoutes)
           nTracks <- length(tracks)
-          message("Finding intersections for survey route ", i, " / ", nSurveyRoutes, " for ", nTracks, " tracks...")
+          cat("Finding intersections for survey route ", i, " / ", nSurveyRoutes, " for ", nTracks, " tracks... ")
                    
 #           i <- 2
 #           count <- 0
@@ -103,6 +103,8 @@ SimulatedIntersections <- setRefClass(
             x[j] <- internal_countIntersections(trackCoords, surveyRouteCoords)
           }
           
+          cat("found = ", sum(x), "\n")
+
           return(x)
         }
         

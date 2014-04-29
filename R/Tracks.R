@@ -223,7 +223,7 @@ Tracks <- setRefClass(
       oldDt <- mean(tracksDF$dt, na.rm=T)
       
       #tracksDFThinned <- ddply(tracksDF, .variables=.(id, burst, year, yday), .fun=function(x, by) {
-      tracksDFThinned <- ddply(tracksDF, .variables=.(burst), .fun=function(x, by) {
+      tracksDFThinned <- ddply(tracksDF, .variables=.(id, year, yday), .fun=function(x, by) {
         n <- nrow(x)
         if (n == 1 | n < 2 * by) return(NULL)
         retainIndex <- seq(1, n, by=by)

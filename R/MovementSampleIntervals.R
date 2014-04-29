@@ -32,7 +32,7 @@ MovementSampleIntervals <- setRefClass(
       tracksDF <- if (inherits(tracks$tracks, "ltraj")) ld(tracks$tracks) else tracks$tracks
       tracksDF <- data.frame(tracksDF, breakDownDate(tracksDF$date))
 
-      intervals <<- ddply(tracksDF, .(burst, yday, year), function(x) {
+      intervals <<- ddply(tracksDF, .(id, yday, year), function(x) {
         if (is.na(x$dt[nrow(x)])) x$dt[nrow(x)] <- mean(x$dt, na.rm=T)
         
         s <- sum(x$dt, na.rm=T) / 3600
@@ -42,7 +42,7 @@ MovementSampleIntervals <- setRefClass(
         intervalMin <- 24 / nrow(x) * 60
         if (intervalMin > 24*60) return(NULL)
         
-        y <- data.frame(id=paste(x$burst[1], x$year[1], x$yday[1]),
+        y <- data.frame(id=paste(x$id[1], x$year[1], x$yday[1]),
                         individualId = x$id[1],
                         date=x$date[1],
                         year=x$year[1],
@@ -89,6 +89,7 @@ MovementSampleIntervals <- setRefClass(
         if (sum(retainIndex) == 0) break
 
         thinnedIntervals$intervals <- thinnedIntervals$intervals[retainIndex,]
+        # TODO: burst definition changed, DOES THIS WORK?
         retainBursts <- unique(thinnedIntervals$intervals[, "burst"])
         thinnedTracks$tracks <- subset(thinnedTracks$tracks, burst %in% retainBursts)
         
