@@ -163,7 +163,7 @@ SimulatedIntersections <- setRefClass(
       tracksObj <- tracks$getTracks()
       tracksDF <- if (inherits(tracksObj, "ltraj")) ld(tracksObj) else tracksObj
       
-      burstYear <- ddply(tracksDF, .(burst), function(x) {
+      burstYear <- ddply(tracksDF, .(id,year), function(x) {
         date <- as.POSIXlt(x$date)
         data.frame(burst=x$burst[1],
                    year=date$year[1] + 1900,
