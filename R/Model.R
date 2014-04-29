@@ -162,7 +162,7 @@ SmoothModel <- setRefClass(
                                tag="observed")
       
       predStack <<- inla.stack(data=list(response=NA,
-                                         E=1, #getPredictedOffset(),
+                                         E=2/pi, #1, #getPredictedOffset(),
                                          link=1),
                                A=list(1),
                                effects=list(c(index, list(intercept=1))),
