@@ -54,7 +54,7 @@ Tracks <- setRefClass(
       return(tracks)
     },
         
-    getSpatialLines = function(variables=.(burst)) {
+    getSpatialLines = function(variables=.(id,year)) {
       library(sp)
       message("Converting tracks to SP object...")
       if (is.data.frame(tracks)) {
