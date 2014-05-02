@@ -15,7 +15,7 @@ StudyArea <- setRefClass(
   methods = list(
     initialize = function(context=NA, region=NA, proj4string=NA, ...) {
       callSuper(context=context, region=region, proj4string=proj4string, ...)
-      return(.self)
+      return(invisible(.self))
     },
     
     newInstance = function(thin=TRUE, tolerance=0.1, prepareHabitatRaster=FALSE, rawRasterFile) {
@@ -26,7 +26,7 @@ StudyArea <- setRefClass(
       }
       loadHabitatRaster()
       if (length(plotScale) == 0) plotScale <<- getPlotScale()
-      return(.self)
+      return(invisible(.self))
     },
     
     loadBoundary = function(thin, tolerance) {
@@ -36,7 +36,8 @@ StudyArea <- setRefClass(
     prepareHabitatRaster = function(rawRasterFile) {
       if (missing(rawRasterFile))
         stop("rawRasterFile or boundary parameter missing.")
-      saveHabitatRasterFile(rawRasterFile=rawRasterFile)      
+      saveHabitatRasterFile(rawRasterFile=rawRasterFile)
+      return(invisible(.self))
     },
     
     maskLargeRaster = function(inputRasterFile, outputRasterFile) {
@@ -65,6 +66,7 @@ StudyArea <- setRefClass(
 
       #unlink(tmptif)
       #unlink(tmpshp)
+      return(invisible(.self))
     },
     
     saveHabitatRasterFile = function(rawRasterFile) {
@@ -83,11 +85,17 @@ StudyArea <- setRefClass(
       saveHabitatFrequencies(habitat)
       
       message("Cleaning up...")
-      #unlink(tmpRasterFile)      
+      #unlink(tmpRasterFile)
+      
+      return(invisible(.self))
     },
     
+    #getHabitatRasterFile = function() {
+    #  stop("Override this method.")
+    #},
+    
     getHabitatRasterFile = function() {
-      stop("Override this method.")
+      return(context$getFileName(context$scratchDirectory, name="HabitatRaster", region=region, ext=".tif"))
     },
     
     loadHabitatRaster = function() {
@@ -96,6 +104,7 @@ StudyArea <- setRefClass(
         stop("Habitat raster file ", getHabitatRasterFile(), " not found.")
       habitat <<- raster(getHabitatRasterFile())
       projection(habitat) <<- attr(proj4string, "projargs")
+      return(invisible(.self))
     },
             
     findLargestPolygon = function(gadm) {
@@ -160,6 +169,7 @@ StudyArea <- setRefClass(
       }
       
       boundary <<- gadm
+      return(invisible(.self))
     },
     
     getHabitatFrequenciesFileName = function() {
@@ -169,6 +179,7 @@ StudyArea <- setRefClass(
     saveHabitatFrequencies = function(habitatRaster) {
       habitatFrequencies <- freq(habitatRaster, progress="text")
       save(habitatFrequencies, file=getHabitatFrequenciesFileName())
+      return(invisible(.self))
     },
     
     loadHabitatFrequencies = function() {
@@ -185,6 +196,7 @@ StudyArea <- setRefClass(
     plotHabitatRaster = function() {
       plot(habitat)
       plot(boundary, add=T)
+      return(invisible(.self))
     },
     
     readRasterIntoMemory = function() {
@@ -192,7 +204,8 @@ StudyArea <- setRefClass(
         message("Reading habitat raster into memory...")
         habitat <<- readAll(habitat)
       }
-    }
+      return(invisible(.self))
+    }    
   )
 )
 
@@ -201,7 +214,6 @@ TestStudyArea <- setRefClass(
   contains = "StudyArea",
   methods = list(
     initialize = function(...) {
-      library(sp)
       callSuper(region="test", proj4string=CRS("+init=epsg:2393"), ...)
       return(.self)
     },
@@ -232,17 +244,62 @@ FinlandStudyArea <- setRefClass(
   contains = "StudyArea",
   methods = list(
     initialize = function(...) {
-      library(sp)
       callSuper(region="Finland", proj4string=CRS("+init=epsg:2393"), ...)
-      return(.self)
+      return(invisible(.self))
     },
     
     loadBoundary = function(thin=TRUE, tolerance=0.1) {
       loadBoundaryGADM(country="FIN", thin=thin, tolerance=tolerance)
+      return(invisible(.self))
+    }
+  )
+)
+
+RussiaStudyArea <- setRefClass(
+  Class = "RussiaStudyArea",
+  contains = "StudyArea",
+  methods = list(
+    initialize = function(...) {
+      callSuper(region="Russia", proj4string=CRS("+init=epsg:3410"), ...)
+      return(invisible(.self))
     },
     
-    getHabitatRasterFile = function() {
-      return(context$getFileName(context$scratchDirectory, name="HabitatRaster", region="Finland", ext=".tif"))
+    loadDistricts = function() {
+      library(sp)
+      library(maptools)
+      library(rgdal)
+      
+      fileName <- file.path(context$rawDataDirectory, "russia", "adm6_district")
+      districts <- readShapeSpatial(fileName)
+      proj4string(districts) <- CRS("+proj=longlat +datum=WGS84")
+      districts <- spTransform(districts, .self$proj4string)
+      
+      return(districts)
+    },
+    
+    getBoundaryFileName = function() {
+      context$getFileName(dir=context$processedDataDirectory, name="Boundary", response=response, region=region)
+    },
+    
+    saveBoundary = function(fileName=getBoundaryFileName(), study) {
+      i <- RussiaWTCIntersections$new(study=study)
+      i$loadIntersections()
+      districts <- loadDistricts()
+      boundary <<- subset(districts, NAME_LAT %in% i$intersections$District_Lat & ADM4_ID %in% i$intersections$RegionID)
+      save(boundary, file=fileName)
+      return(invisible(.self))
+    },
+    
+    loadBoundary = function(thin=TRUE, tolerance=0.1) {
+      load(fileName=getBoundaryFileName(), envir=as.environment(.self))
+      
+      #loadBoundaryGADM(country="RUS", thin=thin, tolerance=tolerance)      
+      
+      return(invisible(.self))
+    },
+    
+    loadHabitatRaster = function() {
+      return(invisible(.self))
     }
   )
 )

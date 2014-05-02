@@ -323,3 +323,29 @@ FinlandWTCStudy <- setRefClass(
     }
   )
 )
+
+RussiaWTCStudy <- setRefClass(
+  Class = "RussiaWTCStudy",
+  contains = "Study",
+  methods = list(
+    initialize = function(context, ...) {
+      callSuper(context=context, ...)
+      studyArea <<- RussiaStudyArea$new(context=context)$newInstance()
+      return(invisible(.self))
+    },
+    
+    preprocessResponse = function(response) {
+      response <<- response
+      intersections <- RussiaWTCIntersections$new(study=.self)
+      intersections$saveIntersections()
+    },
+    
+    preprocess = function() {
+      preprocessResponse(response="canis.lupus")
+      preprocessResponse(response="lynx.lynx")
+      preprocessResponse(response="rangifer.tarandus.fennicus")
+      return(invisible(.self))
+    }
+    
+  )
+)

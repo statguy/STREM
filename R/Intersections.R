@@ -281,3 +281,49 @@ FinlandWTCIntersections <- setRefClass(
     }
   )
 )
+
+RussiaWTCIntersections <- setRefClass(
+  Class = "RussiaWTCIntersections",
+  contains = c("Intersections"), # RussiaCovariates
+  fields = list(
+    maxDuration = "numeric"
+  ),
+  methods = list(
+    initialize = function(maxDuration=Inf, ...) {
+      callSuper(...)
+      maxDuration <<- maxDuration
+      return(invisible(.self))
+    },
+    
+    saveIntersections = function() {
+      library(sp)
+      library(dplyr)
+      
+      message("Processing ", study$response, "...")
+      
+      districts <- study$studyArea$loadDistricts()
+      districts <- data.frame(coordinates(districts), RegionID=districts@data$ADM4_ID, District_Lat=districts@data$NAME_LAT)
+      names(districts) <- c("x","y",c("RegionID", "District_Lat"))
+      
+      wtc <- read.csv(file.path(study$context$rawDataDirectory, "russia", "Regions_Districts_Latin.csv"), sep="\t", dec=",")
+      
+      x <- merge(wtc, districts, by=c("RegionID", "District_Lat"), all.x=TRUE, sort=FALSE)
+      
+      x$canis.lupus <- NA
+      x[x$Species_RU=="Волк",]$canis.lupus <- x[x$Species_RU=="Волк",]$Cnt_trs_Forest + x[x$Species_RU=="Волк",]$Cnt_trs_Field + x[x$Species_RU=="Волк",]$Cnt_trs_Bog
+      x$lynx.lynx <- NA
+      x[x$Species_RU=="Рысь",]$lynx.lynx <- x[x$Species_RU=="Рысь",]$Cnt_trs_Forest + x[x$Species_RU=="Рысь",]$Cnt_trs_Field + x[x$Species_RU=="Рысь",]$Cnt_trs_Bog
+      x$rangifer.tarandus.fennicus <- NA
+      x[x$Species_RU=="Лесной северный олень",]$rangifer.tarandus.fennicus <- x[x$Species_RU=="Лесной северный олень",]$Cnt_trs_Forest + x[x$Species_RU=="Лесной северный олень",]$Cnt_trs_Field + x[x$Species_RU=="Лесной северный олень",]$Cnt_trs_Bog
+      x$length <- x$Length_Forest + x$Length_Field + x$Length_Bog
+      
+      xy <- x[!is.na(x$x) & !is.na(x$y),]
+      xy$duration <- 1
+      
+      intersections <<- SpatialPointsDataFrame(select(xy, x, y), data=select(xy,-x, -y), proj4string=study$studyArea$proj4string)
+      
+      save(intersections, file=getIntersectionsFileName())
+    }
+
+  )
+)
