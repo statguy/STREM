@@ -143,7 +143,7 @@ SmoothModel <- setRefClass(
       groupYears <- as.integer(data$year - min(years) + 1)
             
       spde <<- inla.spde2.matern(mesh)
-      index <<- inla.spde.make.index("st", n.spde=mesh$n, n.group=nYears)
+      index <<- inla.spde.make.index("st", n.spde=spde$n.spde, n.group=nYears)
       
       family <<- family
       model <<- response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))#, hyper=rhoPrior))
@@ -175,7 +175,8 @@ SmoothModel <- setRefClass(
       library(INLA)
       
       fullStack <<- inla.stack(obsStack, predStack)
-      stackData <- inla.stack.data(fullStack)
+      #stackData <- inla.stack.data(fullStack)
+      stackData <- inla.stack.data(fullStack, spde=spde)
       
       control.fixed <- if (!inherits(interceptPrior, "undefinedField"))
          list(mean=list(intercept=interceptPrior$mean), prec=list(intercept=interceptPrior$prec))
@@ -185,7 +186,8 @@ SmoothModel <- setRefClass(
       
       result <<- inla(model,
                       family=family,
-                      data=inla.stack.data(fullStack, spde=spde),
+                      #data=inla.stack.data(fullStack, spde=spde),
+                      data=stackData,
                       E=stackData$E,
                       verbose=verbose,
                       control.fixed=control.fixed,
