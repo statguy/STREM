@@ -382,6 +382,11 @@ FinlandRussiaWTCStudy <- setRefClass(
       return(model)
     },
     
+    loadEstimates = function() {
+      model <- FinlandRussiaSmoothModel$new(study=.self)
+      return(model$loadEstimates())
+    },
+    
     collectEstimates = function() {
       estimates <- loadEstimates()
       estimates$collectEstimates()

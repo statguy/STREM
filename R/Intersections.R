@@ -307,7 +307,8 @@ RussiaWTCIntersections <- setRefClass(
       xy <- x %.% filter(Species_RU == species) %.%
         mutate(intersections = Cnt_trs_Forest + Cnt_trs_Field + Cnt_trs_Bog,
                length = (Length_Forest + Length_Field + Length_Bog) * 1000,
-               duration = 1) %.%
+               duration = 1,
+               area = districts_Area) %.% # TODO: Area should be on the same scale as rest of the variables
         filter(!is.na(x), !is.na(y), !is.na(length), length > 0, !is.na(intersections))
       coordinates(xy) <- ~x+y
       proj4string(xy) <- study$studyArea$proj4string
@@ -333,7 +334,6 @@ FinlandRussiaWTCIntersections <- setRefClass(
       library(rgdal)
       library(plyr)
       
-      # TODO: check coordinates
       # TODO: divide finland into smaller regions
       
       finlandStudy <- FinlandWTCStudy$new(context=context, response=study$response)
@@ -343,12 +343,13 @@ FinlandRussiaWTCIntersections <- setRefClass(
       x <- ddply(as.data.frame(finland$intersections), .(year),
                  function(x) { data.frame(year=x$year[1], length=sum(x$length), duration=mean(x$duration), intersections=sum(x$intersections)) })
       x$district <- "Finland"
+      x$area <- finlandStudy$studyArea$boundary@polygons[[1]]@area / 1000^2
       finlandBoundary <- spTransform(finlandStudy$studyArea$boundary, russiaStudy$studyArea$proj4string)
       x$x <- coordinates(finlandBoundary)[1]
       x$y <- coordinates(finlandBoundary)[2]
       
       russia <- RussiaWTCIntersections$new(study=russiaStudy)$loadIntersections()
-      y <- as.data.frame(russia$intersections)[,c("x","y","length","intersections","duration")]
+      y <- as.data.frame(russia$intersections)[,c("x","y","length","intersections","duration","area")]
       y$year <- russia$intersections$Year
       y$district <- russia$intersections$NAME_LAT
       

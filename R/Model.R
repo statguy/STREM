@@ -584,6 +584,15 @@ FinlandRussiaSmoothModel <- setRefClass(
     initialize = function(...) {
       callSuper(modelName="SmoothModel", ...)
       return(invisible(.self))
+    },
+    
+    getObservedOffset = function(distance=data$distance) {
+      return(2/pi * data$length * data$duration * distance * data$area)
+    },
+    
+    getPredictedOffset = function(distance=mean(data$distance)) {
+      # Put on approximately the same scale with observed crossings
+      return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years) * data$area))
     }
   )
 )

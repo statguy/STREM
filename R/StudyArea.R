@@ -340,7 +340,7 @@ FinlandRussiaStudyArea <- setRefClass(
     
     loadHabitatRaster = function() {
       library(raster)
-      habitat <<- raster(extent(c(2.2,7.5,7.4,11.2)*1e6), nrows=400, ncols=1000, crs=proj4string)
+      habitat <<- raster(extent(c(2.2,7.5,7.4,11.2)*1e6), nrows=400*100, ncols=1000*100, crs=proj4string)
       return(invisible(.self))
     }
   )
