@@ -334,8 +334,8 @@ FinlandRussiaWTCIntersections <- setRefClass(
       # TODO: check coordinates
       # TODO: divide finland into smaller regions
       
-      finlandStudy <- FinlandWTCStudy$new(context=context, response=response)
-      russiaStudy <- RussiaWTCStudy$new(context=context, response=response)
+      finlandStudy <- FinlandWTCStudy$new(context=context, response=study$response)
+      russiaStudy <- RussiaWTCStudy$new(context=context, response=study$response)
       finland <- FinlandWTCIntersections$new(study=finlandStudy)$loadIntersections()
       finland$intersections <- spTransform(finland$intersections, russiaStudy$studyArea$proj4string)
       x <- ddply(as.data.frame(finland$intersections), .(year),

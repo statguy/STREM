@@ -325,7 +325,7 @@ FinlandRussiaStudyArea <- setRefClass(
       finland <- FinlandStudyArea$new(context=context)$newInstance()
       russia <- RussiaStudyArea$new(context=context)$newInstance()
       
-      x <- spTransform(finland$boundary, russia$proj4string)      
+      x <- spTransform(finland$boundary, russia$proj4string)
       y <- russia$boundary
       
       x@data <- data.frame(district=x$NAME_ENGLISH)
