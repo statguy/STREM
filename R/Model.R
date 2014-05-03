@@ -574,3 +574,16 @@ FinlandSmoothModelNoDistances <- setRefClass(
     }
   )
 )
+
+FinlandRussiaSmoothModel <- setRefClass(
+  Class = "FinlandRussiaSmoothModel",
+  contains = c("SmoothModel"),
+  fields = list(
+  ),
+  methods = list(
+    initialize = function(...) {
+      callSuper(modelName="SmoothModel", ...)
+      return(invisible(.self))
+    }
+  )
+)

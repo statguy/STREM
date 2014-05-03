@@ -271,25 +271,9 @@ FinlandWTCStudy <- setRefClass(
       return(distances)
     },
     
-    collectEstimates = function() { #withDistanceWeights=TRUE) {
-      #intervals <- getSampleIntervals()
-      
-      #message("Predictions for survey routes...")
-      #intersections <- loadIntersections()
-      #distancesAtSurveyRoutes <- if (withDistanceWeights)
-      #  subset(intervals$predictDistances(predictCovariates=intersections$covariates), Variable=="Predicted", select="Value", drop=TRUE)
-      #else
-      #  mean(loadTracks()$getDistances(), na.rm=T)
-      
-      #message("Predictions for mesh nodes...")
+    collectEstimates = function() {
       estimates <- loadEstimates()
-      #distancesAtNodes <- if (withDistanceWeights)
-      #  subset(intervals$predictDistances(predictCovariates=estimates$covariates), Variable=="Predicted", select="Value", drop=TRUE)
-      #else
-      #  mean(loadTracks()$getDistances(), na.rm=T)
-      
       estimates$collectEstimates()
-      
       return(estimates)
     },
     
@@ -346,6 +330,56 @@ RussiaWTCStudy <- setRefClass(
       preprocessResponse(response="rangifer.tarandus.fennicus")
       return(invisible(.self))
     }
+  )
+)
+
+FinlandRussiaWTCStudy <- setRefClass(
+  Class = "FinlandRussiaWTCStudy",
+  contains = "Study",
+  methods = list(
+    initialize = function(context, ...) {
+      callSuper(context=context, ...)
+      studyArea <<- FinlandRussiaStudyArea$new(context=context)$newInstance()
+      return(invisible(.self))
+    },
     
+    preprocessResponse = function(response) {
+      response <<- response
+      intersections <- FinlandRussiaWTCIntersections$new(study=.self)
+      intersections$saveIntersections()
+    },
+    
+    preprocess = function() {
+      preprocessResponse(response="canis.lupus")
+      preprocessResponse(response="lynx.lynx")
+      preprocessResponse(response="rangifer.tarandus.fennicus")
+      return(invisible(.self))
+    },
+    
+    loadTracks = function() {
+      finlandStudy <- FinlandWTCStudy$new(context=.self$context, response=response)
+      return(FinlandWTCTracks$new(study=finlandStudy)$loadTracks())
+    },
+    
+    loadIntersections = function() {
+      intersections <- FinlandRussiaWTCIntersections$new(study=.self)
+      intersections$loadIntersections()
+      tracks <- loadTracks()
+      intersections$intersections$distance <- tracks$getMeanDistance()
+      return(intersections)
+    },
+    
+    estimate = function(meshParams, interceptPriorParams, save=FALSE, test=FALSE) {
+      intersections <- loadIntersections()
+      
+      model <- FinlandRussiaSmoothModel$new(study=.self)
+      model$setup(intersections=intersections, meshParams=meshParams)
+      if (!missing(interceptPriorParams))
+        model$setupInterceptPrior(priorParams=interceptPriorParams)
+      
+      if (!test) model$estimate(save=save, fileName=model$getEstimatesFileName())
+      
+      return(model)
+    }
   )
 )

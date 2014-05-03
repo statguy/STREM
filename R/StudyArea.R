@@ -214,6 +214,7 @@ TestStudyArea <- setRefClass(
   contains = "StudyArea",
   methods = list(
     initialize = function(...) {
+      library(sp)
       callSuper(region="test", proj4string=CRS("+init=epsg:2393"), ...)
       return(.self)
     },
@@ -244,6 +245,7 @@ FinlandStudyArea <- setRefClass(
   contains = "StudyArea",
   methods = list(
     initialize = function(...) {
+      library(sp)
       callSuper(region="Finland", proj4string=CRS("+init=epsg:2393"), ...)
       return(invisible(.self))
     },
@@ -260,6 +262,7 @@ RussiaStudyArea <- setRefClass(
   contains = "StudyArea",
   methods = list(
     initialize = function(...) {
+      library(sp)
       callSuper(region="Russia", proj4string=CRS("+init=epsg:3410"), ...)
       return(invisible(.self))
     },
@@ -278,28 +281,64 @@ RussiaStudyArea <- setRefClass(
     },
     
     getBoundaryFileName = function() {
-      context$getFileName(dir=context$processedDataDirectory, name="Boundary", response=response, region=region)
+      context$getFileName(dir=context$processedDataDirectory, name="Boundary", region=region)
     },
     
     saveBoundary = function(fileName=getBoundaryFileName(), study) {
+      library(sp)
       i <- RussiaWTCIntersections$new(study=study)
       i$loadIntersections()
       districts <- loadDistricts()
       boundary <<- subset(districts, NAME_LAT %in% i$intersections$District_Lat & ADM4_ID %in% i$intersections$RegionID)
+      boundary$NAME_ENGLISH <<- boundary$NAME_LAT 
       save(boundary, file=fileName)
       return(invisible(.self))
     },
     
     loadBoundary = function(thin=TRUE, tolerance=0.1) {
-      load(fileName=getBoundaryFileName(), envir=as.environment(.self))
-      
-      #loadBoundaryGADM(country="RUS", thin=thin, tolerance=tolerance)      
-      
+      library(sp)
+      #load(file=getBoundaryFileName(), envir=as.environment(.self))
+      loadBoundaryGADM(country="RUS", thin=thin, tolerance=tolerance)
       return(invisible(.self))
     },
     
     loadHabitatRaster = function() {
       return(invisible(.self))
     }
+  )
+)
+
+FinlandRussiaStudyArea <- setRefClass(
+  Class = "FinlandRussiaStudyArea",
+  contains = "StudyArea",
+  methods = list(
+    initialize = function(...) {
+      library(sp)
+      callSuper(region="FinlandRussia", proj4string=CRS("+init=epsg:3410"), ...)
+      return(invisible(.self))
+    },
+    
+    loadBoundary = function(thin=TRUE, tolerance=0.1) {
+      library(sp)
+      library(rgdal)
+      
+      finland <- FinlandStudyArea$new(context=context)$newInstance()
+      russia <- RussiaStudyArea$new(context=context)$newInstance()
+      
+      x <- spTransform(finland$boundary, russia$proj4string)      
+      y <- russia$boundary
+      
+      x@data <- data.frame(district=x$NAME_ENGLISH)
+      y@data <- data.frame(district=y$NAME_ENGLISH)
+      z <- spChFIDs(y, as.character(1:length(y)+1))
+      boundary <<- rbind(x, z)
+
+      return(invisible(.self))
+    },
+    
+    loadHabitatRaster = function() {
+      return(invisible(.self))
+    }
+    
   )
 )

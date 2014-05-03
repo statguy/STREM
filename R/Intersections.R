@@ -284,14 +284,10 @@ FinlandWTCIntersections <- setRefClass(
 
 RussiaWTCIntersections <- setRefClass(
   Class = "RussiaWTCIntersections",
-  contains = c("Intersections"), # RussiaCovariates
-  fields = list(
-    maxDuration = "numeric"
-  ),
+  contains = c("Intersections"),
   methods = list(
-    initialize = function(maxDuration=Inf, ...) {
+    initialize = function(...) {
       callSuper(...)
-      maxDuration <<- maxDuration
       return(invisible(.self))
     },
     
@@ -304,26 +300,61 @@ RussiaWTCIntersections <- setRefClass(
       districts <- study$studyArea$loadDistricts()
       districts <- data.frame(coordinates(districts), RegionID=districts@data$ADM4_ID, District_Lat=districts@data$NAME_LAT)
       names(districts) <- c("x","y",c("RegionID", "District_Lat"))
-      
       wtc <- read.csv(file.path(study$context$rawDataDirectory, "russia", "Regions_Districts_Latin.csv"), sep="\t", dec=",")
-      
       x <- merge(wtc, districts, by=c("RegionID", "District_Lat"), all.x=TRUE, sort=FALSE)
+      species <- switch(study$response, canis.lupus="Волк", lynx.lynx="Рысь", rangifer.tarandus.fennicus="Лесной северный олень")
       
-      x$canis.lupus <- NA
-      x[x$Species_RU=="Волк",]$canis.lupus <- x[x$Species_RU=="Волк",]$Cnt_trs_Forest + x[x$Species_RU=="Волк",]$Cnt_trs_Field + x[x$Species_RU=="Волк",]$Cnt_trs_Bog
-      x$lynx.lynx <- NA
-      x[x$Species_RU=="Рысь",]$lynx.lynx <- x[x$Species_RU=="Рысь",]$Cnt_trs_Forest + x[x$Species_RU=="Рысь",]$Cnt_trs_Field + x[x$Species_RU=="Рысь",]$Cnt_trs_Bog
-      x$rangifer.tarandus.fennicus <- NA
-      x[x$Species_RU=="Лесной северный олень",]$rangifer.tarandus.fennicus <- x[x$Species_RU=="Лесной северный олень",]$Cnt_trs_Forest + x[x$Species_RU=="Лесной северный олень",]$Cnt_trs_Field + x[x$Species_RU=="Лесной северный олень",]$Cnt_trs_Bog
-      x$length <- x$Length_Forest + x$Length_Field + x$Length_Bog
-      
-      xy <- x[!is.na(x$x) & !is.na(x$y),]
-      xy$duration <- 1
-      
-      intersections <<- SpatialPointsDataFrame(select(xy, x, y), data=select(xy,-x, -y), proj4string=study$studyArea$proj4string)
+      xy <- x %.% filter(Species_RU == species) %.%
+        mutate(intersections = Cnt_trs_Forest + Cnt_trs_Field + Cnt_trs_Bog,
+               length = (Length_Forest + Length_Field + Length_Bog) * 1000,
+               duration = 1) %.%
+        filter(!is.na(x), !is.na(y), !is.na(length), length > 0, !is.na(intersections))
+      coordinates(xy) <- ~x+y
+      proj4string(xy) <- study$studyArea$proj4string
+      intersections <<- xy
       
       save(intersections, file=getIntersectionsFileName())
     }
 
+  )
+)
+
+FinlandRussiaWTCIntersections <- setRefClass(
+  Class = "FinlandRussiaWTCIntersections",
+  contains = c("Intersections"),
+  methods = list(
+    initialize = function(...) {
+      callSuper(...)
+      return(invisible(.self))
+    },
+    
+    saveIntersections = function() {
+      library(plyr)
+      
+      # TODO: check coordinates
+      # TODO: divide finland into smaller regions
+      
+      finlandStudy <- FinlandWTCStudy$new(context=context, response=response)
+      russiaStudy <- RussiaWTCStudy$new(context=context, response=response)
+      finland <- FinlandWTCIntersections$new(study=finlandStudy)$loadIntersections()
+      finland$intersections <- spTransform(finland$intersections, russiaStudy$studyArea$proj4string)
+      x <- ddply(as.data.frame(finland$intersections), .(year),
+                 function(x) { data.frame(year=x$year[1], length=sum(x$length), duration=mean(x$duration), intersections=sum(x$intersections)) })
+      x$district <- "Finland"
+      x$x <- coordinates(finlandStudy$studyArea$boundary)[1]
+      x$y <- coordinates(finlandStudy$studyArea$boundary)[2]
+      
+      russia <- RussiaWTCIntersections$new(study=russiaStudy)$loadIntersections()
+      y <- as.data.frame(russia$intersections)[,c("x","y","length","intersections","duration")]
+      y$year <- russia$intersections$Year
+      y$district <- russia$intersections$NAME_LAT
+      
+      z <- rbind(x[,colnames(y)],y)
+      coordinates(z) <- ~x+y
+      proj4string(z) <- russiaStudy$studyArea$proj4string
+      intersections <<- z
+      
+      save(intersections, file=getIntersectionsFileName())
+    }
   )
 )
