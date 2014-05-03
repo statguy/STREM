@@ -380,6 +380,34 @@ FinlandRussiaWTCStudy <- setRefClass(
       if (!test) model$estimate(save=save, fileName=model$getEstimatesFileName())
       
       return(model)
+    },
+    
+    collectEstimates = function() {
+      estimates <- loadEstimates()
+      estimates$collectEstimates()
+      return(estimates)
+    },
+    
+    getPopulationDensity = function(saveDensityPlots=FALSE, getSD=FALSE) {
+      estimates <- collectEstimates()
+      
+      habitatWeights <- HabitatWeights$new(study=study)$getWeightsRaster()
+      populationDensity <- estimates$getPopulationDensity(templateRaster=habitatWeights, getSD=getSD)
+      populationDensity$mean$weight(habitatWeights)
+      
+      if (saveDensityPlots) {
+        populationDensity$mean$animate(name=estimates$modelName)
+        if (getSD) populationDensity$sd$animate(name=estimates$modelName)
+      }
+      
+      return(populationDensity)
+    },
+    
+    getPopulationSize = function(saveDensityPlots=FALSE) {
+      populationDensity <- getPopulationDensity(saveDensityPlots=saveDensityPlots)
+      populationSize <- populationDensity$mean$integrate(volume=FinlandRussiaPopulationSize$new(study=study))
+      return(populationSize)
     }
+    
   )
 )

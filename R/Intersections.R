@@ -329,6 +329,8 @@ FinlandRussiaWTCIntersections <- setRefClass(
     },
     
     saveIntersections = function() {
+      library(sp)
+      library(rgdal)
       library(plyr)
       
       # TODO: check coordinates
@@ -341,8 +343,9 @@ FinlandRussiaWTCIntersections <- setRefClass(
       x <- ddply(as.data.frame(finland$intersections), .(year),
                  function(x) { data.frame(year=x$year[1], length=sum(x$length), duration=mean(x$duration), intersections=sum(x$intersections)) })
       x$district <- "Finland"
-      x$x <- coordinates(finlandStudy$studyArea$boundary)[1]
-      x$y <- coordinates(finlandStudy$studyArea$boundary)[2]
+      finlandBoundary <- spTransform(finlandStudy$studyArea$boundary, russiaStudy$studyArea$proj4string)
+      x$x <- coordinates(finlandBoundary)[1]
+      x$y <- coordinates(finlandBoundary)[2]
       
       russia <- RussiaWTCIntersections$new(study=russiaStudy)$loadIntersections()
       y <- as.data.frame(russia$intersections)[,c("x","y","length","intersections","duration")]
@@ -352,7 +355,14 @@ FinlandRussiaWTCIntersections <- setRefClass(
       z <- rbind(x[,colnames(y)],y)
       coordinates(z) <- ~x+y
       proj4string(z) <- russiaStudy$studyArea$proj4string
-      intersections <<- z
+      
+      minx <- xmin(extent(study$studyArea$habitat))
+      maxx <- xmax(extent(study$studyArea$habitat))
+      miny <- ymin(extent(study$studyArea$habitat))
+      maxy <- ymax(extent(study$studyArea$habitat))
+      window <- matrix(c(minx,miny, minx,maxy, maxx,maxy, maxx,miny, minx,miny), ncol=2, byrow=T)
+      coords <- coordinates(z)
+      intersections <<- z[point.in.polygon(coords[,1], coords[,2], window[,1], window[,2])==1,]
       
       save(intersections, file=getIntersectionsFileName())
     }

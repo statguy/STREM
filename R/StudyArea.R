@@ -263,7 +263,8 @@ RussiaStudyArea <- setRefClass(
   methods = list(
     initialize = function(...) {
       library(sp)
-      callSuper(region="Russia", proj4string=CRS("+init=epsg:3410"), ...)
+      #callSuper(region="Russia", proj4string=CRS("+init=epsg:3410"), ...)
+      callSuper(region="Russia", proj4string=CRS("+init=epsg:3857"), ...)
       return(invisible(.self))
     },
     
@@ -314,7 +315,8 @@ FinlandRussiaStudyArea <- setRefClass(
   methods = list(
     initialize = function(...) {
       library(sp)
-      callSuper(region="FinlandRussia", proj4string=CRS("+init=epsg:3410"), ...)
+      #callSuper(region="FinlandRussia", proj4string=CRS("+init=epsg:3410"), ...)
+      callSuper(region="FinlandRussia", proj4string=CRS("+init=epsg:3857"), ...)
       return(invisible(.self))
     },
     
@@ -337,8 +339,9 @@ FinlandRussiaStudyArea <- setRefClass(
     },
     
     loadHabitatRaster = function() {
+      library(raster)
+      habitat <<- raster(extent(c(2.2,7.5,7.4,11.2)*1e6), nrows=400, ncols=1000, crs=proj4string)
       return(invisible(.self))
     }
-    
   )
 )
