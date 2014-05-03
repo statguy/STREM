@@ -84,10 +84,10 @@ SimulationStudy <- setRefClass(
       return(invisible(intersections))
     },
     
-    estimate = function(iteration, meshParams, interceptPriorParams, save=TRUE) {
+    estimate = function(iteration, meshParams, offsetScale=1, interceptPriorParams, save=TRUE) {
       intersections <- loadIntersections(iteration=iteration)
       model <- SimulatedSmoothModel$new(study=.self, iteration=iteration)
-      model$setup(intersections=intersections, meshParams=meshParams)
+      model$setup(intersections=intersections, meshParams=meshParams, offsetScale=offsetScale)
       if (!missing(interceptPriorParams)) model$setupInterceptPrior(interceptPriorParams)
       model$estimate()
       if (save) model$saveEstimates()
@@ -213,13 +213,13 @@ FinlandWTCStudy <- setRefClass(
       return(CORINEHabitatWeights$new(study=.self)$loadWeightsRaster())
     },
     
-    estimate = function(meshParams, interceptPriorParams, predictDistances=TRUE, save=FALSE, test=FALSE) {
+    estimate = function(meshParams, offsetScale=1, interceptPriorParams, predictDistances=TRUE, save=FALSE, test=FALSE) {
       intersections <- loadIntersections()
       if (predictDistances) intersections$predictDistances()
       else intersections$intersections$distance <- tracks$getMeanDistance()
       
       model <- FinlandSmoothModel$new(study=.self)
-      model$setup(intersections=intersections, meshParams=meshParams)
+      model$setup(intersections=intersections, meshParams=meshParams, offsetScale=offsetScale)
       if (!missing(interceptPriorParams))
         model$setupInterceptPrior(priorParams=interceptPriorParams)
       
@@ -369,11 +369,11 @@ FinlandRussiaWTCStudy <- setRefClass(
       return(intersections)
     },
     
-    estimate = function(meshParams, interceptPriorParams, save=FALSE, test=FALSE) {
+    estimate = function(meshParams, offsetScale=1, interceptPriorParams, save=FALSE, test=FALSE) {
       intersections <- loadIntersections()
       
       model <- FinlandRussiaSmoothModel$new(study=.self)
-      model$setup(intersections=intersections, meshParams=meshParams)
+      model$setup(intersections=intersections, meshParams=meshParams, offsetScale=offsetScale)
       if (!missing(interceptPriorParams))
         model$setupInterceptPrior(priorParams=interceptPriorParams)
       

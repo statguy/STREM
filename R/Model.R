@@ -23,7 +23,8 @@ Model <- setRefClass(
     fullStack = "inla.data.stack",
     result = "inla",
     node = "list",
-    modelName = "character"
+    modelName = "character",
+    offsetScale = "numeric"
   ),
   methods = list(
     initialize = function(...) {
@@ -78,6 +79,7 @@ SmoothModel <- setRefClass(
     },
     
     setupInterceptPrior = function(priorParams) {
+      # TODO: Handle offset scale
       # TODO: Find area from raster ignoring NA values if habitat weights are used (raster area sligtly different from the boundary area)
       # TODO: Link function is fixed, change if needed
       
@@ -107,18 +109,19 @@ SmoothModel <- setRefClass(
     },
     
     getObservedOffset = function(distance=data$distance) {
-      return(2/pi * data$length * data$duration * distance)
+      return(2/pi * data$length * data$duration * distance / offsetScale)
     },
     
     getPredictedOffset = function(distance=mean(data$distance)) {
       # Put on approximately the same scale with observed crossings
-      return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years)))
+      return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years) / offsetScale))
     },
     
-    setup = function(intersections, meshParams, family="nbinomial") {
+    setup = function(intersections, meshParams, offsetScale=1, family="nbinomial") {
       library(INLA)
       library(plyr)
       
+      offsetScale <<- offsetScale
       data <<- intersections$getData()
       
       p <- ddply(data, .(year), function(x) {
@@ -208,9 +211,9 @@ SmoothModel <- setRefClass(
       message("Processing fitted values...")
       
       indexObserved <- inla.stack.index(fullStack, "observed")$data
-      data$eta <<- result$summary.linear.predictor$mean[indexObserved] - log(observationWeights)
-      data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] / observationWeights
-      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] / observationWeights^2
+      data$eta <<- result$summary.linear.predictor$mean[indexObserved] + log(observationWeights)
+      data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] * observationWeights
+      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] * observationWeights^2
       
       #stackData <- inla.stack.data(fullStack, tag="observed")
       #observedOffset <- stackData$E[indexObserved]
@@ -223,8 +226,8 @@ SmoothModel <- setRefClass(
       message("Processing random effects...")
       
       indexPredicted <- inla.stack.index(fullStack, "predicted")$data
-      node$mean <<- matrix(result$summary.fitted.values$mean[indexPredicted] / predictionWeights, nrow=mesh$n, ncol=length(years))
-      node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] / predictionWeights^2, nrow=mesh$n, ncol=length(years))
+      node$mean <<- matrix(result$summary.fitted.values$mean[indexPredicted] * predictionWeights, nrow=mesh$n, ncol=length(years))
+      node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] * predictionWeights^2, nrow=mesh$n, ncol=length(years))
       node$spatialMean <<- matrix(result$summary.random$st$mean, nrow=mesh$n, ncol=length(years))
       node$spatialSd <<- matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(years))
       #predictedOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years)) * matrix(getPredictedOffset(), nrow=mesh$n, ncol=length(years))
@@ -245,6 +248,7 @@ SmoothModel <- setRefClass(
             ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich]),
             EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
             EstimatedAtNodesScaled=sum(node$mean[,yearIndex]),
+            EstimatedAtNodesScaledAdjusted=sum(node$mean[,yearIndex]) * nrow(locations[yearWhich,]) / mesh$n,
             
             ObservedOffset=mean(observedOffset[yearWhich]),
             predictedOffset=mean(predictedOffset[,yearIndex])
@@ -259,6 +263,7 @@ SmoothModel <- setRefClass(
             ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich]),
             EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
             EstimatedAtNodesScaled=sum(node$mean[,yearIndex]),
+            EstimatedAtNodesScaledAdjusted=sum(node$mean[,yearIndex]) * nrow(locations[yearWhich,]) / mesh$n,
             
             ObservedOffset=mean(observedOffset[yearWhich])
           )
@@ -281,6 +286,9 @@ SmoothModel <- setRefClass(
     collectHyperparameters = function() {
       library(INLA)
       
+      # TODO: Handle offset scale
+      warning("TODO: Handle offset scale")
+      
       message("Processing hyperparameters...")
       spdeResult <- inla.spde2.result(result, "st", spde)
       logKappa <- getINLAEstimates(spdeResult$marginals.log.kappa[[1]], coordsScale=1)
@@ -301,7 +309,7 @@ SmoothModel <- setRefClass(
     },
     
     # TODO: fix?
-    getPredictedIntersections = function() {
+    DEPRECATED_getPredictedIntersections = function() {
       x <- data
       indexObserved <- inla.stack.index(fullStack, "observed")$data
       x$offset <- inla.stack.data(fullStack)$E[indexObserved]
@@ -345,11 +353,11 @@ SmoothModel <- setRefClass(
         yearIndex <- year - min(xyzMean$Year) + 1
         message("Processing year ", year, "...")
         
-        meanRaster <- project(projectValues=node$mean[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon, weights=cellArea)
+        meanRaster <- project(projectValues=node$mean[,yearIndex] / offsetScale, projectionRaster=templateRaster, maskPolygon=maskPolygon, weights=cellArea)
         meanPopulationDensityRaster$addLayer(meanRaster, year)
         
         if (getSD) {
-          sdRaster <- project(projectValues=node$sd[,yearIndex], projectionRaster=templateRaster, maskPolygon=maskPolygon, weights=cellArea)
+          sdRaster <- project(projectValues=node$sd[,yearIndex] / offsetScale^2, projectionRaster=templateRaster, maskPolygon=maskPolygon, weights=cellArea^2)
           sdPopulationDensityRaster$addLayer(sdRaster, year)
         }
       }
@@ -537,7 +545,7 @@ FinlandSmoothModel <- setRefClass(
         #distance <- tracks$getMeanDistance()
       }
       #if (length(distance) == 1) distance <- rep(distance, mesh$n * length(years))
-      return(2/pi * 12000 * 1 * distance)
+      return(2/pi * 12000 * 1 * distance * offsetScale)
     },
     
     saveMeshNodeCovariates = function(save=FALSE) {
@@ -584,15 +592,6 @@ FinlandRussiaSmoothModel <- setRefClass(
     initialize = function(...) {
       callSuper(modelName="SmoothModel", ...)
       return(invisible(.self))
-    },
-    
-    getObservedOffset = function(distance=data$distance) {
-      return(2/pi * data$length * data$duration * distance * data$area)
-    },
-    
-    getPredictedOffset = function(distance=mean(data$distance)) {
-      # Put on approximately the same scale with observed crossings
-      return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years) * data$area))
     }
   )
 )
