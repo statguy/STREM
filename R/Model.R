@@ -40,7 +40,7 @@ Model <- setRefClass(
     
     saveEstimates = function(fileName=getEstimatesFileName()) {
       message("Saving result to ", fileName, "...")
-      save(locations, data, model, coordsScale, years, mesh, spde, index, A, fullStack, result, file=fileName)
+      save(locations, data, model, coordsScale, years, mesh, spde, index, A, fullStack, result, offsetScale, file=fileName)
     },
     
     loadEstimates = function(fileName=getEstimatesFileName()) {
