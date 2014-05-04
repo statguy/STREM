@@ -93,6 +93,8 @@ MovementSimulationScenario <- setRefClass(
       
       step <- 2
       
+      proposedVectorsFailed <- matrix(ncol=2)
+      
       while (TRUE) {
         for (j in 1:maxTry) {
           # Correlated random walk
@@ -122,14 +124,25 @@ MovementSimulationScenario <- setRefClass(
             # Go back one step and try again, so we don't get stuck.
             step <- step - 1
             if (step < 2) step <- 2
+            
+            proposedVectorsFailed <- rbind(proposedVectorsFailed, proposedVectors)
+            
             next
           }
         }
         
         if (j == maxTry) {
           fileName <- file.path(getwd(), "boundary_reflection_failed_points.RData")
-          save(coords, proposedVectors, acceptedVectors, step, file=fileName)
+          save(coords, proposedVectors, acceptedVectors, step, proposedVectorsFailed[-1,] file=fileName)
           stop("Boundary reflection failed. File saved to ", fileName)
+          
+          x <- range(coords[,1], proposedVectors[,1], acceptedVectors[,1], na.rm=T) + c(-1,1) * 1e4
+          y <- range(coords[,2], proposedVectors[,2], acceptedVectors[,2], na.rm=T) + c(-1,1) * 1e4
+          plot(x, y, type="n")
+          plot(study$studyArea$boundary, add=T)
+          points(coords, col="darkgreen")
+          points(proposedVectors, col="darkred")
+          points(coords[step-1,,drop=F], col="green")
         }
         
         if (step == nSteps + 1) break

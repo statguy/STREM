@@ -79,7 +79,6 @@ SmoothModel <- setRefClass(
     },
     
     setupInterceptPrior = function(priorParams) {
-      # TODO: Handle offset scale
       # TODO: Find area from raster ignoring NA values if habitat weights are used (raster area sligtly different from the boundary area)
       # TODO: Link function is fixed, change if needed
       
@@ -93,6 +92,7 @@ SmoothModel <- setRefClass(
       x <- toTheta(populationSizeMean, area)
       y <- transformDeviation(populationSizeMean, populationSizeDeviation, toTheta, area=area)
       interceptPrior <<- list(mean=x, prec=1/y)
+      message("Intercept prior mean = ", interceptPrior$mean, ", sd = ", 1/interceptPrior$prec)
       
       z <- fromTheta(qnorm(c(0.025,0.5,0.975), x, y), area)
       message("Intercept prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
