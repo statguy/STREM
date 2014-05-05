@@ -92,7 +92,6 @@ MovementSimulationScenario <- setRefClass(
       angles[1] <- initialAngle
       
       step <- 2
-      
       proposedVectorsFailed <- matrix(ncol=2)
       
       while (TRUE) {
@@ -117,6 +116,7 @@ MovementSimulationScenario <- setRefClass(
           if (!is.null(acceptedVectors)) {
             coords[step,] <- acceptedVectors$coords
             angles[step] <- newAngles[acceptedVectors$index]
+            proposedVectorsFailed <- matrix(ncol=2)
             break
           }
           else {
@@ -124,16 +124,14 @@ MovementSimulationScenario <- setRefClass(
             # Go back one step and try again, so we don't get stuck.
             step <- step - 1
             if (step < 2) step <- 2
-            
             proposedVectorsFailed <- rbind(proposedVectorsFailed, proposedVectors)
-            
             next
           }
         }
         
         if (j == maxTry) {
           fileName <- file.path(getwd(), "boundary_reflection_failed_points.RData")
-          save(coords, proposedVectors, acceptedVectors, step, proposedVectorsFailed[-1,] file=fileName)
+          save(coords, proposedVectors, acceptedVectors, step, proposedVectorsFailed[-1,], file=fileName)
           stop("Boundary reflection failed. File saved to ", fileName)
           
           x <- range(coords[,1], proposedVectors[,1], acceptedVectors[,1], na.rm=T) + c(-1,1) * 1e4
@@ -141,8 +139,8 @@ MovementSimulationScenario <- setRefClass(
           plot(x, y, type="n")
           plot(study$studyArea$boundary, add=T)
           points(coords, col="darkgreen")
-          points(proposedVectors, col="darkred")
           points(coords[step-1,,drop=F], col="green")
+          points(proposedVectorsFailed, col="darkred")
         }
         
         if (step == nSteps + 1) break

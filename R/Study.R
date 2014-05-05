@@ -329,6 +329,14 @@ RussiaWTCStudy <- setRefClass(
       preprocessResponse(response="lynx.lynx")
       preprocessResponse(response="rangifer.tarandus.fennicus")
       return(invisible(.self))
+    },
+    
+    loadIntersections = function() {
+      intersections <- RussiaWTCIntersections$new(study=.self)
+      intersections$loadIntersections()
+      #tracks <- loadTracks()
+      #intersections$intersections$distance <- tracks$getMeanDistance()
+      return(intersections)
     }
   )
 )

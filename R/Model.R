@@ -24,7 +24,11 @@ Model <- setRefClass(
     result = "inla",
     node = "list",
     modelName = "character",
-    offsetScale = "numeric"
+    offsetScale = "numeric",
+    family = "character",
+    interceptPrior = "list",
+    rhoPrior = "list",
+    spdeParams = "list"
   ),
   methods = list(
     initialize = function(...) {
@@ -40,7 +44,7 @@ Model <- setRefClass(
     
     saveEstimates = function(fileName=getEstimatesFileName()) {
       message("Saving result to ", fileName, "...")
-      save(locations, data, model, coordsScale, years, mesh, spde, index, A, fullStack, result, offsetScale, file=fileName)
+      save(locations, data, model, coordsScale, years, mesh, spde, index, A, fullStack, result, offsetScale, family, interceptPrior, rhoPrior, spdeParams, file=fileName)
     },
     
     loadEstimates = function(fileName=getEstimatesFileName()) {
@@ -68,9 +72,6 @@ SmoothModel <- setRefClass(
   Class = "SmoothModel",
   contains = "Model",
   fields = list(
-    family = "character",
-    interceptPrior = "list",
-    rhoPrior = "list"
   ),
   methods = list(
     initialize = function(...) {
@@ -105,6 +106,26 @@ SmoothModel <- setRefClass(
       rhoPrior <<- list(theta=priorParams)
       #z <- qnorm(c(0.025, 0.5, 0.975), priorParams$param[1], priorParams$param[2])
       #message("Rho prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
+      return(invisible(.self))
+    },
+    
+    # theta1 = variance (gaussian prior)
+    # theta2 = range (gaussian prior)
+    setupSpatialPrior = function(range, sigma, constr=FALSE) {
+      kappa.mean <- rangeToKappa(range$mean)
+      tau.mean <- sigmaToTau(sigma$mean, kappa.mean)
+      tau.log.sd <- sort(log(tau.mean) - log(sigmaToTau(c(sigma$lower, sigma$upper), kappa.mean))) / qnorm(c(0.025,0.975))
+      kappa.log.sd <- sort(log(kappa.mean) - log(rangeToKappa(c(range$lower, range$upper)))) / qnorm(c(0.025,0.975))
+      
+      message("tau mean = ", signif(tau.mean,2), ", sd candidates = ", signif(exp(tau.log.sd[1]),2), " ", signif(exp(tau.log.sd[2]),2), ", sd mean = ", signif(mean(exp(tau.log.sd)),2))
+      message("kappa mean = ", signif(kappa.mean,2), ", sd candidates = ", signif(exp(kappa.log.sd[1]),2), " ", signif(exp(kappa.log.sd[2]),2), ", sd mean = ", signif(mean(exp(kappa.log.sd)),2))
+      message("log tau mean = ", signif(log(tau.mean),2), ", sd candidates = ", signif(tau.log.sd[1],2), " ", signif(tau.log.sd[2],2), ", sd mean = ", signif(mean(tau.log.sd),2))
+      message("log kappa mean = ", signif(log(kappa.mean),2), ", sd candidates = ", signif(kappa.log.sd[1],2), " ", signif(kappa.log.sd[2],2), ", sd mean = ", signif(mean(kappa.log.sd),2))
+      message("log tau precision = ", signif(1/mean(tau.log.sd),4), ", log kappa precision = ", signif(1/mean(kappa.log.sd),4))
+      
+      spdeParams <<- list(kappa=kappa.mean, tau=tau.mean, B.tau=cbind(log(tau.mean), -1, 1), B.kappa=cbind(log(kappa.mean), 0, -1),
+                          theta.prior.mean=c(0,0), theta.prior.prec=c(1/mean(tau.log.sd),1/mean(kappa.log.sd)),
+                          constr=constr)
       return(invisible(.self))
     },
     
@@ -144,8 +165,9 @@ SmoothModel <- setRefClass(
       years <<- as.integer(sort(unique(data$year)))
       nYears <- length(years)
       groupYears <- as.integer(data$year - min(years) + 1)
-            
-      spde <<- inla.spde2.matern(mesh)
+      
+      spde <<- if (inherits(spdeParams, "uninitializedField")) inla.spde2.matern(mesh)
+      else inla.spde2.matern(mesh, B.tau=spdeParams$B.tau, B.kappa=spdeParams$B.kappa, theta.prior.mean=spdeParams$theta.prior.mean, theta.prior.prec=spdeParams$theta.prior.prec, constr=spdeParams$constr)
       index <<- inla.spde.make.index("st", n.spde=spde$n.spde, n.group=nYears)
       
       family <<- family
@@ -248,7 +270,6 @@ SmoothModel <- setRefClass(
             ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich]),
             EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
             EstimatedAtNodesScaled=sum(node$mean[,yearIndex]),
-            EstimatedAtNodesScaledAdjusted=sum(node$mean[,yearIndex]) * nrow(locations[yearWhich,]) / mesh$n,
             
             ObservedOffset=mean(observedOffset[yearWhich]),
             predictedOffset=mean(predictedOffset[,yearIndex])
@@ -285,9 +306,6 @@ SmoothModel <- setRefClass(
     
     collectHyperparameters = function() {
       library(INLA)
-      
-      # TODO: Handle offset scale
-      warning("TODO: Handle offset scale")
       
       message("Processing hyperparameters...")
       spdeResult <- inla.spde2.result(result, "st", spde)

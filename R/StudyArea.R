@@ -291,7 +291,7 @@ RussiaStudyArea <- setRefClass(
       i$loadIntersections()
       districts <- loadDistricts()
       boundary <<- subset(districts, NAME_LAT %in% i$intersections$District_Lat & ADM4_ID %in% i$intersections$RegionID)
-      boundary$NAME_ENGLISH <<- boundary$NAME_LAT 
+      boundary$NAME_ENGLISH <<- boundary$NAME_LAT
       save(boundary, file=fileName)
       return(invisible(.self))
     },
@@ -304,6 +304,8 @@ RussiaStudyArea <- setRefClass(
     },
     
     loadHabitatRaster = function() {
+      library(raster)
+      habitat <<- raster(extent(c(2.2,7.5,7.4,11.2)*1e6), nrows=400*100, ncols=1000*100, crs=proj4string)
       return(invisible(.self))
     }
   )

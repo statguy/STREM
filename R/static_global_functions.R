@@ -71,6 +71,7 @@ inverseDistanceWeightningImpute <- function(data, varname, formula=as.formula(pa
 }
 
 theme_raster <- function(base_size=12, base_family="", ...) {
+  library(grid)
   theme_minimal(base_size=base_size, base_family=base_family) %+replace%
   theme(
     panel.background=element_rect(fill="transparent", colour=NA),
@@ -96,6 +97,7 @@ theme_raster <- function(base_size=12, base_family="", ...) {
 }
 
 theme_presentation <- function(base_size=20, base_family="", ...) {
+  library(grid)
   theme_minimal(base_size=base_size, base_family=base_family) %+replace%
   theme(
     ...,
@@ -181,3 +183,8 @@ summaryStat <- function(x, rowname=NULL) {
   colnames(y) <- c("mean", "sd", "0.025quant", "0.5quant", "0.975quant")
   return(y)
 }
+
+rangeToKappa <- function(range) sqrt(8)/range
+kappaToRange <- function(kappa) sqrt(8)/kappa
+sigmaToTau <- function(sigma,kappa) 1/(sqrt(4*pi)*sigma*kappa)
+tauToSigma <- function(tau,kappa) 1/(sqrt(4*pi)*tau*kappa)
