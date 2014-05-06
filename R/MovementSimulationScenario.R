@@ -18,6 +18,7 @@ MovementSimulationScenario <- setRefClass(
     loadHabitatRasterInMemory = "logical",
     runParallel = "logical",
     
+    birthDeathParams = "list",
     nSteps = "integer",
     agents = "integer",
     newAgentId = "integer",
@@ -38,6 +39,7 @@ MovementSimulationScenario <- setRefClass(
       message("Number of steps = ", nSteps.tmp, ", steps per day = ", 24 / stepIntervalHours)
       if (nSteps.tmp %% 1 != 0) stop("Number of steps must be integer.")
       nSteps <<- as.integer(nSteps.tmp)
+      if (inherits(birthDeathParams, "uninitializedField")) birthDeathParams <<- list(mean=1, sd=1.1)
       return(invisible(.self))
     },
     
@@ -160,8 +162,12 @@ MovementSimulationScenario <- setRefClass(
     # 1 born = individual survives to the next year
     # 2 born = 1 parent survives + 1 offspring/immigration
     # etc.
-    randomizeBirthDeath = function(param=list(mean=1, sd=1.1)) {
-      bdRate <- rlnorm(n=1, meanlog=log(param$mean), sdlog=log(param$sd))
+    randomizeBirthDeath = function() {
+      if (inherits(birthDeathParams, "uninitializedField"))
+        stop("Set birthDeathParams parameter.")
+      
+      bdRate <- if (birthDeathParams$sd == 0) birthDeathParams$mean
+      else rlnorm(n=1, meanlog=log(birthDeathParams$mean), sdlog=log(birthDeathParams$sd))
       nTransform <- rpois(length(agents), bdRate)
       
       nBorn <- sum(nTransform[nTransform > 1] - 1)
