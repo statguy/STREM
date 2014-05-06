@@ -90,27 +90,25 @@ SmoothModel <- setRefClass(
       populationSizeMean <- priorParams$mean
       populationSizeDeviation <- priorParams$sd
       
-      x <- toTheta(populationSizeMean, area)
-      y <- transformDeviation(populationSizeMean, populationSizeDeviation, toTheta, area=area)
-      interceptPrior <<- list(mean=x, prec=1/y)
-      message("Intercept prior mean = ", interceptPrior$mean, ", sd = ", 1/interceptPrior$prec)
+      prior.mean <- toTheta(populationSizeMean, area)
+      prior.sd <- transformDeviation(populationSizeMean, populationSizeDeviation, toTheta, area=area)
+      interceptPrior <<- list(mean=prior.mean, prec=1/prior.sd)
+
+      message("Intercept prior mean = ", prior.mean, ", sd = ", 1/prior.sd)
       
-      z <- fromTheta(qnorm(c(0.025,0.5,0.975), x, y), area)
+      z <- fromTheta(qnorm(c(0.025,0.5,0.975), prior.mean, prior.sd), area)
       message("Intercept prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
       
       return(invisible(.self))
     },
-
-    setupRhoPrior = function(priorParams) {
-      warning("Prior for rho not in use.")
-      rhoPrior <<- list(theta=priorParams)
-      #z <- qnorm(c(0.025, 0.5, 0.975), priorParams$param[1], priorParams$param[2])
-      #message("Rho prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
+    
+    setupTemporalPrior = function(priorParams) {
+      rhoPrior <<- list(theta=list(param=c(priorParams$mean, priorParams$sd), initial=priorParams$initial))
+      z <- qnorm(c(0.025, 0.5, 0.975), priorParams$mean, priorParams$sd)
+      message("Rho prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
       return(invisible(.self))
     },
     
-    # theta1 = variance (gaussian prior)
-    # theta2 = range (gaussian prior)
     setupSpatialPrior = function(range, sigma, constr=FALSE) {
       kappa.mean <- rangeToKappa(range$mean)
       tau.mean <- sigmaToTau(sigma$mean, kappa.mean)
@@ -171,7 +169,8 @@ SmoothModel <- setRefClass(
       index <<- inla.spde.make.index("st", n.spde=spde$n.spde, n.group=nYears)
       
       family <<- family
-      model <<- response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))#, hyper=rhoPrior))
+      model <<- if (inherits(rhoPrior, "uninitializedField")) response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))
+      else response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1", hyper=rhoPrior))
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
       
       message("Number of nodes in the mesh = ", mesh$n)
@@ -204,7 +203,7 @@ SmoothModel <- setRefClass(
       stackData <- inla.stack.data(fullStack, spde=spde)
       
       control.fixed <- if (!inherits(interceptPrior, "undefinedField"))
-         list(mean=list(intercept=interceptPrior$mean), prec=list(intercept=interceptPrior$prec))
+         list(mean.intercept=interceptPrior$mean, prec.intercept=interceptPrior$prec)
       else NULL
       
       message("Estimating population density...")
