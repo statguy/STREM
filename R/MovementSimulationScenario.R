@@ -39,7 +39,7 @@ MovementSimulationScenario <- setRefClass(
       message("Number of steps = ", nSteps.tmp, ", steps per day = ", 24 / stepIntervalHours)
       if (nSteps.tmp %% 1 != 0) stop("Number of steps must be integer.")
       nSteps <<- as.integer(nSteps.tmp)
-      if (inherits(birthDeathParams, "uninitializedField")) birthDeathParams <<- list(mean=1, sd=1.1)
+      if (length(birthDeathParams) == 0) birthDeathParams <<- list(mean=1, sd=1.1)
       return(invisible(.self))
     },
     
@@ -163,7 +163,7 @@ MovementSimulationScenario <- setRefClass(
     # 2 born = 1 parent survives + 1 offspring/immigration
     # etc.
     randomizeBirthDeath = function() {
-      if (inherits(birthDeathParams, "uninitializedField"))
+      if (length(birthDeathParams) == 0)
         stop("Set birthDeathParams parameter.")
       
       bdRate <- if (birthDeathParams$sd == 0) birthDeathParams$mean
