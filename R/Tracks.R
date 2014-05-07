@@ -288,14 +288,18 @@ SimulatedTracks <- setRefClass(
       return(invisible(.self))
     },
     
-    randomizeObservationDayTracks = function() {
+    randomizeObservationDayTracks = function(days=1) {
       library(plyr)
       message("Randomizing observation day and filtering tracks...")
 
-      observationTracksDF <- ddply(tracks, .(year), function(x) {
-        randomDay <- sample(x$yday, 1)
-        return(subset(x, yday == randomDay))
-      })
+      observationTracksDF <- ddply(tracks, .(year), function(x, days) {
+        randomDays <- x$yday
+        randomDays <- randomDays[randomDays <= max(x$yday) - days + 1]
+        randomDay <- sample(randomDays, 1)
+        return(subset(x, yday %in% randomDay:(randomDay + days - 1)))
+        #randomDay <- sample(x$yday, 1)
+        #return(subset(x, yday == randomDay))
+      }, days=days)
       
       observationTracks <- copy()
       observationTracks$tracks <- observationTracksDF
