@@ -123,38 +123,38 @@ MovementSampleIntervals <- setRefClass(
       
       code <- '
       data {
-      int<lower=1> n_obs;
-      vector[n_obs] distance;
-      vector[n_obs] interval;
-      int<lower=1> n_individuals;
-      matrix[n_obs,n_individuals] individual_model_matrix;
-      int<lower=1> n_samples;
-      matrix[n_obs,n_samples] sample_model_matrix;
-      int<lower=1> n_fixed;
-      matrix[n_obs,n_fixed] fixed_model_matrix;
-      int<lower=1> n_predicts;
-      vector[n_predicts] predict_interval;
+        int<lower=1> n_obs;
+        vector[n_obs] distance;
+        vector[n_obs] interval;
+        int<lower=1> n_individuals;
+        matrix[n_obs,n_individuals] individual_model_matrix;
+        int<lower=1> n_samples;
+        matrix[n_obs,n_samples] sample_model_matrix;
+        int<lower=1> n_fixed;
+        matrix[n_obs,n_fixed] fixed_model_matrix;
+        int<lower=1> n_predicts;
+        vector[n_predicts] predict_interval;
       }
       parameters {
-      real alpha;
-      real intercept;
-      real<lower=0> sigma;
-      vector[n_individuals] individual_effect;
-      real<lower=0> individual_sigma;
-      vector[n_samples] sample_effect;
-      real<lower=0> sample_sigma;
-      vector[n_fixed] fixed_effect;
+        real alpha;
+        real intercept;
+        real<lower=0> sigma;
+        vector[n_individuals] individual_effect;
+        real<lower=0> individual_sigma;
+        vector[n_samples] sample_effect;
+        real<lower=0> sample_sigma;
+        vector[n_fixed] fixed_effect;
       }
       model {
-      vector[n_obs] mu;
-      individual_effect ~ normal(0, individual_sigma);
-      sample_effect ~ normal(0, sample_sigma);
-      mu <- intercept + fixed_model_matrix * fixed_effect - alpha * log(interval) + individual_model_matrix * individual_effect + sample_model_matrix * sample_effect;
-      log(distance) ~ normal(mu, sigma);
+        vector[n_obs] mu;
+        individual_effect ~ normal(0, individual_sigma);
+        sample_effect ~ normal(0, sample_sigma);
+        mu <- intercept + fixed_model_matrix * fixed_effect - alpha * log(interval) + individual_model_matrix * individual_effect + sample_model_matrix * sample_effect;
+        log(distance) ~ normal(mu, sigma);
       }
       generated quantities {
-      vector[n_predicts] predicted_distance;
-      predicted_distance <- exp(intercept - alpha * log(predict_interval));
+        vector[n_predicts] predicted_distance;
+        predicted_distance <- exp(intercept - alpha * log(predict_interval));
       }
       '
       

@@ -273,6 +273,7 @@ FinlandWTCIntersections <- setRefClass(
       intersections <<- SpatialPointsDataFrame(xy[retainIndex,], data=wtc, proj4string=CRS("+init=epsg:2393"))
 
       save(intersections, file=getIntersectionsFileName())
+      return(invisible(.self))
     },
     
     predictDistances = function(formula=study$getDistanceCovariatesModel(), intervalH=study$getTrackSampleInterval()) {

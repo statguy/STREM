@@ -159,6 +159,7 @@ FinlandWTCStudy <- setRefClass(
       intersections$saveCovariates(intersections$intersections, cache=cacheCovariates, fmiApiKey=fmiApiKey)
             
       tracks$saveTracks()
+      tracks$saveMetadata()
       
       fitDistanceCorrectionModel(save=TRUE)
       

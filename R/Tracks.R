@@ -53,21 +53,26 @@ Tracks <- setRefClass(
       if (nrow(tracks) == 0) loadTracks()
       return(tracks)
     },
-        
+    
     getSpatialLines = function(variables=.(id,year)) {
       library(sp)
+      
       message("Converting tracks to SP object...")
-      if (is.data.frame(tracks)) {
+      
+      x <- if (inherits(tracks, "ltraj")) ld(tracks) else tracks
+
+      if (is.data.frame(x)) {
         library(plyr)
-        lines <- dlply(tracks, variables, function(x, variables) {
+        lines <- dlply(x, variables, function(x, variables) {
           return(Lines(Line(x[,c("x","y")]), ID=paste(x[1,variables], collapse=" ")))
         }, variables=as.character(variables))
-        tracksSP <- SpatialLines(lines, proj4string=study$studyArea$proj4string)
+        id <- ldply(lines, function(x) data.frame(ID=x@ID))
+        tracksSP <- SpatialLinesDataFrame(SpatialLines(lines, proj4string=study$studyArea$proj4string), data=id, match.ID=FALSE)
       }
-      else if (inherits(tracks, "ltraj")) {
-        tracksSP <- ltraj2sldf(tracks, byid=TRUE)
-        proj4string(tracksSP) <- study$studyArea$proj4string
-      }
+      #else if (inherits(tracks, "ltraj")) {
+      #  tracksSP <- ltraj2sldf(tracks, byid=TRUE)
+      #  proj4string(tracksSP) <- study$studyArea$proj4string
+      #}
       return(tracksSP)
     },
     
@@ -355,6 +360,7 @@ FinlandWTCTracks <- setRefClass(
   Class = "FinlandWTCTracks",
   contains = "Tracks",
   fields = list(
+    metadata = "data.frame"
   ),
   methods = list(
     saveTracks = function() {
@@ -387,7 +393,7 @@ FinlandWTCTracks <- setRefClass(
       assign(".b", study$studyArea$boundary@polygons[[1]]@Polygons[[1]]@coords, envir=.GlobalEnv)
       gpsLT <- cutltraj(gpsLT, "point.in.polygon(x, y, .b[,1], .b[,2])==0") # Remove movements outside the boundary
       rm(".b", envir=.GlobalEnv)
-      
+            
       tracks <<- gpsLT
       save(tracks, file=getTracksFileName())
       return(invisible(.self))
@@ -400,6 +406,8 @@ FinlandWTCTracks <- setRefClass(
       gps <- data.frame(id=substr(gps.raw$UnitID, 11, length(gps.raw$UnitID)),
                         date=as.POSIXct(gps.raw$Time*24*60*60, origin=as.POSIXct(gps.raw$Date, format="%Y-%m-%d")),
                         x=as.numeric(as.character(gps.raw$X)), y=as.numeric(as.character(gps.raw$Y)))
+      message("Number of individuals in raw data = ", length(unique(gps$id)))
+      
       index <- gps$x < 0 | gps$x > 200 | gps$y < 0 | gps$y > 200
       gps <- gps[!index,]
       
@@ -413,6 +421,7 @@ FinlandWTCTracks <- setRefClass(
       gps <- data.frame(id=gps.raw$UnitID,
                         date=as.POSIXct(paste(gps.raw$Date, gps.raw$Time), format="%m/%d/%Y %I:%M:%S %p"),
                         x=gps.raw$X, y=gps.raw$Y)
+      message("Number of individuals in raw data = ", length(unique(gps$id)))
       
       return(list(gps=gps, fromProj="+init=epsg:2393"))
     },
@@ -424,6 +433,7 @@ FinlandWTCTracks <- setRefClass(
       gps <- data.frame(id=gps.raw$UnitID,
                         date=as.POSIXct(gps.raw$Date*60*60*24-60*60*2*24-60*60*.3, origin="1900-01-01"),
                         x=gps.raw$X, y=gps.raw$Y)
+      message("Number of individuals in raw data = ", length(unique(gps$id)))
       
       return(list(gps=gps, fromProj="+init=epsg:4326"))
     },
@@ -440,6 +450,57 @@ FinlandWTCTracks <- setRefClass(
       if (is.null(thinnedTracksDF)) return(NULL)
       thinnedTracks <- FinlandWTCTracks$new(study=study, tracks=thinnedTracksDF, thinId=thinId)#as.integer(thinId+1))
       return(thinnedTracks)
+    },
+    
+    preprocessWolfMetadata = function() {
+      metadata.raw <- read.csv(file.path(study$context$rawDataDirectory, "wolf-metadata.csv"))
+      gps.metadata <- data.frame(id=metadata.raw$nimi,
+                                 sex=ifelse(metadata.raw$sp=="uros", "male", "female"),
+                                 born=metadata.raw$syntymä,
+                                 dispersing=metadata.raw$dispersoiva.nuori==1,
+                                 homerange=metadata.raw$reviiri==1,
+                                 alpha=metadata.raw$alfa==1)
+      return(gps.metadata)
+    },
+
+    preprocessLynxMetadata = function() {
+      gps.metadata <- data.frame(id=c(),
+                                 sex=c(),
+                                 born=c())
+      return(gps.metadata)
+    },
+    
+    preprocessReindeerMetadata = function() {
+      gps.metadata <- data.frame(id=c(),
+                                 sex=c(),
+                                 born=c())
+      return(gps.metadata)
+    },
+    
+    getMetadataFileName = function() {
+      return(study$context$getFileName(dir=study$context$processedDataDirectory, name="TracksMetadata", response=study$response, region=study$studyArea$region))
+    },
+    
+    saveMetadata = function(fileName=getMetadataFileName()) {
+      gps.metadata <- if (study$response == "canis.lupus") preprocessWolfMetadata()
+      else if (study$response == "lynx.lynx") preprocessLynxMetadata()
+      else if (study$response == "rangifer.tarandus.fennicus") preprocessReindeerMetadata()
+      metadata <<- gps.metadata
+      save(metadata, file=fileName)
+      return(invisible(.self))
+    },
+    
+    loadMetadata = function(fileName=getMetadataFileName()) {
+      load(file=fileName, envir=as.environment(.self))
+      return(invisible(.self))
+    },
+    
+    getSpatialLines = function(variables=.(id,year)) {
+      library(plyr)
+      loadMetadata()
+      tracksSP <- callSuper(variables=variables)
+      tracksSP@data <- plyr::join(tracksSP@data, metadata, by="id")
+      return(tracksSP)
     }
   )
 )
