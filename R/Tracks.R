@@ -59,7 +59,11 @@ Tracks <- setRefClass(
       
       message("Converting tracks to SP object...")
       
-      x <- if (inherits(tracks, "ltraj")) ld(tracks) else tracks
+      x <- if (inherits(tracks, "ltraj")) {
+        x <- ld(tracks)
+        x$year <- as.POSIXlt(x$date)$year + 1900
+        x
+      } else tracks
 
       if (is.data.frame(x)) {
         library(plyr)
@@ -499,7 +503,8 @@ FinlandWTCTracks <- setRefClass(
       library(plyr)
       loadMetadata()
       tracksSP <- callSuper(variables=variables)
-      tracksSP@data <- plyr::join(tracksSP@data, metadata, by="id")
+      if (nrow(metadata) > 0)
+        tracksSP@data <- plyr::join(tracksSP@data, metadata, by="id")
       return(tracksSP)
     }
   )
