@@ -43,6 +43,7 @@ MovementSampleIntervals <- setRefClass(
         if (intervalMin > 24*60) return(NULL)
         
         y <- data.frame(id=paste(x$id[1], x$year[1], x$yday[1]),
+                        burst=x$burst[1],
                         individualId = x$id[1],
                         date=x$date[1],
                         year=x$year[1],
@@ -51,7 +52,7 @@ MovementSampleIntervals <- setRefClass(
                         intervalSec=intervalMin * 60,
                         distanceKm=distKm,
                         x=mean(x$x),
-                        y=mean(x$y))   
+                        y=mean(x$y))
         return(y)
       }, .parallel=TRUE)
       
