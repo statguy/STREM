@@ -32,6 +32,7 @@ estimate <- function(study, iteration, test) {
     populationSize <- model$getPopulationSize(withHabitatWeights=FALSE); populationSize
     populationSize$plotPopulationSize()
     
+    
     #sum(model$node$mean[,1] * (inla.mesh.fem(model$mesh, order=1)$c1 %*% model$node$mean[,1]))
   }
   else if (test=="spatial") {

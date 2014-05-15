@@ -38,7 +38,6 @@ print(args)
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores())
-
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 

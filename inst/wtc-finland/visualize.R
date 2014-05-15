@@ -21,15 +21,21 @@ surveyRoutes <- study$loadSurveyRoutes(findLengths=FALSE)
 surveyRoutesSP <- SpatialLinesDataFrame(surveyRoutes$surveyRoutes, data=data.frame(x=1:length(surveyRoutes$surveyRoutes)), match.ID=FALSE)
 surveyRoutesDF <- ggplot2::fortify(surveyRoutesSP)
 p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_polygon(colour="black", fill=NA) +
-  geom_polygon(data=surveyRoutesDF, aes(long, lat, group=group), colour="blue") +
+  geom_polygon(data=surveyRoutesDF, aes(long, lat, group=group), colour="blue", fill=NA) +
   coord_equal() + theme_raster()
 print(p)
 saveFigure(p, filename="SurveyRoutes.svg", bg="transparent")
 
+p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_polygon(colour="black", fill=NA, size=1) +
+  geom_polygon(data=surveyRoutesDF, aes(long, lat, group=group), colour="blue", fill=NA, size=1) +
+  coord_cartesian(c(3.605,3.638)*1e6, c(7.27,7.29)*1e6) + theme_raster(aspect.ratio=.6, panel.background=element_rect(fill="transparent", colour="gray", size=1))
+print(p)
+saveFigure(p, filename="SurveyRoutesZoom.svg", bg="transparent", width=3, height=3)
+
 surveyRouteDF <- ggplot2::fortify(surveyRoutesSP[1,])
 p <- ggplot(surveyRouteDF, aes(long, lat, group=group)) + geom_polygon(colour="blue", fill=NA) + coord_equal() + theme_raster()
 print(p)
-saveFigure(p, filename="SurveyRoute.svg", bg="transparent", width=4, height=4)
+saveFigure(p, filename="SurveyRoute.svg", bg="transparent", width=2, height=2)
 
 ######
 ### Intersections
@@ -420,3 +426,90 @@ tracks <- study$loadTracks()
 p <- usage$plotSampleSteps(tracks=tracks, index=0:3+800-69)
 print(p)
 saveFigure(p, filename="HabitatUsageSampling.svg", bg="transparent")
+
+######
+### Russian data
+######
+
+response <- "canis.lupus"
+study <- RussiaWTCStudy(context=context, response=response)
+study$studyArea$saveBoundary(study=study)
+load(file=study$studyArea$getBoundaryFileName(), envir=as.environment(study$studyArea))
+plot(study$studyArea$boundary)
+
+intersections <- study$loadIntersections()
+minx <- xmin(extent(study$studyArea$habitat))
+maxx <- xmax(extent(study$studyArea$habitat))
+miny <- ymin(extent(study$studyArea$habitat))
+maxy <- ymax(extent(study$studyArea$habitat))
+window <- matrix(c(minx,miny, minx,maxy, maxx,maxy, maxx,miny, minx,miny), ncol=2, byrow=T)
+coords <- coordinates(intersections$intersections)
+z <- intersections$intersections[point.in.polygon(coords[,1], coords[,2], window[,1], window[,2])==1,]
+plot(z)
+boundary <- subset(study$studyArea$boundary, NAME_LAT %in% z$District_Lat & ADM4_ID %in% z$RegionID)
+plot(boundary)
+
+x <- subset(z, Year==2001)
+x$density <- x$intersections / (x$length/1000) / x$duration #/ x$area # / track length
+x$NAME_LAT <- x$District_Lat
+x$ADM4_ID <- x$RegionID
+y <- boundary
+ids <- unlist(lapply(y@polygons, function(x) { x@ID }))
+y$id <- ids
+# TODO: merge so that missing districts have missing values
+y@data <- merge(y@data, x@data[,c("NAME_LAT","ADM4_ID","density")], by=c("NAME_LAT", "ADM4_ID"))
+y@polygons <- y@polygons[ids %in% y$id]
+#plot(y, col=colorRampPalette(c('white', 'red'))(length(x$density))[rank(x$density)])
+#legend("right", "(x,y)", title="Wolf crossing density")
+
+
+library(ggplot2)
+library(scales)
+library(plyr)
+#spChFIDs(y, as.character(1:length(y)))
+#y$id <- unlist(lapply(y@polygons, function(x) { x@ID }))
+
+#y$density[y$density>8e-5] <- NA
+yf <- fortify(y)
+yfd <- join(yf, y@data[,c("id","density")], by="id")
+p <- ggplot(yfd, aes(long, lat, group=group)) +
+  geom_polygon(aes(fill=density)) + scale_fill_continuous("Crossing density / km", low="white", high=muted("red")) +
+  geom_path(color="gray", linestyle=2) +
+  theme_raster(20, legend.position="bottom", plot.margin=unit(c(0,0,-1,2), "lines"),
+               legend.key=element_rect(size=0.5), 
+               legend.key.height=unit(1, "cm"), 
+               legend.key.width=unit(1, "cm")) +
+  ggtitle("Волк")
+saveFigure(p, filename="CrossingDensity-canis.lupus-Russia.svg", bg="transparent")
+print(p)
+#
+
+
+(Slide 1)
+
+Russians have surveyed game animal populations for decades from winter tracks throughout
+Russia.  The census system works so that species are identified from snow tracks
+and number of crossings of each species over survey routes are counted, which gives a relative
+estimate of the population density.  The picture on the left shows aggregated data for the European
+part of Russia in one year. Similar census system has been also adopted in Finland, shown on
+the right. It is a network of survey routes, which are triangular shape and there is 25 years of
+Finnish data collected now.
+
+(Slide 2)
+
+I develop a model to convert the number of crossings to population density and for that I use the
+Finnish data with a few focal game animal species. However, the population-level count data does
+not solely tell about the density, so I combine it with individual-level GPS data. I use the GPS tracks
+to determine habitat use and movement activity of the species predicted from habitat distribution
+and weather data. I also verify the method with simulation studies.
+
+(Slide 3)
+
+After tuning the model for the Finnish data, I obtain population density and total population size
+and compare it to the validation data, shown on the pictures. I apply the model also on the Russian
+data combined with the Finnish data. This can help to answer biological question like how the
+populations have fluctuated and where they are heading now in Russia. Also, what ecological,
+environmental and anthropogenic factors affect the population densities and how much. One
+interesting detail is that the forest management has been very different in Finland and Russia
+and there is a clear ecological boundary at the border, and with this data it can be seen what
+effect the boundary has.

@@ -15,13 +15,14 @@ if (length(iterations) == 0)
 library(plyr)
 populationSize <- ldply(iterations, function(iteration, study) {
   x <- study$loadPopulationSize(iteration=iteration)
-  #return(data.frame(Iteration=iteration, x$sizeData))
-  return(data.frame(x$sizeData))
+  return(data.frame(x$sizeData, iteration=iteration))
 }, study=study)
-populationSize <- arrange(populationSize, Year)
-#populationSize <- arrange(populationSize, Iteration, Year)
-populationSize <- subset(populationSize, Estimated < 10000) # Some results strange...
-#populationSize$Difference <- populationSize$Estimated - populationSize$Total
+populationSize <- arrange(populationSize, iteration, Year)
+print(populationSize)
+#populationSize <- subset(populationSize, Estimated < 10000) # Some results strange... fixed with prior
+
+ddply(populationSize, .(Year), summarise, ObservedMean=mean(Observed), ObservedSD=sd(Observed), EstimatedMean=mean(Estimated), EstimatedSD=sd(Estimated))
+ddply(populationSize, .(iteration), summarise, Observed=mean(Observed, na.rm=T), Estimated=mean(Estimated, na.rm=T), iteration=mean(iteration))
 
 library(ggplot2)
 library(reshape2)
@@ -34,3 +35,11 @@ p <- ggplot(x, aes(x=Year, y=value, group=variable, colour=variable)) +
   ylab("Population size")
 print(p)
 ggsave(study$context$getFileName(dir=study$context$figuresDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region, ext=".png"), p, width=10, height=8)
+
+###
+
+intersectionsDistribution <- llply(iterations, function(iteration, study) {
+  x <- study$loadIntersections(iteration=iteration)
+  return(x$intersections$intersections)
+}, study=study)
+round(prop.table(table(Reduce(c, intersectionsDistribution)))*100,2)
