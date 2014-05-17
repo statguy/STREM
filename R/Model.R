@@ -164,12 +164,12 @@ SmoothModel <- setRefClass(
       nYears <- length(years)
       groupYears <- as.integer(data$year - min(years) + 1)
       
-      spde <<- if (inherits(spdeParams, "uninitializedField")) inla.spde2.matern(mesh)
+      spde <<- if (length(spdeParams) == 0) inla.spde2.matern(mesh)
       else inla.spde2.matern(mesh, B.tau=spdeParams$B.tau, B.kappa=spdeParams$B.kappa, theta.prior.mean=spdeParams$theta.prior.mean, theta.prior.prec=spdeParams$theta.prior.prec, constr=spdeParams$constr)
       index <<- inla.spde.make.index("st", n.spde=spde$n.spde, n.group=nYears)
       
       family <<- family
-      model <<- if (inherits(rhoPrior, "uninitializedField")) response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))
+      model <<- if (length(rhoPrior) == 0) response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))
       else response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1", hyper=rhoPrior))
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
       
@@ -199,18 +199,16 @@ SmoothModel <- setRefClass(
       library(INLA)
       
       fullStack <<- inla.stack(obsStack, predStack)
-      #stackData <- inla.stack.data(fullStack)
       stackData <- inla.stack.data(fullStack, spde=spde)
       
-      control.fixed <- if (!inherits(interceptPrior, "undefinedField"))
+      control.fixed <- if (length(interceptPrior) > 0)
          list(mean.intercept=interceptPrior$mean, prec.intercept=interceptPrior$prec)
-      else NULL
+      else list()
       
       message("Estimating population density...")
       
       result <<- inla(model,
                       family=family,
-                      #data=inla.stack.data(fullStack, spde=spde),
                       data=stackData,
                       E=stackData$E,
                       verbose=verbose,

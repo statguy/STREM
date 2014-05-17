@@ -188,3 +188,9 @@ rangeToKappa <- function(range) sqrt(8)/range
 kappaToRange <- function(kappa) sqrt(8)/kappa
 sigmaToTau <- function(sigma,kappa) 1/(sqrt(4*pi)*sigma*kappa)
 tauToSigma <- function(tau,kappa) 1/(sqrt(4*pi)*tau*kappa)
+
+getSPID <- function(x) UseMethod("getSPID", x)
+getSPID.SpatialLines <- function(x) sapply(x@lines, function(x) x@ID)
+getSPID.SpatialLinesDataFrame <- function(x) getSPID.SpatialLines(x)
+getSPID.SpatialPolygons <- function(x) sapply(x@polygons, function(x) x@ID)
+getSPID.SpatialPolygonsDataFrame <- function(x) getSPID.SpatialLines(x)

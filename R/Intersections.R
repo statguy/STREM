@@ -54,8 +54,9 @@ SimulatedIntersections <- setRefClass(
     
     findIntersections = function(tracks, surveyRoutes, ...) {
       tracksSP <- tracks$getSpatialLines()
+      surveyRoutesSP <- surveyRoutes$surveyRoutes
       message("Counting intersections...")
-      findIntersectionsMatrix(tracksSP, surveyRoutes$surveyRoutes, ...)
+      findIntersectionsMatrix(tracksSP, surveyRoutesSP, ...)
       nSurveyRoutes <- length(surveyRoutes$surveyRoutes)
       nTracks <- length(tracksSP)
       nYears <- length(unique(tracks$tracks$year))
@@ -65,21 +66,21 @@ SimulatedIntersections <- setRefClass(
     },
     
     # TODO: Support for WTC survey routes for each year
-    findIntersectionsMatrix = function(tracks, surveyRoutes, dimension=1) {
+    findIntersectionsMatrix = function(tracksSP, surveyRoutesSP, dimension=1) {
       library(sp)
       
-      nSurveyRoutes <- length(surveyRoutes)
-      nTracks <- length(tracks)
+      nSurveyRoutes <- length(surveyRoutesSP)
+      nTracks <- length(tracksSP)
       #intersectionsMatrix <<- matrix(0, nrow=nSurveyRoutes, ncol=nTracks)
       
       if (dimension == 1) {
         # Assumes that the survey routes are the same every year
-        countIntersections <- function(i, surveyRoutes, tracks) {
+        countIntersections <- function(i, surveyRoutesSP, tracksSP) {
           library(plyr)
           #library(rgeos)
 
-          nSurveyRoutes <- length(surveyRoutes)
-          nTracks <- length(tracks)
+          nSurveyRoutes <- length(surveyRoutesSP)
+          nTracks <- length(tracksSP)
           cat("Finding intersections for survey route ", i, " / ", nSurveyRoutes, " for ", nTracks, " tracks... ")
                    
 #           i <- 2
@@ -95,11 +96,11 @@ SimulatedIntersections <- setRefClass(
 #           }
 #           count
           
-          surveyRouteCoords <- coordinates(surveyRoutes[i])[[1]][[1]]
+          surveyRouteCoords <- coordinates(surveyRoutesSP@lines[[i]])[[1]]
           
           x <- integer(nTracks)
           for (j in 1:nTracks) {
-            trackCoords <- coordinates(tracks[j])[[1]][[1]]
+            trackCoords <- coordinates(tracksSP@lines[[j]])[[1]]
             x[j] <- internal_countIntersections(trackCoords, surveyRouteCoords)
           }
           
@@ -108,7 +109,7 @@ SimulatedIntersections <- setRefClass(
           return(x)
         }
         
-        intersectionsMatrix <<- laply(1:nSurveyRoutes, countIntersections, surveyRoutes=surveyRoutes, tracks=tracks, .drop=FALSE, .parallel=TRUE, .inform=FALSE)
+        intersectionsMatrix <<- laply(1:nSurveyRoutes, countIntersections, surveyRoutesSP=surveyRoutesSP, tracksSP=tracksSP, .drop=FALSE, .parallel=TRUE, .inform=FALSE)
       }
       
       if (F) {
@@ -154,8 +155,11 @@ SimulatedIntersections <- setRefClass(
       }
       }
       
-      rownames(intersectionsMatrix) <<- names(surveyRoutes)
-      colnames(intersectionsMatrix) <<- sapply(tracks@lines, function(x) x@ID)     
+      #rownames(intersectionsMatrix) <<- names(surveyRoutesSP)
+      #colnames(intersectionsMatrix) <<- sapply(tracksSP@lines, function(x) x@ID)
+
+      rownames(intersectionsMatrix) <<- getSPID(surveyRoutesSP)
+      colnames(intersectionsMatrix) <<- getSPID(tracksSP)
     },
     
     aggregateIntersectionsMatrix = function(tracks, surveyRoutes) {
