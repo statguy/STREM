@@ -58,9 +58,10 @@ Intersections <- setRefClass(
       return(invisible(.self))
     },
     
-    delete = function(extent) {
+    delete = function(extent, permanently=FALSE) {
       index <- over(intersections, extent)
-      intersections$intersections[is.na(index)] <<- 0
+      if (permanently) intersections <<- intersections[!is.na(index),]
+      else intersections$intersections[is.na(index)] <<- 0
       return(invisible(.self))
     }
   )
