@@ -169,3 +169,13 @@ getSPID.SpatialLinesDataFrame <- function(x) getSPID.SpatialLines(x)
 getSPID.SpatialPolygons <- function(x) sapply(x@polygons, function(x) x@ID)
 getSPID.SpatialPolygonsDataFrame <- function(x) getSPID.SpatialLines(x)
 
+getPolygonRectangle <- function(xrange, yrange, proj4string) {
+  coords <- matrix(c(
+    xrange[1], yrange[1],
+    xrange[1], yrange[2],
+    xrange[2], yrange[2],
+    xrange[2], yrange[1],
+    xrange[1], yrange[1]), ncol=2, byrow=T)
+  r <- SpatialPolygons(list(Polygons(list(Polygon(coords)), ID="window")), proj4string=proj4string)
+  return(r)
+}
