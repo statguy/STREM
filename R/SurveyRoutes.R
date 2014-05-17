@@ -37,13 +37,18 @@ SurveyRoutes <- setRefClass(
       crosses <- gCrosses(study$studyArea$boundary, surveyRoutes, byid=T)
       index <- c(which(contains), which(crosses))
       intersection <- gIntersection(study$studyArea$boundary, surveyRoutes[index], byid=T, id=names(surveyRoutes[index]))
+      
       return(intersection)
     },
     
     getLengths = function() {
       library(plyr)
       message("Finding survey route lengths...")
-      intersection <- cutSurveyRoutes()
+      
+      contains <- gContains(study$studyArea$boundary, surveyRoutes, byid=T)
+      crosses <- gCrosses(study$studyArea$boundary, surveyRoutes, byid=T)
+      index <- c(which(contains), which(crosses))
+      intersection <- gIntersection(study$studyArea$boundary, surveyRoutes[index], byid=T, id=names(surveyRoutes[index]))
       
       #lengths <<- laply(seq(along=intersection), function(i, intersection) {
       #  coords <- intersection[i]@lines[[1]]@Lines[[1]]@coords
