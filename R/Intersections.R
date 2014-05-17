@@ -35,6 +35,33 @@ Intersections <- setRefClass(
     
     getSurveyLocations = function() {
       return(SpatialPoints(unique(coordinates(intersections)), proj4string=intersections@proj4string))
+    },
+    
+    getExtent = function(margin=0) {
+      library(sp)
+      
+      coords <- coordinates(intersections)
+      index <- intersections$intersections > 0
+      x <- range(coords[index,1]) + c(-1,1)*margin
+      y <- range(coords[index,2]) + c(-1,1)*margin
+      extent <- getPolygonRectangle(x, y, intersections@proj4string)
+      
+      return(extent)
+    },
+    
+    plotExtent = function(margin=0) {
+      extent <- getExtent(margin=margin)
+      index <- intersections$intersections > 0
+      plot(intersections)
+      plot(intersections[index,], col="red", add=T)
+      plot(extent, border="blue", add=T)
+      return(invisible(.self))
+    },
+    
+    delete = function(extent) {
+      index <- over(intersections, extent)
+      intersections$intersections[is.na(index)] <<- 0
+      return(invisible(.self))
     }
   )
 )
@@ -275,7 +302,10 @@ FinlandWTCIntersections <- setRefClass(
               maxDuration, " of which ", round(nonZero*100), "% are non-zero.")
       
       intersections <<- SpatialPointsDataFrame(xy[retainIndex,], data=wtc, proj4string=CRS("+init=epsg:2393"))
-
+      
+      if (study$response == "rangifer.tarandus.fennicus")
+        delete(getPolygonRectangle(c(3.31,3.684)*1e6, c(7.2,6.92)*1e6, intersections@proj4string))
+      
       save(intersections, file=getIntersectionsFileName())
       return(invisible(.self))
     },

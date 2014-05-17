@@ -168,3 +168,4 @@ getSPID.SpatialLines <- function(x) sapply(x@lines, function(x) x@ID)
 getSPID.SpatialLinesDataFrame <- function(x) getSPID.SpatialLines(x)
 getSPID.SpatialPolygons <- function(x) sapply(x@polygons, function(x) x@ID)
 getSPID.SpatialPolygonsDataFrame <- function(x) getSPID.SpatialLines(x)
+
