@@ -30,24 +30,38 @@ SurveyRoutes <- setRefClass(
       return(invisible(.self))
     },
     
-    getLengths = function() {
+    cutSurveyRoutes = function() {
       library(rgeos)
-      library(plyr)
-      
-      message("Finding survey route lengths...")
       
       contains <- gContains(study$studyArea$boundary, surveyRoutes, byid=T)
       crosses <- gCrosses(study$studyArea$boundary, surveyRoutes, byid=T)
-      intersection <- gIntersection(study$studyArea$boundary,
-                                    surveyRoutes[c(which(contains), which(crosses))],
-                                    byid=T,
-                                    id=names(surveyRoutes[c(which(contains), which(crosses))]))
+      index <- c(which(contains), which(crosses))
+      intersection <- gIntersection(study$studyArea$boundary, surveyRoutes[index], byid=T, id=names(surveyRoutes[index]))
+      return(intersection)
+    },
+    
+    getLengths = function() {
+      library(plyr)
+      message("Finding survey route lengths...")
+      intersection <- cutSurveyRoutes()
       
+      #lengths <<- laply(seq(along=intersection), function(i, intersection) {
+      #  coords <- intersection[i]@lines[[1]]@Lines[[1]]@coords
+      #  n <- nrow(coords)
+      #  return(sum(euclidean(coords[1:(n-1),,drop=F], coords[2:n,,drop=F])))
+      #}, intersection=intersection)
+        
       lengths <<- laply(seq(along=intersection), function(i, intersection) {
-        coords <- intersection[i]@lines[[1]]@Lines[[1]]@coords
-        n <- nrow(coords)
-        return(sum(euclidean(coords[1:(n-1),,drop=F], coords[2:n,,drop=F])))
+        length <- laply(seq(along=intersection[i]@lines[[1]]@Lines), function(j, lines) {
+          #coords <- intersection[i]@lines[[1]]@Lines[[j]]@coords
+          coords <- lines[[j]]@coords
+          n <- nrow(coords)
+          length <- sum(euclidean(coords[1:(n - 1),, drop=F], coords[2:n,, drop=F]))
+          return(length)
+        }, lines=intersection[i]@lines[[1]]@Lines)
+        return(sum(length))
       }, intersection=intersection)
+      
       names(lengths) <<- names(intersection)
       
       outsideNames <- which(!contains & !crosses)
@@ -55,6 +69,7 @@ SurveyRoutes <- setRefClass(
       names(outsideLengths) <- outsideNames
       lengths <<- c(lengths, outsideLengths)
       lengths <<- lengths[order(as.numeric(names(lengths)))]
+      
       return(invisible(.self))
     }
   )
