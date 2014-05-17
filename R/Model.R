@@ -133,7 +133,7 @@ SmoothModel <- setRefClass(
     
     getPredictedOffset = function(distance=mean(data$distance)) {
       # Put on approximately the same scale with observed crossings
-      return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years) / offsetScale))
+      return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years)) / offsetScale)
     },
     
     setup = function(intersections, meshParams, offsetScale=1, family="nbinomial") {
@@ -186,7 +186,7 @@ SmoothModel <- setRefClass(
                                tag="observed")
       
       predStack <<- inla.stack(data=list(response=NA,
-                                         E=1, #getPredictedOffset(),
+                                         E=1,
                                          link=1),
                                A=list(1),
                                effects=list(c(index, list(intercept=1))),
