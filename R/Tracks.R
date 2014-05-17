@@ -460,7 +460,7 @@ FinlandWTCTracks <- setRefClass(
       metadata.raw <- read.csv(file.path(study$context$rawDataDirectory, "wolf-metadata.csv"))
       gps.metadata <- data.frame(id=metadata.raw$nimi,
                                  sex=ifelse(metadata.raw$sp=="uros", "male", "female"),
-                                 born=metadata.raw$syntymä,
+                                 born=metadata.raw$"syntym\a",
                                  dispersing=metadata.raw$dispersoiva.nuori==1,
                                  homerange=metadata.raw$reviiri==1,
                                  alpha=metadata.raw$alfa==1)
