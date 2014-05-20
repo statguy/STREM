@@ -234,7 +234,7 @@ SmoothModel <- setRefClass(
       indexObserved <- inla.stack.index(fullStack, "observed")$data
       data$eta <<- result$summary.linear.predictor$mean[indexObserved] + log(observationWeights)
       data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] * observationWeights
-      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] * observationWeights^2
+      data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] * observationWeights
       observedOffset <- getObservedOffset()
       
       message("Fitted values sums all years:")
@@ -243,7 +243,7 @@ SmoothModel <- setRefClass(
       
       indexPredicted <- inla.stack.index(fullStack, "predicted")$data
       node$mean <<- inla.vector2matrix(result$summary.fitted.values$mean[indexPredicted] * predictionWeights, nrow=mesh$n, ncol=length(years))
-      node$sd <<- inla.vector2matrix(result$summary.fitted.values$sd[indexPredicted] * predictionWeights^2, nrow=mesh$n, ncol=length(years))
+      node$sd <<- inla.vector2matrix(result$summary.fitted.values$sd[indexPredicted] * predictionWeights, nrow=mesh$n, ncol=length(years))
       node$spatialMean <<- inla.vector2matrix(result$summary.random$st$mean, nrow=mesh$n, ncol=length(years))
       node$spatialSd <<- inla.vector2matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(years))
       if (predictAtNodesOnOriginalScale)
@@ -345,18 +345,17 @@ SmoothModel <- setRefClass(
 
       meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)
       sdPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)
-      
       cellArea <- prod(res(templateRaster)) # m^2
       
-      for (year in sort(unique(xyzMean$Year))) {
-        yearIndex <- year - min(xyzMean$Year) + 1
+      for (year in sort(unique(data$year))) {
+        yearIndex <- year - min(data$year) + 1
         message("Processing year ", year, "...")
         
         meanRaster <- project(projectValues=node$mean[,yearIndex] / offsetScale, projectionRaster=templateRaster, maskPolygon=maskPolygon, weights=cellArea)
         meanPopulationDensityRaster$addLayer(meanRaster, year)
         
         if (getSD) {
-          sdRaster <- project(projectValues=node$sd[,yearIndex] / offsetScale^2, projectionRaster=templateRaster, maskPolygon=maskPolygon, weights=cellArea^2)
+          sdRaster <- project(projectValues=node$sd[,yearIndex] / offsetScale, projectionRaster=templateRaster, maskPolygon=maskPolygon, weights=cellArea)
           sdPopulationDensityRaster$addLayer(sdRaster, year)
         }
       }
@@ -371,7 +370,7 @@ SmoothModel <- setRefClass(
       library(raster)
       
       xyztMean <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedMean / offsetScale, t=data$year)
-      xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale^2, t=data$year)
+      xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale, t=data$year)
       cellArea <- prod(res(templateRaster)) # m^2
       
       meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=unique(xyztMean$t), weights=cellArea)
