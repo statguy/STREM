@@ -296,6 +296,21 @@ FinlandWTCStudy <- setRefClass(
       return(populationDensity)
     },
     
+    getPopulationDensity2 = function(withHabitatWeights=TRUE, saveDensityPlots=FALSE, getSD=FALSE) {
+      estimates <- collectEstimates()
+      
+      habitatWeights <- if (withHabitatWeights) loadHabitatWeightsRaster() else HabitatWeights$new(study=study)$getWeightsRaster()
+      populationDensity <- estimates$getPopulationDensity2(templateRaster=habitatWeights, getSD=getSD)
+      populationDensity$mean$weight(habitatWeights)
+      
+      if (saveDensityPlots) {
+        populationDensity$mean$animate(name=estimates$modelName)
+        if (getSD) populationDensity$sd$animate(name=estimates$modelName)
+      }
+      
+      return(populationDensity)
+    },
+    
     getPopulationSize = function(withHabitatWeights=TRUE, saveDensityPlots=FALSE) {
       populationDensity <- getPopulationDensity(withHabitatWeights=withHabitatWeights, saveDensityPlots=saveDensityPlots)
       populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study))

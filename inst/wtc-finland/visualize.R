@@ -281,20 +281,20 @@ distances <- data.frame()
 distanceRasters <- list()
 for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
-  #intersections <- study$loadIntersections()
-  #intersections$predictDistances()
-  #predictedDistances <- intersections$intersections$distance / 1000
-
-  intervals <- study$loadSampleIntervals()
-  estimates <- study$loadEstimates()
-  estimates$saveMeshNodeCovariates()
-  predictedDistances <- estimates$covariates$distance / 1000
-  coords <- repeatMatrix(estimates$getUnscaledMeshCoordinates(), length(estimates$years))
+  intersections <- study$loadIntersections()
+  intersections$predictDistances()
+  predictedDistances <- intersections$intersections$distance / 1000
+    
+  #intervals <- study$loadSampleIntervals()
+  #estimates <- study$loadEstimates()
+  #estimates$saveMeshNodeCovariates()
+  #predictedDistances <- estimates$covariates$distance / 1000
+  #coords <- repeatMatrix(estimates$getUnscaledMeshCoordinates(), length(estimates$years))
   
-  x <- data.frame(year=estimates$covariates$year, distance=predictedDistances, logDistance=log(predictedDistances), response=study$getPrettyResponse(response))
-  #x <- data.frame(estimates$locations, distance=predictedDistances, logDistance=log(predictedDistances), response=study$getPrettyResponse(response))
-  #x$year <- intersections$intersections$year
-  #x$year <- rep(estimates$years, each=estimates$mesh$n)
+  x <- data.frame(estimates$locations, distance=predictedDistances, logDistance=log(predictedDistances), response=study$getPrettyResponse(response))
+  x$year <- intersections$intersections$year
+  x$year <- rep(estimates$years, each=estimates$mesh$n)
+  #x <- data.frame(year=estimates$covariates$year, distance=predictedDistances, logDistance=log(predictedDistances), response=study$getPrettyResponse(response))
   distances <- rbind(distances, x)
   
   for (year in estimates$years) {
@@ -334,17 +334,17 @@ getPopulationDensity <- function(responses, context, withHabitatWeights=FALSE) {
   populationDensity <- list()
   for (response in responses) {
     study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
-    populationDensity[[response]] <- study$getPopulationDensity(withHabitatWeights=withHabitatWeights)
+    populationDensity[[response]] <- study$getPopulationDensity2(withHabitatWeights=withHabitatWeights) # NOTE!!!
   }
   return(populationDensity)
 }
 
 # TODO: legend
 # TODO: standard deviation, include all focal species when data available
-populationDensity <- getPopulationDensity(responses=responses[1], context=context)
-weightedPopulationDensity <- getPopulationDensity(responses=responses[1], context=context, withHabitatWeights=TRUE)
+populationDensity <- getPopulationDensity(responses=responses, context=context)
+weightedPopulationDensity <- getPopulationDensity(responses=responses, context=context, withHabitatWeights=TRUE)
 
-for (response in responses[1]) {
+for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   
   popdens <- populationDensity[[response]]$mean
@@ -362,7 +362,7 @@ for (response in responses[1]) {
 
 populationSize <- data.frame()
 
-for (response in responses[1]) {
+for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   x <- weightedPopulationDensity[[response]]$mean$integrate(volume=FinlandPopulationSize$new(study=study))
   x$loadValidationData()
@@ -482,34 +482,3 @@ p <- ggplot(yfd, aes(long, lat, group=group)) +
   ggtitle("Волк")
 saveFigure(p, filename="CrossingDensity-canis.lupus-Russia.svg", bg="transparent")
 print(p)
-#
-
-
-(Slide 1)
-
-Russians have surveyed game animal populations for decades from winter tracks throughout
-Russia.  The census system works so that species are identified from snow tracks
-and number of crossings of each species over survey routes are counted, which gives a relative
-estimate of the population density.  The picture on the left shows aggregated data for the European
-part of Russia in one year. Similar census system has been also adopted in Finland, shown on
-the right. It is a network of survey routes, which are triangular shape and there is 25 years of
-Finnish data collected now.
-
-(Slide 2)
-
-I develop a model to convert the number of crossings to population density and for that I use the
-Finnish data with a few focal game animal species. However, the population-level count data does
-not solely tell about the density, so I combine it with individual-level GPS data. I use the GPS tracks
-to determine habitat use and movement activity of the species predicted from habitat distribution
-and weather data. I also verify the method with simulation studies.
-
-(Slide 3)
-
-After tuning the model for the Finnish data, I obtain population density and total population size
-and compare it to the validation data, shown on the pictures. I apply the model also on the Russian
-data combined with the Finnish data. This can help to answer biological question like how the
-populations have fluctuated and where they are heading now in Russia. Also, what ecological,
-environmental and anthropogenic factors affect the population densities and how much. One
-interesting detail is that the forest management has been very different in Finland and Russia
-and there is a clear ecological boundary at the border, and with this data it can be seen what
-effect the boundary has.
