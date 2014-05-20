@@ -313,7 +313,7 @@ for (response in responses) {
   n.cell <- length(h.masked) - freq(h.masked, value=NA)
   A.discrete <- n.cell * prod(res(h.masked)) / 1000^2
   h.cell <- cellStats(h.masked, sum)
-  A.h <- h.cell * prod(res(h.masked)) / 1000^2 * A / A.discrete # A.discrete is a little bit smaller than A due to discretization, so apply a correction
+  A.h <- h.cell * prod(res(h.masked)) / 1000^2 * A / A.discrete # A.discrete is a little bit smaller than A due to the discretization, so apply a correction
   
   C <- 2/pi * A.h / M
   l <- C * x / N
