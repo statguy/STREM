@@ -64,6 +64,10 @@ Model <- setRefClass(
     
     getUnscaledMeshCoordinates = function() {
       return(getUnscaledMesh()$loc[,1:2])
+    },
+    
+    getUnscaledObservationCoordinates = function() {
+      return(locations / coordsScale)
     }
   )
 )
@@ -227,30 +231,23 @@ SmoothModel <- setRefClass(
     collectEstimates = function(observationWeights=1, predictionWeights=1, predictAtNodesOnOriginalScale=FALSE) {
       library(INLA)
       
-      message("Processing fitted values...")
-      
       indexObserved <- inla.stack.index(fullStack, "observed")$data
       data$eta <<- result$summary.linear.predictor$mean[indexObserved] + log(observationWeights)
       data$fittedMean <<- result$summary.fitted.values$mean[indexObserved] * observationWeights
       data$fittedSD <<- result$summary.fitted.values$sd[indexObserved] * observationWeights^2
-      
-      #stackData <- inla.stack.data(fullStack, tag="observed")
-      #observedOffset <- stackData$E[indexObserved]
       observedOffset <- getObservedOffset()
       
       message("Fitted values sums all years:")
       message("observed = ", sum(data$intersections))
       message("estimated = ", sum(data$fittedMean * observedOffset))
       
-      message("Processing random effects...")
-      
       indexPredicted <- inla.stack.index(fullStack, "predicted")$data
-      node$mean <<- matrix(result$summary.fitted.values$mean[indexPredicted] * predictionWeights, nrow=mesh$n, ncol=length(years))
-      node$sd <<- matrix(result$summary.fitted.values$sd[indexPredicted] * predictionWeights^2, nrow=mesh$n, ncol=length(years))
-      node$spatialMean <<- matrix(result$summary.random$st$mean, nrow=mesh$n, ncol=length(years))
-      node$spatialSd <<- matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(years))
-      #predictedOffset <- matrix(stackData$E[indexPredicted], nrow=mesh$n, ncol=length(years)) * matrix(getPredictedOffset(), nrow=mesh$n, ncol=length(years))
-      if (predictAtNodesOnOriginalScale) predictedOffset <- matrix(getPredictedOffset(), nrow=mesh$n, ncol=length(years))
+      node$mean <<- inla.vector2matrix(result$summary.fitted.values$mean[indexPredicted] * predictionWeights, nrow=mesh$n, ncol=length(years))
+      node$sd <<- inla.vector2matrix(result$summary.fitted.values$sd[indexPredicted] * predictionWeights^2, nrow=mesh$n, ncol=length(years))
+      node$spatialMean <<- inla.vector2matrix(result$summary.random$st$mean, nrow=mesh$n, ncol=length(years))
+      node$spatialSd <<- inla.vector2matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(years))
+      if (predictAtNodesOnOriginalScale)
+        predictedOffset <- inla.vector2matrix(getPredictedOffset(), nrow=mesh$n, ncol=length(years))
       
       stat <- data.frame()
       for (year in years) {
@@ -349,8 +346,6 @@ SmoothModel <- setRefClass(
       meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)
       sdPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)
       
-      xyzMean <- data.frame(Year=data$year, locations / coordsScale, z=data$fittedMean)
-      xyzSD <- data.frame(Year=data$year, locations / coordsScale, z=data$fittedSD)
       cellArea <- prod(res(templateRaster)) # m^2
       
       for (year in sort(unique(xyzMean$Year))) {
@@ -366,6 +361,23 @@ SmoothModel <- setRefClass(
         }
       }
       
+      return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
+    },
+    
+    getPopulationDensity2 = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
+      if (length(node) == 0)
+        stop("Did you forgot to run collectEstimates() first?")
+      
+      library(raster)
+      
+      xyztMean <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedMean / offsetScale, t=data$year)
+      xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale^2, t=data$year)
+      cellArea <- prod(res(templateRaster)) # m^2
+      
+      meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=unique(xyztMean$t), weights=cellArea)
+      sdPopulationDensityRaster <- if (getSD) SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=unique(xyztMean$t), weights=cellArea)
+      else SpatioTemporalRaster$new(study=study)
+            
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
     },
     

@@ -210,8 +210,11 @@ FinlandWTCStudy <- setRefClass(
       return(habitatWeights)
     },
     
-    loadHabitatWeightsRaster = function() {
-      return(CORINEHabitatWeights$new(study=.self)$loadWeightsRaster())
+    loadHabitatWeightsRaster = function(maskBoundary=TRUE) {
+      habitatWeightsRaster <- CORINEHabitatWeights$new(study=.self)$loadWeightsRaster()
+      if (maskBoundary)
+        habitatWeightsRaster <- mask(habitatWeightsRaster, study$studyArea$boundary)
+      return(habitatWeightsRaster)
     },
     
     estimate = function(meshParams, offsetScale=1, interceptPriorParams, predictDistances=TRUE, save=FALSE, test=FALSE) {
