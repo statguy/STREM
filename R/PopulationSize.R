@@ -16,7 +16,8 @@ PopulationSize <- setRefClass(
     },
     
     setValidationSizeData = function(validationSizeData) {
-      sizeData <<- merge(sizeData, validationSizeData, all=TRUE, sort=FALSE)
+      sizeData <<- if (nrow(sizeData) == 0) validationSizeData
+      else merge(sizeData, validationSizeData, all=TRUE, sort=FALSE)
     },
     
     getValidationDataFileName = function() {
@@ -82,9 +83,9 @@ FinlandPopulationSize <- setRefClass(
     
     loadValidationData = function(fileName=getValidationDataFileName()) {
       load(fileName)
-      setValidationSizeData(validation[,c("Year", study$response)])
-      #sizeData <<- merge(sizeData, validation[,c("Year",study$response)], all=T)
-      colnames(sizeData) <<- c("Year","Estimated","Validation")
+      validationData <- validation[,c("Year", study$response)]
+      colnames(validationData) <- c("Year","Validation")
+      setValidationSizeData(validationData)
       return(invisible(.self))
     }
   )

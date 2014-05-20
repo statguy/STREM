@@ -323,17 +323,6 @@ SmoothModel <- setRefClass(
       return(x)
     },
     
-    # TODO: fix?
-    DEPRECATED_getPredictedIntersections = function() {
-      x <- data
-      indexObserved <- inla.stack.index(fullStack, "observed")$data
-      x$offset <- inla.stack.data(fullStack)$E[indexObserved]
-      intersections <- ddply(x, .(year), function(x) {
-        data.frame(Observed=sum(x$intersections), Predicted=sum(x$fittedMean * x$offset), logObsOff=log(sum(x$intersections / x$offset)), eta=sum(x$eta))
-      })
-      return(intersections)
-    },
-    
     project = function(projectValues, projectionRaster=study$getTemplateRaster(), maskPolygon, weights=1) {
       library(INLA)
       library(raster)

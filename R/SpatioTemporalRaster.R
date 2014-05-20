@@ -43,11 +43,14 @@ SpatioTemporalRaster <- setRefClass(
       ggsave(p, filename=getRasterFileName(name=name, layerName=layerName, ext=ext), width=width0, height=height, ...)
     },
     
-    plotLayer = function(layerName, plotTitle, legendTitle, digits=2, breaks=round(seq(minValue(rasterStack[[layerName]]), maxValue(rasterStack[[layerName]]), length.out=7), digits=digits), boundary=FALSE, plot=FALSE, save=FALSE, name, ...) {
+    plotLayer = function(layerName, plotTitle, legendTitle, digits=2, breaks=round(seq(minValue(rasterStack[[layerName]]), maxValue(rasterStack[[layerName]]), length.out=7), digits=digits), boundary=FALSE, plot=TRUE, save=FALSE, name, ...) {
       library(ggplot2)
       library(raster)
       library(rasterVis)
 
+      message("Breaks:")
+      print(breaks)
+      
       layer <- crop(rasterStack[[layerName]], extent(study$studyArea$boundary))
       p <- gplot(layer) + geom_raster(aes(fill=value)) + coord_equal() +
         #scale_fill_gradientn(colours=terrain.colors(99), na.value=NA)

@@ -1,6 +1,9 @@
 #+ setup, include=FALSE
 library(knitr)
-opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, tidy=FALSE, fig.width=10, fig.height=15, cache=TRUE)
+opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, tidy=FALSE, fig.width=10, fig.height=15, cache=TRUE)#, cache.path="~/tmp/cache")
+
+#' NOTE: Figures and tables may be out of sync with the manuscript!
+#' ----------------------------------------------------------------
 
 ```{r initialize}
 library(WTC)
@@ -266,7 +269,7 @@ cat("Prediction interval = 2h")
 
 
 ######
-### Power law fit estimates for distance - sampling interval (Table 2)
+### Power law fit estimates for distance - sampling interval (Table 1)
 ######
 # Fixed effects: human population density, precipitation, snow cover, temperature
 
@@ -282,7 +285,47 @@ intervals <- l_ply(responses, function(response, context) {
 ```
 
 ######
-### Habitat weights (Figure 5)
+### Crude distance estimates (Table 1)
+#####
+
+```{r distance-crude-estimates}
+responses <- c("canis.lupus","lynx.lynx","rangifer.tarandus.fennicus")
+for (response in responses) {
+  context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+  study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
+  
+  populationSize <- FinlandPopulationSize$new(study=study)
+  populationSize$loadValidationData()
+  
+  intersections <- study$loadIntersections()
+  
+  A <- 338424 # km^2
+  M <- ddply(intersections$getData(), .(year), function(x) sum(x$length))$V1 / 1000
+  N <- populationSize$sizeData$Validation
+  x <- ddply(intersections$getData(), .(year), function(x) sum(x$intersections))$V1
+  
+  C <- 2/pi * A / M
+  l <- C * x / N
+  cat(response, ": crude distance mean = ", mean(l, na.rm=T), " sd = ", sd(l, na.rm=T), " km/d\n")
+    
+  h <- study$loadHabitatWeightsRaster()
+  h.masked <- mask(h, study$studyArea$boundary)
+  n.cell <- length(h.masked) - freq(h.masked, value=NA)
+  A.discrete <- n.cell * prod(res(h.masked)) / 1000^2
+  h.cell <- cellStats(h.masked, sum)
+  A.h <- h.cell * prod(res(h.masked)) / 1000^2 * A / A.discrete # A.discrete is a little bit smaller than A due to discretization, so apply a correction
+  
+  C <- 2/pi * A.h / M
+  l <- C * x / N
+  cat(response, ": crude weighted distance mean = ", mean(l, na.rm=T), " sd = ", sd(l, na.rm=T), " km/d\n")
+  
+  cat(response, ": observed number of intersections:\n")
+  print(1/C * l)
+}
+```
+
+######
+### Habitat weights (Figure 6)
 ######
 
 ```{r habitat-weights, fig.height=5, results="hide"}
@@ -309,7 +352,7 @@ print(p)
 ```
 
 ######
-### Total population size estimates (Figure 6)
+### Total population size estimates (Figure 7)
 ######
 
 ```{r population-size-init, results="hide"}
