@@ -69,17 +69,10 @@ SpatioTemporalRaster <- setRefClass(
       return(invisible(p))
     },
     
-    interpolate = function(xyzt, timeVariable, templateRaster=study$getTemplateRaster(), transform=identity, inverseTransform=identity, layerNames) {
+    interpolate = function(xyzt, timeVariable=colnames(xyzt)[4], templateRaster=study$getTemplateRaster(), transform=identity, inverseTransform=identity, layerNames) {
       library(ST)
-      if (missing(timeVariable)) {
-        if (missing(layerNames)) stop("Missing layerNames argument.")
-        x <- rasterInterpolate(xyzt, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)
-        addLayer(x, layerNames)
-      }
-      else {
-        rasterStack <<- multiRasterInterpolate(xyzt, variables=timeVariable, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)
-        if (!missing(layerNames)) names(rasterStack) <<- layerNames
-      }
+      rasterStack <<- ST::multiRasterInterpolate(xyzt, variables=timeVariable, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)
+      if (!missing(layerNames)) names(rasterStack) <<- layerNames
       return(invisible(.self))
     },
     
