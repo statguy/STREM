@@ -81,7 +81,8 @@ Model <- setRefClass(
       data$response <<- data$intersections
       locations <<- intersections$getCoordinates() * coordsScale
       years <<- as.integer(sort(unique(data$year)))
-      model <<- response ~ 1 + f(year, model=params$timeModel)
+      model <<- if (hasMember(params, "model")) params$model
+      else response ~ 1 + f(year, model=params$timeModel)
       
       return(invisible(.self))      
     },

@@ -26,10 +26,15 @@ if (F) {
   estimates$collectEstimates()
   summary(estimates$result)
   estimates$collectHyperparameters()
+  
+  #habitatWeights <- CORINEHabitatWeights$new(study=study)$loadWeightsRaster()
+  #habitatWeights <- crop(habitatWeights, extent(subarea))
+  
   habitatWeights <- study$loadHabitatWeightsRaster()
-  populationDensity <- estimates$getPopulationDensity(templateRaster=habitatWeights, getSD=FALSE)
-  populationDensity$mean$weight(habitatWeights)
-  populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study))
+  #populationDensity <- estimates$getPopulationDensity(templateRaster=habitatWeights, getSD=FALSE)
+  populationDensity2 <- estimates$getPopulationDensity2(templateRaster=habitatWeights, getSD=FALSE)
+  populationDensity2$mean$weight(habitatWeights)
+  populationSize <- populationDensity2$mean$integrate(volume=FinlandPopulationSize$new(study=study))
   #estimates$collectHyperparameters()
   populationSize$loadValidationData()
   populationSize
