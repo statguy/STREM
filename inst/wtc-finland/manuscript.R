@@ -366,7 +366,8 @@ getPopulationDensity <- function(responses, context, withHabitatWeights=FALSE) {
     #estimates$saveEstimates()
     
     study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
-    populationDensity[[response]] <- study$getPopulationDensity(withHabitatWeights=withHabitatWeights)
+    #populationDensity[[response]] <- study$getPopulationDensity(withHabitatWeights=withHabitatWeights)
+    populationDensity[[response]] <- study$getPopulationDensity2(withHabitatWeights=withHabitatWeights)
   }
   return(populationDensity)
 }

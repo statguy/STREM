@@ -57,8 +57,8 @@ SimulationStudy <- setRefClass(
       return(intersections)
     },
     
-    loadEstimates = function(iteration) {
-      estimates <- SimulatedSmoothModel$new(study=.self, iteration=iteration)$loadEstimates()
+    loadEstimates = function(estimates) {
+      estimates$loadEstimates()
       return(estimates)
     },
     
@@ -84,11 +84,12 @@ SimulationStudy <- setRefClass(
       return(invisible(intersections))
     },
     
-    estimate = function(iteration, meshParams, offsetScale=1, interceptPriorParams, save=TRUE) {
-      intersections <- loadIntersections(iteration=iteration)
-      model <- SimulatedSmoothModel$new(study=.self, iteration=iteration)
-      model$setup(intersections=intersections, meshParams=meshParams, offsetScale=offsetScale)
-      if (!missing(interceptPriorParams)) model$setupInterceptPrior(interceptPriorParams)
+    estimate = function(model, params, meshParams, save=TRUE) {
+      if (missing(model)) stop("Missing model argument.")
+      if (missing(params)) stop("Missing params argument.")
+      
+      intersections <- loadIntersections(iteration=model$iteration)
+      model$setup(intersections=intersections, params=params)
       model$estimate()
       if (save) model$saveEstimates()
       return(invisible(model))
@@ -217,24 +218,23 @@ FinlandWTCStudy <- setRefClass(
       return(habitatWeightsRaster)
     },
     
-    estimate = function(meshParams, offsetScale=1, interceptPriorParams, predictDistances=TRUE, save=FALSE, test=FALSE) {
+    estimate = function(model, params, predictDistances=TRUE, save=FALSE, test=FALSE) {
+      if (missing(model)) stop("Missing model argument.")
+      if (missing(params)) stop("Missing params argument.")
+      
       intersections <- loadIntersections()
       if (predictDistances) intersections$predictDistances()
       else intersections$intersections$distance <- tracks$getMeanDistance()
       
-      model <- FinlandSmoothModel$new(study=.self)
-      model$setup(intersections=intersections, meshParams=meshParams, offsetScale=offsetScale)
-      if (!missing(interceptPriorParams))
-        model$setupInterceptPrior(priorParams=interceptPriorParams)
-      
+      model$setup(intersections=intersections, params=params)
       if (!test) model$estimate(save=save, fileName=model$getEstimatesFileName())
       
-      return(model)
+      return(model)      
     },
         
-    loadEstimates = function() {
-      estimates <- FinlandSmoothModel$new(study=.self)$loadEstimates()
-      estimates$loadCovariates()   
+    loadEstimates = function(estimates) {
+      if (missing(estimates)) stop("Missing estimates argument.")
+      estimates$loadEstimates()$loadCovariates()   
       return(estimates)
     },
 
@@ -396,22 +396,21 @@ FinlandRussiaWTCStudy <- setRefClass(
       return(intersections)
     },
     
-    estimate = function(meshParams, offsetScale=1, interceptPriorParams, save=FALSE, test=FALSE) {
+    estimate = function(model, params, save=FALSE, test=FALSE) {
+      if (missing(model)) stop("Missing model argument.")
+      if (missing(params)) stop("Missing params argument.")
+      
       intersections <- loadIntersections()
-      
-      model <- FinlandRussiaSmoothModel$new(study=.self)
-      model$setup(intersections=intersections, meshParams=meshParams, offsetScale=offsetScale)
-      if (!missing(interceptPriorParams))
-        model$setupInterceptPrior(priorParams=interceptPriorParams)
-      
+      model$setup(intersections=intersections, meshParams=meshParams)      
       if (!test) model$estimate(save=save, fileName=model$getEstimatesFileName())
       
       return(model)
     },
     
-    loadEstimates = function() {
-      model <- FinlandRussiaSmoothModel$new(study=.self)
-      return(model$loadEstimates())
+    loadEstimates = function(estimates) {
+      if (missing(estimates)) stop("Missing estimates argument.")
+      estimates$loadEstimates()
+      return(estimates)
     },
     
     collectEstimates = function() {
@@ -440,6 +439,5 @@ FinlandRussiaWTCStudy <- setRefClass(
       populationSize <- populationDensity$mean$integrate(volume=FinlandRussiaPopulationSize$new(study=study))
       return(populationSize)
     }
-    
   )
 )

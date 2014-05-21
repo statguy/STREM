@@ -10,29 +10,22 @@ Model <- setRefClass(
     study = "Study",
     data = "data.frame",
     locations = "matrix",
-    #covariates = "data.frame",
     model = "formula",
     coordsScale = "numeric",
     years = "integer",
-    mesh = "inla.mesh",
-    spde = "inla.spde2",
-    index = "list",
-    A = "Matrix",
-    obsStack = "inla.data.stack",
-    predStack = "inla.data.stack",
-    fullStack = "inla.data.stack",
     result = "inla",
-    node = "list",
     modelName = "character",
     offsetScale = "numeric",
-    family = "character",
-    interceptPrior = "list",
-    rhoPrior = "list",
-    spdeParams = "list"
+    family = "character"
   ),
   methods = list(
     initialize = function(...) {
       callSuper(...)
+      return(invisible(.self))
+    },
+    
+    setModelName = function(likelihood, randomEffect) {
+      modelName <<- paste("SmoothModel", likelihood, randomEffect, sep="-")
       return(invisible(.self))
     },
     
@@ -43,19 +36,14 @@ Model <- setRefClass(
     },
     
     saveEstimates = function(fileName=getEstimatesFileName()) {
-      message("Saving result to ", fileName, "...")
-      save(locations, data, model, coordsScale, years, mesh, spde, index, A, fullStack, result, offsetScale, family, interceptPrior, rhoPrior, spdeParams, file=fileName)
+      stop("Unimplemented method saveEstimates.")
     },
     
     loadEstimates = function(fileName=getEstimatesFileName()) {
       load(fileName, envir=as.environment(.self))
       return(invisible(.self))
     },
-    
-    estimate = function(save=FALSE, fileName=getEstimatesFileName()) {
-      stop("Unimplemented method.")
-    },
-    
+        
     getUnscaledMesh = function() {
       mesh.unscaled <- mesh
       mesh.unscaled$loc <- mesh.unscaled$loc / coordsScale
@@ -68,19 +56,176 @@ Model <- setRefClass(
     
     getUnscaledObservationCoordinates = function() {
       return(locations / coordsScale)
+    },
+    
+    getObservedOffset = function(distance=data$distance) {
+      return(2/pi * data$length * data$duration * distance / offsetScale)
+    },
+    
+    setup = function(intersections, params) {
+      library(INLA)
+      library(plyr)
+      
+      if (missing(params))
+        stop("Missing params argument.")
+      if (!hasMember(params, "family"))
+        stop("Missing family parameter.")
+      if (!hasMember(params, "timeModel"))
+        stop("Missing timeModel parameter.")
+      coordsScale <<- if (!hasMember(params, "coordsScale")) 1 else params$coordScale
+      offsetScale <<- if (!hasMember(params, "offsetScale")) 1000^2 else params$offsetScale
+      family <<- if (!hasMember(params, "family")) "nbinomial" else params$family
+      
+      setModelName(family=params$family, randomEffect=params$timeModel)
+      data <<- intersections$getData()
+      locations <<- intersections$getCoordinates() * coordsScale
+      years <<- as.integer(sort(unique(data$year)))
+      model <<- response ~ 1 + f(i, model=params$timeModel)
+      
+      return(invisible(.self))      
+    },
+    
+    estimate = function(save=FALSE, fileName=getEstimatesFileName()) {
+      stop("Unimplemented method.")
     }
   )
 )
 
-SmoothModel <- setRefClass(
-  Class = "SmoothModel",
+SmoothModelTemporal <- setRefClass(
+  Class = "SmoothModelTemporal",
   contains = "Model",
   fields = list(
   ),
   methods = list(
-    initialize = function(...) {
-      callSuper(modelName="SmoothModel", ...)
-      return(invisible(.self))
+    saveEstimates = function(fileName=getEstimatesFileName()) {
+      message("Saving result to ", fileName, "...")
+      save(locations, data, model, coordsScale, years, result, offsetScale, family, file=fileName)
+    },
+            
+    estimate = function(save=FALSE, fileName=getEstimatesFileName(), verbose=TRUE) {
+      library(INLA)
+      
+      message("Estimating population density...")
+      
+      result <<- inla(model,
+                      family=family,
+                      data=data,
+                      E=getObservedOffset(),
+                      verbose=verbose,
+                      control.predictor=list(compute=TRUE),
+                      control.compute=list(cpo=FALSE, dic=TRUE))
+      
+      if (is.null(result$ok) | result$ok == FALSE) {
+        warning("INLA failed to run.")
+      }
+      else {
+        if (save) saveEstimates(fileName=fileName)
+      }
+    },
+    
+    collectEstimates = function(observationWeights=1, predictionWeights=1) {
+      library(INLA)
+      
+      data$eta <<- result$summary.linear.predictor$mean + log(observationWeights)
+      data$fittedMean <<- result$summary.fitted.values$mean * observationWeights
+      data$fittedSD <<- result$summary.fitted.values$sd * observationWeights
+      observedOffset <- getObservedOffset()
+      
+      message("Fitted values sums all years:")
+      message("observed = ", sum(data$intersections))
+      message("estimated = ", sum(data$fittedMean * observedOffset))      
+      
+      stat <- data.frame()
+      for (year in years) {
+        yearWhich <- data$year == year
+        yearIndex <- year - min(years) + 1
+        data.frame(
+          Year=years[yearIndex],
+          Observed=sum(data$intersections[yearWhich]),
+          EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich]),
+          ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich]),
+          EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
+          ObservedOffset=mean(observedOffset[yearWhich])
+        )
+        stat <- rbind(stat, x)
+      }
+      
+      message("Year by year summary:")
+      print(stat)
+      message("Column sums:")
+      x <- stat[!colnames(stat) %in% c("Year")]
+      print(colSums(x))
+      message("Column means:")
+      print(colMeans(x))
+      message("Correlations:")
+      print(cor(x))
+      
+      return(invisible(stat))
+    },
+    
+    collectHyperparameters = function() {
+      library(INLA)
+      
+      message("Processing hyperparameters...")
+      
+      x <- data.frame()
+      if (any(rownames(result$summary.hyperpar)=="Precision for i")) # RW1, RW2, AR1, ARp, seasonal
+        x <- rbind(x, random_effect_precision=result$summary.hyperpar["Precision for i",])
+      if (any(rownames(result$summary.hyperpar)=="Rho for i")) # AR1
+        x <- rbind(x, rho=result$summary.hyperpar["Rho for i",])
+      if (any(rownames(result$summary.hyperpar)=="PACF1 for i")) # ARp
+        x <- rbind(x, rho=result$summary.hyperpar["PACF1 for i",])
+      if (any(rownames(result$summary.hyperpar)=="PACF2 for i")) # ARp
+        x <- rbind(x, rho=result$summary.hyperpar["PACF2 for i",])
+      if (any(rownames(result$summary.hyperpar)=="PACF3 for i")) # ARp
+        x <- rbind(x, rho=result$summary.hyperpar["PACF3 for i",])
+      if (any(rownames(result$summary.hyperpar)=="PACF4 for i")) # ARp
+        x <- rbind(x, rho=result$summary.hyperpar["PACF4 for i",])
+      
+      return(x)
+    },
+    
+    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
+      if (length(node) == 0)
+        stop("Did you forgot to run collectEstimates() first?")
+      
+      library(raster)
+      
+      xyztMean <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedMean / offsetScale, t=data$year)
+      xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale, t=data$year)
+      cellArea <- prod(res(templateRaster)) # m^2
+      
+      meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=unique(xyztMean$t), weights=cellArea)
+      sdPopulationDensityRaster <- if (getSD) SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=unique(xyztMean$t), weights=cellArea)
+      else SpatioTemporalRaster$new(study=study)
+      
+      return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
+    }
+    
+  )
+)
+
+SmoothModelSpatioTemporal <- setRefClass(
+  Class = "SmoothModelSpatioTemporal",
+  contains = "Model",
+  fields = list(
+    mesh = "inla.mesh",
+    spde = "inla.spde2",
+    index = "list",
+    A = "Matrix",
+    obsStack = "inla.data.stack",
+    predStack = "inla.data.stack",
+    fullStack = "inla.data.stack",
+    interceptPrior = "list",
+    rhoPrior = "list",
+    spdeParams = "list",
+    node = "list"
+  ),
+  methods = list(
+    saveEstimates = function(fileName=getEstimatesFileName()) {
+      stop("Unimplemented method saveEstimates.")
+      message("Saving result to ", fileName, "...")
+      save(locations, data, model, coordsScale, years, mesh, spde, index, A, fullStack, result, offsetScale, family, interceptPrior, rhoPrior, spdeParams, file=fileName)
     },
     
     setupInterceptPrior = function(priorParams) {
@@ -113,11 +258,11 @@ SmoothModel <- setRefClass(
       return(invisible(.self))
     },
     
-    setupSpatialPrior = function(range, sigma, constr=FALSE) {
-      kappa.mean <- rangeToKappa(range$mean)
-      tau.mean <- sigmaToTau(sigma$mean, kappa.mean)
-      tau.log.sd <- sort(log(tau.mean) - log(sigmaToTau(c(sigma$lower, sigma$upper), kappa.mean))) / qnorm(c(0.025,0.975))
-      kappa.log.sd <- sort(log(kappa.mean) - log(rangeToKappa(c(range$lower, range$upper)))) / qnorm(c(0.025,0.975))
+    setupSpatialPrior = function(priorParams) {
+      kappa.mean <- rangeToKappa(priorParams$range$mean)
+      tau.mean <- sigmaToTau(priorParams$sigma$mean, kappa.mean)
+      tau.log.sd <- sort(log(tau.mean) - log(sigmaToTau(c(priorParams$sigma$lower, priorParams$sigma$upper), kappa.mean))) / qnorm(c(0.025,0.975))
+      kappa.log.sd <- sort(log(kappa.mean) - log(rangeToKappa(c(priorParams$range$lower, priorParams$range$upper)))) / qnorm(c(0.025,0.975))
       
       message("tau mean = ", signif(tau.mean,2), ", sd candidates = ", signif(exp(tau.log.sd[1]),2), " ", signif(exp(tau.log.sd[2]),2), ", sd mean = ", signif(mean(exp(tau.log.sd)),2))
       message("kappa mean = ", signif(kappa.mean,2), ", sd candidates = ", signif(exp(kappa.log.sd[1]),2), " ", signif(exp(kappa.log.sd[2]),2), ", sd mean = ", signif(mean(exp(kappa.log.sd)),2))
@@ -127,12 +272,8 @@ SmoothModel <- setRefClass(
       
       spdeParams <<- list(kappa=kappa.mean, tau=tau.mean, B.tau=cbind(log(tau.mean), -1, 1), B.kappa=cbind(log(kappa.mean), 0, -1),
                           theta.prior.mean=c(0,0), theta.prior.prec=c(1/mean(tau.log.sd),1/mean(kappa.log.sd)),
-                          constr=constr)
+                          constr=priorParams$constr)
       return(invisible(.self))
-    },
-    
-    getObservedOffset = function(distance=data$distance) {
-      return(2/pi * data$length * data$duration * distance / offsetScale)
     },
     
     getPredictedOffset = function(distance=mean(data$distance)) {
@@ -140,31 +281,28 @@ SmoothModel <- setRefClass(
       return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years)) / offsetScale)
     },
     
-    setup = function(intersections, meshParams, offsetScale=1, family="nbinomial") {
+    setup = function(intersections, params) {
       library(INLA)
-      library(plyr)
       
-      offsetScale <<- offsetScale
-      data <<- intersections$getData()
+      callSuper(intersections=intersections, params=params)
+      setModelName(family=params$family, randomEffect=paste("matern", params$timeModel, sep="-"))
+
+      if (!hasMember(params, "meshParams"))
+        stop("Missing meshParams parameter.")
       
-      p <- ddply(data, .(year), function(x) {
-        data.frame(pzero=sum(x$intersections==0)/length(x$intersections), mean=mean(x$intersections))
-      })
-      message("Proportion of zeros, mean each year:")
-      print(p)
-      message("Proportion of intersections:")
-      print(prop.table(table(data$intersections)))
+      if (hasMember(params, "interceptPrior")) setupInterceptPrior(params$interceptPrior)
+      if (hasMember(params, "temporalPrior")) setupTemporalPrior(params$temporalPrior)
+      if (hasMember(params, "spatialPrior")) setupSpatialPrior(params$spatialPrior)
       
       message("Constructing mesh...")
       
-      coordsScale <<- meshParams$coordsScale
+      coordsScale <<- params$meshParams$coordsScale
       locations <<- intersections$getCoordinates() * coordsScale
       mesh <<- inla.mesh.create.helper(points.domain=locations,
-                                       min.angle=meshParams$minAngle,
-                                       max.edge=meshParams$maxEdge * coordsScale,
-                                       cutoff=meshParams$cutOff * coordsScale)
+                                       min.angle=params$meshParams$minAngle,
+                                       max.edge=params$meshParams$maxEdge * coordsScale,
+                                       cutoff=params$meshParams$cutOff * coordsScale)
 
-      years <<- as.integer(sort(unique(data$year)))
       nYears <- length(years)
       groupYears <- as.integer(data$year - min(years) + 1)
       
@@ -172,7 +310,6 @@ SmoothModel <- setRefClass(
       else inla.spde2.matern(mesh, B.tau=spdeParams$B.tau, B.kappa=spdeParams$B.kappa, theta.prior.mean=spdeParams$theta.prior.mean, theta.prior.prec=spdeParams$theta.prior.prec, constr=spdeParams$constr)
       index <<- inla.spde.make.index("st", n.spde=spde$n.spde, n.group=nYears)
       
-      family <<- family
       model <<- if (length(rhoPrior) == 0) response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))
       else response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1", hyper=rhoPrior))
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
@@ -289,11 +426,12 @@ SmoothModel <- setRefClass(
       message("Year by year summary:")
       print(stat)
       message("Column sums:")
-      print(colSums(stat))
+      x <- stat[!colnames(stat) %in% c("Year")]
+      print(colSums(x))
       message("Column means:")
-      print(colMeans(stat))
+      print(colMeans(x))
       message("Correlations:")
-      print(cor(stat[!colnames(stat) %in% c("Year")]))
+      print(cor(x))
       
       return(invisible(stat))
     },
@@ -314,7 +452,7 @@ SmoothModel <- setRefClass(
                  logTau=logTau,
                  sd=sd,
                  range=range)
-      if (any(rownames(result$summary.hyperpar)=="GroupRho for st"))
+      if (any(rownames(result$summary.hyperpar)=="GroupRho for st")) # AR1
         x <- rbind(x, rho=result$summary.hyperpar["GroupRho for st",])
       
       return(x)
@@ -376,7 +514,7 @@ SmoothModel <- setRefClass(
       meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=unique(xyztMean$t), weights=cellArea)
       sdPopulationDensityRaster <- if (getSD) SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=unique(xyztMean$t), weights=cellArea)
       else SpatioTemporalRaster$new(study=study)
-            
+      
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
     },
     
@@ -488,9 +626,9 @@ SmoothModel <- setRefClass(
   )
 )
 
-SimulatedSmoothModel <- setRefClass(
-  Class = "SimulatedSmoothModel",
-  contains = c("SmoothModel"),
+SimulatedSmoothModelSpatioTemporal <- setRefClass(
+  Class = "SimulatedSmoothModelSpatioTemporal",
+  contains = c("SmoothModelSpatioTemporal"),
   fields = list(
     iteration = "integer"
   ),
@@ -524,31 +662,14 @@ SimulatedSmoothModel <- setRefClass(
   )
 )
 
-SimulatedSmoothModelNoOffset <- setRefClass(
-  Class = "SimulatedSmoothModelNoOffset",
-  contains = c("SimulatedSmoothModel"),
-  fields = list(
-    iteration = "integer"
-  ),
-  methods = list(
-    getObservedOffset = function(distance) {
-      return(rep(1, nrow(data)))
-    },
-    
-    getPredictedOffset = function(distance) {
-      return(rep(1, mesh$n * length(years)))
-    }
-  )
-)
-
-FinlandSmoothModel <- setRefClass(
-  Class = "FinlandSmoothModel",
-  contains = c("SmoothModel", "FinlandCovariates"),
+FinlandSmoothModelSpatioTemporal <- setRefClass(
+  Class = "FinlandSmoothModelSpatioTemporal",
+  contains = c("SmoothModelSpatioTemporal", "FinlandCovariates"),
   fields = list(
   ),
   methods = list(
     initialize = function(...) {
-      callSuper(modelName="SmoothModel", covariatesName="FinlandSmoothModelCovariates", ...)
+      callSuper(covariatesName="FinlandSmoothModelCovariates", ...)
       return(invisible(.self))
     },
     
@@ -577,14 +698,14 @@ FinlandSmoothModel <- setRefClass(
   )
 )
 
-FinlandSmoothModelNoDistances <- setRefClass(
-  Class = "FinlandSmoothModelNoDistances",
-  contains = c("SmoothModel", "FinlandCovariates"),
+FinlandSmoothModelSpatioTemporalNoDistances <- setRefClass(
+  Class = "FinlandSmoothModelSpatioTemporalNoDistances",
+  contains = c("SmoothModelSpatioTemporal", "FinlandCovariates"),
   fields = list(
   ),
   methods = list(
     initialize = function(...) {
-      callSuper(modelName="SmoothModel", covariatesName="FinlandSmoothModelCovariates", ...)
+      callSuper(covariatesName="FinlandSmoothModelCovariates", ...)
       return(invisible(.self))
     },
 
@@ -598,15 +719,11 @@ FinlandSmoothModelNoDistances <- setRefClass(
   )
 )
 
-FinlandRussiaSmoothModel <- setRefClass(
-  Class = "FinlandRussiaSmoothModel",
-  contains = c("SmoothModel"),
+FinlandRussiaSmoothModelSpatioTemporal <- setRefClass(
+  Class = "FinlandRussiaSmoothModelSpatioTemporal",
+  contains = c("SmoothModelSpatioTemporal"),
   fields = list(
   ),
   methods = list(
-    initialize = function(...) {
-      callSuper(modelName="SmoothModel", ...)
-      return(invisible(.self))
-    }
   )
 )

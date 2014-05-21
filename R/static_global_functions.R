@@ -179,3 +179,5 @@ getPolygonRectangle <- function(xrange, yrange, proj4string) {
   r <- SpatialPolygons(list(Polygons(list(Polygon(coords)), ID="window")), proj4string=proj4string)
   return(r)
 }
+
+hasMember <- function(lst, name) if (any(name %in% names(lst))) TRUE else FALSE

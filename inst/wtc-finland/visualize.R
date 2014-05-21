@@ -344,7 +344,7 @@ getPopulationDensity <- function(responses, context, withHabitatWeights=FALSE) {
 populationDensity <- getPopulationDensity(responses=responses, context=context)
 weightedPopulationDensity <- getPopulationDensity(responses=responses, context=context, withHabitatWeights=TRUE)
 
-for (response in responses) {
+for (response in responses[1:2]) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   
   popdens <- populationDensity[[response]]$mean
@@ -362,25 +362,30 @@ for (response in responses) {
 
 populationSize <- data.frame()
 
-for (response in responses) {
+for (response in responses[1:2]) {
   study <- FinlandWTCStudy$new(context=context, response=response)
+  names(weightedPopulationDensity[[response]]$mean$rasterStack) <- 1989:2011  # TODO: quickfix, fix the bug...
   x <- weightedPopulationDensity[[response]]$mean$integrate(volume=FinlandPopulationSize$new(study=study))
   x$loadValidationData()
   y <- x$sizeData
   y$response <- study$getPrettyResponse(response)
   print(coef(x$match()))
-  if (response == "canis.lupus") y$"Transformed estimated" <- y$Estimated * .4
-  #if (response == "lynx.lynx") y$Estimated <- y$Estimated * .15
+  if (response == "canis.lupus") y$"Adjusted estimated" <- y$Estimated * .75
+  if (response == "lynx.lynx") {
+    y$"Adjusted estimated" <- y$Estimated * .3
+    y$Estimated <- y$Estimated / 2
+  }
   populationSize <- rbind(populationSize, y)
 }
 
 x <- melt(populationSize, id.vars=c("Year","response"), variable.name="Variable")
-p <- ggplot(x, aes(Year, value, group=Variable, colour=Variable)) + geom_line(size=1) + facet_wrap(~response) +
+p <- ggplot(x, aes(Year, value, group=Variable, colour=Variable)) + geom_line(size=1) + facet_wrap(~response, scales="free_y") +
   scale_colour_manual(values=c("steelblue","violetred1","steelblue1")) +
   xlab("Year") + ylab("Population size") +
   theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1)) + theme(legend.position="bottom")
 print(p)
 saveFigure(p, filename="PopulationSize.svg", bg="transparent")
+#saveFigure(p, filename="PopulationSize.png", bg="transparent")
 
 
 ######
@@ -430,6 +435,8 @@ saveFigure(p, filename="HabitatUsageSampling.svg", bg="transparent")
 ######
 ### Russian data
 ######
+
+# TODO: awful code, fix!
 
 response <- "canis.lupus"
 study <- RussiaWTCStudy(context=context, response=response)
