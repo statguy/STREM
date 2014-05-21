@@ -24,8 +24,8 @@ Model <- setRefClass(
       return(invisible(.self))
     },
     
-    setModelName = function(likelihood, randomEffect) {
-      modelName <<- paste("SmoothModel", likelihood, randomEffect, sep="-")
+    setModelName = function(family, randomEffect) {
+      modelName <<- paste("SmoothModel", family, randomEffect, sep="-")
       return(invisible(.self))
     },
     
@@ -76,11 +76,12 @@ Model <- setRefClass(
       offsetScale <<- if (!hasMember(params, "offsetScale")) 1000^2 else params$offsetScale
       family <<- if (!hasMember(params, "family")) "nbinomial" else params$family
       
-      setModelName(family=params$family, randomEffect=params$timeModel)
+      setModelName(family=family, randomEffect=params$timeModel)
       data <<- intersections$getData()
+      data$response <<- data$intersections
       locations <<- intersections$getCoordinates() * coordsScale
       years <<- as.integer(sort(unique(data$year)))
-      model <<- response ~ 1 + f(i, model=params$timeModel)
+      model <<- response ~ 1 + f(year, model=params$timeModel)
       
       return(invisible(.self))      
     },
@@ -139,7 +140,7 @@ SmoothModelTemporal <- setRefClass(
       for (year in years) {
         yearWhich <- data$year == year
         yearIndex <- year - min(years) + 1
-        data.frame(
+        x <- data.frame(
           Year=years[yearIndex],
           Observed=sum(data$intersections[yearWhich]),
           EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich]),
@@ -169,24 +170,24 @@ SmoothModelTemporal <- setRefClass(
       message("Processing hyperparameters...")
       
       x <- data.frame()
-      if (any(rownames(result$summary.hyperpar)=="Precision for i")) # RW1, RW2, AR1, ARp, seasonal
-        x <- rbind(x, random_effect_precision=result$summary.hyperpar["Precision for i",])
-      if (any(rownames(result$summary.hyperpar)=="Rho for i")) # AR1
-        x <- rbind(x, rho=result$summary.hyperpar["Rho for i",])
-      if (any(rownames(result$summary.hyperpar)=="PACF1 for i")) # ARp
-        x <- rbind(x, rho=result$summary.hyperpar["PACF1 for i",])
-      if (any(rownames(result$summary.hyperpar)=="PACF2 for i")) # ARp
-        x <- rbind(x, rho=result$summary.hyperpar["PACF2 for i",])
-      if (any(rownames(result$summary.hyperpar)=="PACF3 for i")) # ARp
-        x <- rbind(x, rho=result$summary.hyperpar["PACF3 for i",])
-      if (any(rownames(result$summary.hyperpar)=="PACF4 for i")) # ARp
-        x <- rbind(x, rho=result$summary.hyperpar["PACF4 for i",])
+      if (any(rownames(result$summary.hyperpar)=="Precision for year")) # RW1, RW2, AR1, ARp, seasonal
+        x <- rbind(x, random_effect_precision=result$summary.hyperpar["Precision for year",])
+      if (any(rownames(result$summary.hyperpar)=="Rho for year")) # AR1
+        x <- rbind(x, rho=result$summary.hyperpar["Rho for year",])
+      if (any(rownames(result$summary.hyperpar)=="PACF1 for year")) # ARp
+        x <- rbind(x, rho=result$summary.hyperpar["PACF1 for year",])
+      if (any(rownames(result$summary.hyperpar)=="PACF2 for year")) # ARp
+        x <- rbind(x, rho=result$summary.hyperpar["PACF2 for year",])
+      if (any(rownames(result$summary.hyperpar)=="PACF3 for year")) # ARp
+        x <- rbind(x, rho=result$summary.hyperpar["PACF3 for year",])
+      if (any(rownames(result$summary.hyperpar)=="PACF4 for year")) # ARp
+        x <- rbind(x, rho=result$summary.hyperpar["PACF4 for year",])
       
       return(x)
     },
-    
+
     getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
-      if (length(node) == 0)
+      if (is.null(data$fittedMean))
         stop("Did you forgot to run collectEstimates() first?")
       
       library(raster)
@@ -195,8 +196,8 @@ SmoothModelTemporal <- setRefClass(
       xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale, t=data$year)
       cellArea <- prod(res(templateRaster)) # m^2
       
-      meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=unique(xyztMean$t), weights=cellArea)
-      sdPopulationDensityRaster <- if (getSD) SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=unique(xyztMean$t), weights=cellArea)
+      meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=years, weights=cellArea)
+      sdPopulationDensityRaster <- if (getSD) SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=years, weights=cellArea)
       else SpatioTemporalRaster$new(study=study)
       
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
@@ -658,6 +659,24 @@ SimulatedSmoothModelSpatioTemporal <- setRefClass(
       else populationSize$loadValidationData(tracks=tracks)
       
       return(invisible(populationSize))
+    }
+  )
+)
+
+FinlandSmoothModelTemporal <- setRefClass(
+  Class = "FinlandSmoothModelTemporal",
+  contains = c("SmoothModelTemporal", "FinlandCovariates"),
+  fields = list(
+  ),
+  methods = list(
+    initialize = function(...) {
+      callSuper(covariatesName="FinlandSmoothModelCovariates", ...)
+      return(invisible(.self))
+    },
+    
+    predictDistances = function(formula=study$getDistanceCovariatesModel(), intervalH=study$getTrackSampleInterval()) {
+      distances <- study$predictDistances(formula=formula, data=covariates, intervalH=intervalH)
+      return(distances)
     }
   )
 )

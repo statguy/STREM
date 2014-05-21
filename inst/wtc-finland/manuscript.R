@@ -306,7 +306,7 @@ for (response in responses) {
   
   C <- 2/pi * A / M
   l <- C * x / N
-  cat(response, ": crude distance mean = ", mean(l, na.rm=T), " sd = ", sd(l, na.rm=T), " km/d\n")
+  cat(response, ": crude distance mean = ", mean(l, na.rm=T), " median = ", median(l, na.rm=T), " sd = ", sd(l, na.rm=T), " km/d\n")
     
   h <- study$loadHabitatWeightsRaster()
   h.masked <- mask(h, study$studyArea$boundary)
@@ -317,10 +317,12 @@ for (response in responses) {
   
   C <- 2/pi * A.h / M
   l <- C * x / N
-  cat(response, ": crude weighted distance mean = ", mean(l, na.rm=T), " sd = ", sd(l, na.rm=T), " km/d\n")
+  cat(response, ": crude weighted distance mean = ", mean(l, na.rm=T), " median = ", median(l, na.rm=T), " sd = ", sd(l, na.rm=T), " km/d\n")
   
   cat(response, ": observed number of intersections:\n")
   print(1/C * l)
+
+  cat("Area correction = ", A/A.discrete, "\n")
 }
 ```
 

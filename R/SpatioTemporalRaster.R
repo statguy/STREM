@@ -75,14 +75,22 @@ SpatioTemporalRaster <- setRefClass(
     interpolate = function(xyzt, timeVariable=colnames(xyzt)[4], templateRaster=study$getTemplateRaster(), transform=identity, inverseTransform=identity, layerNames, boundary, weights=1) {
       library(ST)
       library(raster)
+      library(plyr)
+      
       rasterStack <<- ST::multiRasterInterpolate(xyzt, variables=timeVariable, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)
-      if (!missing(layerNames)) names(rasterStack) <<- layerNames
-      if (!missing(boundary))
-        for (i in 1:nlayers(rasterStack)) {
-          message("Cropping ", i, "/", nlayers(rasterStack), "...")
-          rasterStack[[i]] <<- mask(rasterStack[[i]], boundary)
-        }
+      if (!missing(boundary)) {
+        rasterStack <<- stack(llply(1:nlayers(rasterStack),
+                              function(i, rasterStack, boundary) {
+                                message("Cropping ", i, "/", nlayers(rasterStack), "...")
+                                mask(rasterStack[[i]], boundary)
+                              },
+                              rasterStack=rasterStack, boundary=boundary, .parallel=T))
+        #for (i in 1:nlayers(rasterStack)) {          
+        #  rasterStack[[i]] <<- mask(rasterStack[[i]], boundary)
+        #}
+      }
       weight(weights)
+      if (!missing(layerNames)) names(rasterStack) <<- layerNames
       return(invisible(.self))
     },
     
