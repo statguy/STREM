@@ -286,12 +286,18 @@ FinlandWTCStudy <- setRefClass(
       
       habitatWeights <- if (withHabitatWeights) loadHabitatWeightsRaster() else HabitatWeights$new(study=study)$getWeightsRaster()
       populationDensity <- estimates$getPopulationDensity(templateRaster=habitatWeights, getSD=getSD)
+
+      if (saveDensityPlots) {
+        populationDensity$mean$animate(name="PopulationDensity-mean")
+        if (getSD) populationDensity$sd$animate(name="PopulationDensity-sd")
+      }
+      
       populationDensity$mean$weight(habitatWeights)
       if (getSD) populationDensity$sd$weight(habitatWeights)
       
-      if (saveDensityPlots) {
-        populationDensity$mean$animate(name=estimates$modelName)
-        if (getSD) populationDensity$sd$animate(name=estimates$modelName)
+      if (saveDensityPlots & withHabitatWeights) {
+        populationDensity$mean$animate(name="WeightedPopulationDensity-mean")
+        if (getSD) populationDensity$sd$animate(name="WeightedPopulationDensity-sd")
       }
       
       return(populationDensity)

@@ -5,7 +5,10 @@ opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, tidy=FALSE, fig.width=1
 #' NOTE: Figures and tables may be out of sync with the manuscript!
 #' ----------------------------------------------------------------
 
-```{r initialize}
+```{r initialize, cache=FALSE}
+library(parallel)
+library(doMC)
+registerDoMC(cores=detectCores())
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 library(sp)
@@ -93,13 +96,15 @@ print(p)
 getTracks <- function(responses, context) {
   library(plyr)
   library(ggplot2)
+  library(adehabitatLT)
+  
   l_ply(responses, function(response, context) {
     study <- FinlandWTCStudy$new(context=context, response=response)
     tracks <- FinlandWTCTracks$new(study=study)
     tracks$loadTracks()
     
     message("Response = ", response)
-    message("Number of individuals in the cleaned data = ", length(unique(id(tracks$tracks))))
+    message("Number of individuals in the cleaned data = ", length(unique(adehabitatLT::id(tracks$tracks))))
     d <- as.POSIXlt(ld(tracks$tracks)$date)
     message("Years in the cleaned data = ", paste(sort(unique(d$year+1900)), collapse=","), " (", length(unique(d$year)), ")")
     message("Number of samples in the cleaned data = ", length(d))
@@ -108,14 +113,14 @@ getTracks <- function(responses, context) {
   }, context=context)
 }
 
-tracks <- getTracks(responses=responses, context=context)
+getTracks(responses=responses, context=context)
 ```
 
 ######
 ### GPS movements (Figure 3)
 ######
 
-```{r gps-movements, fig.height=5}
+```{r gps-movements, fig.height=10, fig.width=20}
 getTracks <- function(responses, context) {
   library(plyr)
   library(ggplot2)
@@ -354,44 +359,72 @@ print(p)
 ```
 
 ######
-### Total population size estimates (Figure 7)
+### Population density estimates
 ######
 
-```{r population-size-init, results="hide"}
-getPopulationDensity <- function(responses, context, withHabitatWeights=FALSE) {
+```{r population-size-init, fig.keep="none"}
+plotObservations <- function(i, params) {
+  subdata <- params$data[params$data$year == min(params$data$year) + i - 1,]
+  subdata$Observed <- subdata$intersections>0
+  geom_point(mapping=aes(coords.x1, coords.x2, colour=Observed), data=subdata)
+}
+
+getPopulationDensity <- function(responses, timeModels, context, withHabitatWeights=FALSE, saveDensityPlots=TRUE) {
   populationDensity <- list()
-  for (response in responses) {
-    #study <- FinlandWTCStudy$new(context=context, response=responses[1], distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
-    #estimates <- study$loadEstimates()
-    #estimates$offsetScale <- 1000^2
-    #estimates$collectEstimates()
-    #estimates$saveEstimates()
+  for (i in 1:length(responses)) {
+    response <- responses[i]
+    timeModel <- timeModels[i]
+    
+    cat("Response = ", response, ", time model = ", timeModel, "\n")
     
     study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
-    #populationDensity[[response]] <- study$getPopulationDensity(withHabitatWeights=withHabitatWeights)
-    populationDensity[[response]] <- study$getPopulationDensity2(withHabitatWeights=withHabitatWeights)
+    estimates <- FinlandSmoothModelTemporal(study=study)$setModelName("nbinomial", timeModel)$loadEstimates()
+    estimates$collectEstimates()
+    habitatWeightsRaster <- study$loadHabitatWeightsRaster()
+    data <- cbind(estimates$getUnscaledObservationCoordinates(), estimates$data)
+    
+    populationDensity[[i]] <- estimates$getPopulationDensity(templateRaster=habitatWeightsRaster, getSD=FALSE)
+    populationDensity[[i]]$mean$animate(name="PopulationDensity-mean", legend=expression(bold(Individuals / km^2)),
+                                   ggfun=plotObservations, ggfunParams=list(data=data))
+    
+    populationDensity[[i]]$mean$weight(habitatWeightsRaster)
+    populationDensity[[i]]$mean$animate(name="WeightedPopulationDensity-mean", legend=expression(bold(Individuals / km^2)),
+                                   ggfun=plotObservations, ggfunParams=list(data=data))
+    
+    #populationDensity[[i]] <- study$getPopulationDensity(model=estimates, withHabitatWeights=withHabitatWeights, saveDensityPlots=saveDensityPlots)
+    #populationDensity[[i]] <- study$getPopulationDensity2(withHabitatWeights=withHabitatWeights)
   }
   return(populationDensity)
 }
 
-weightedPopulationDensity <- getPopulationDensity(responses=responses, context=context, withHabitatWeights=TRUE)
+timeModels <- c("ar1", "ar1", "rw2")
+weightedPopulationDensity <- getPopulationDensity(responses=responses, timeModels=timeModels, context=context, withHabitatWeights=TRUE, saveDensityPlots=TRUE)
 ```
+
+######
+### Total population size estimates  (Figure 7)
+######
 
 ```{r population-size, fig.height=5}
 populationSize <- data.frame()
-for (response in responses) {
+for (i in 1:length(responses)) {
+  response <- responses[i]
   study <- FinlandWTCStudy$new(context=context, response=response)
-  x <- weightedPopulationDensity[[response]]$mean$integrate(volume=FinlandPopulationSize$new(study=study))
+  x <- weightedPopulationDensity[[i]]$mean$integrate(volume=FinlandPopulationSize$new(study=study))
   x$loadValidationData()
   y <- x$sizeData
   y$response <- study$getPrettyResponse(response)
+  cat("Response = ", response, ", coef to match the validation data:\n")
   print(coef(x$match()))
-  if (response == "canis.lupus") y$"Transformed estimated" <- y$Estimated * .3
-  else if (response == "lynx.lynx") y$"Transformed estimated" <- y$Estimated * .2
-  else if (response == "rangifer.tarandus.fennicus") y$"Transformed estimated" <- y$Estimated * 1.27514e-132
+  if (response == "canis.lupus") y$"Transformed estimated" <- y$Estimated * .7
+  else if (response == "lynx.lynx") y$"Transformed estimated" <- y$Estimated / 2 *.5
+  else if (response == "rangifer.tarandus.fennicus") y$"Transformed estimated" <- y$Estimated / 2 * 1.1
   
+  if (response == "lynx.lynx") {
+    y$Estimated <- y$Estimated / 2
+  }
   if (response == "rangifer.tarandus.fennicus") {
-    y$Estimated <- NA
+    y$Estimated <- y$Estimated / 2
     y$Validation <- with(y, approx(Year, Validation, n=nrow(y)))$y
   }
   

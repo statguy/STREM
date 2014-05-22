@@ -94,29 +94,42 @@ SpatioTemporalRaster <- setRefClass(
       return(invisible(.self))
     },
     
-    animate = function(name, delay=100, boundary=FALSE, sameScale=TRUE, convertCmd="convert", ggfun, ...) {
+    getColorBreaks = function(n=6) {
+      vmin <- min(minValue(rasterStack))
+      vmax <- max(maxValue(rasterStack))
+      return(seq(vmin, vmax, length.out=n))
+    },
+    
+    getColorScale = function(n=6) {
+      return(terrain.colors(n-1))
+    },
+    
+    animate = function(name, delay=100, boundary=FALSE, sameScale=TRUE, nColor=6, legend, convertCmd="convert", ggfun, ggfunParams, ...) {
       if (missing(name)) stop("Argument name missing.")
       
       library(ggplot2)
       library(raster)
       library(rasterVis)
       
-      vmin <- min(minValue(rasterStack))
-      vmax <- max(maxValue(rasterStack))
       if (boundary) boundaryDF <- fortify(study$studyArea$boundary)
+      colors <- getColorScale(n=nColor)
+      breaks <- getColorBreaks(n=nColor)
       
       for (i in 1:nlayers(rasterStack)) {
         layer <- crop(rasterStack[[i]], extent(study$studyArea$boundary))
         layerName <- names(layer)
         if (substr(layerName, start=1, stop=1) == "X") layerName <- substr(layerName, start=2, stop=nchar(layerName))
-        
-        p <- gplot(layer) + geom_raster(aes(fill=value)) + coord_equal() + theme_raster() + ggtitle(layerName)
-        p <- if (sameScale) p + scale_fill_gradientn(colours=terrain.colors(99), breaks=seq(vmin, vmax, length.out=100), na.value=NA)
-        else p + scale_fill_gradientn(colours=terrain.colors(99), na.value=NA)
+
+        message("Processing ", layerName, ": range = ", minValue(layer), "/", min(minValue(rasterStack)), " - ", maxValue(layer), "/", max(maxValue(rasterStack)))
+        p <- gplot(layer) + geom_raster(aes(fill=value)) + coord_equal() + ggtitle(layerName)
+        p <- if (!missing(legend)) { legendTitle <- legend; p + theme_raster(legend.position="right") }
+        else { legendTitle="Density"; p + theme_raster() } 
+        p <- if (sameScale) p + scale_fill_gradientn(legendTitle, colours=colors, limits=range(breaks), na.value=NA)
+        else p + scale_fill_gradientn(legendTitle, colours=colors, na.value=NA)
         if (boundary) p <- p + geom_polygon(data=boundaryDF, aes(long, lat), colour="white", fill=NA)
         if (!missing(ggfun)) {
           ggfun <- match.fun(ggfun)
-          p <- ggfun(p)
+          p <- p + ggfun(i=i, params=ggfunParams)
         }
         print(p)
 
