@@ -46,17 +46,23 @@ if (test == "test") {
 } else {
   # For the full estimation
   
-  estimate <- function(response, timeModel) {
+  estimate <- function(response, spatialModel, timeModel) {
     context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
     study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
-    model <- FinlandSmoothModelTemporal$new(study=study)
-    params <- if (timeModel == "ar2") list(family="nbinomial", offsetScale=1000^2, timeModel="ar", model=response ~ 1 + f(year, model="ar", order=2))
-    else list(family="nbinomial", offsetScale=1000^2, timeModel=timeModel)
+    
+    model <- if (spatialModel) FinlandSmoothModelSpatioTemporal$new(study=study)
+    else FinlandSmoothModelTemporal$new(study=study)
+    
+    meshParams <- list(coordsScale=1e-6, maxEdge=c(.1e6, .2e6), cutOff=.01e6)
+    params <- if (timeModel == "ar2") list(family="nbinomial", offsetScale=1000^2, meshParams=meshParams, timeModel="ar", model=response ~ 1 + f(year, model="ar", order=2))
+    else list(family="nbinomial", offsetScale=1000^2, meshParams=meshParams, timeModel=timeModel)
+    
     model <- study$estimate(model=model, params=params, save=T)
   }
   
   responses <- c("canis.lupus", "lynx.lynx", "rangifer.tarandus.fennicus")
   response <- responses[task_id]
+  spatialModels <- c(T, T, F)
   timeModels <- c("ar1", "ar1", "rw2")
-  estimate(response=response, timeModel=timeModels[task_id])
+  estimate(response=response, spatialModel=spatialModels[task_id], timeModel=timeModels[task_id])
 }

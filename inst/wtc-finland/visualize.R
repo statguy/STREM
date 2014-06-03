@@ -330,21 +330,34 @@ saveFigure(p, filename="PredictedDistanceDistributions.svg")
 ### Population density
 ######
 
-getPopulationDensity <- function(responses, context, withHabitatWeights=FALSE) {
+getPopulationDensity <- function(responses, timeModels, spatialModels, context, withHabitatWeights=FALSE) {
   populationDensity <- list()
-  for (response in responses) {
+  for (i in 1:length(responses)) {
+    response <- responses[i]
+    timeModel <- timeModels[i]
+    spatialModel <- spatialModels[i]
+    
+    context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
     study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
-    populationDensity[[response]] <- study$getPopulationDensity2(withHabitatWeights=withHabitatWeights) # NOTE!!!
+    
+    model <- if (spatialModel) FinlandSmoothModelSpatioTemporal(study=study)$setModelName("nbinomial", paste("matern", timeModel, sep="-"))
+    else FinlandSmoothModelTemporal(study=study)$setModelName("nbinomial", timeModel)
+    model$offsetScale <- 1000^2 # TODO: quickfix
+    
+    populationDensity[[response]] <- study$getPopulationDensity(model=model, withHabitatWeights=withHabitatWeights, saveDensityPlots=FALSE, getSD=FALSE)
+
+    #study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
+    #populationDensity[[response]] <- study$getPopulationDensity2(withHabitatWeights=withHabitatWeights) # NOTE!!!
   }
   return(populationDensity)
 }
 
 # TODO: legend
 # TODO: standard deviation, include all focal species when data available
-populationDensity <- getPopulationDensity(responses=responses, context=context)
-weightedPopulationDensity <- getPopulationDensity(responses=responses, context=context, withHabitatWeights=TRUE)
+populationDensity <- getPopulationDensity(responses=responses, timeModels=c("ar1", "ar1", "rw2"), spatialModels=c(T, T, F), context=context)
+weightedPopulationDensity <- getPopulationDensity(responses=responses, timeModels=c("ar1", "ar1", "rw2"), spatialModels=c(T, T, F), context=context, withHabitatWeights=TRUE)
 
-for (response in responses[1:2]) {
+for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   
   popdens <- populationDensity[[response]]$mean
@@ -362,7 +375,7 @@ for (response in responses[1:2]) {
 
 populationSize <- data.frame()
 
-for (response in responses[1:2]) {
+for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   names(weightedPopulationDensity[[response]]$mean$rasterStack) <- 1989:2011  # TODO: quickfix, fix the bug...
   x <- weightedPopulationDensity[[response]]$mean$integrate(volume=FinlandPopulationSize$new(study=study))
@@ -371,9 +384,13 @@ for (response in responses[1:2]) {
   y$response <- study$getPrettyResponse(response)
   print(coef(x$match()))
   if (response == "canis.lupus") y$"Adjusted estimated" <- y$Estimated * .75
-  if (response == "lynx.lynx") {
+  else if (response == "lynx.lynx") {
     y$"Adjusted estimated" <- y$Estimated * .3
     y$Estimated <- y$Estimated / 2
+  }
+  else if (response == "rangifer.tarandus.fennicus") {
+    y$"Adjusted estimated" <- y$Estimated / 2
+    y$Validation <- with(y, approx(Year, Validation, n=nrow(y)))$y
   }
   populationSize <- rbind(populationSize, y)
 }

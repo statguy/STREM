@@ -1,11 +1,14 @@
 #+ setup, include=FALSE
 library(knitr)
-opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, tidy=FALSE, fig.width=10, fig.height=15, cache=TRUE)#, cache.path="~/tmp/cache")
+opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, tidy=FALSE, fig.width=10, fig.height=15, cache=TRUE, cache.path="~/tmp/cache/")
+```{r check, cache=FALSE}
+message("cache path = ", opts_chunk$get("cache.path"))
+```
 
 #' NOTE: Figures and tables may be out of sync with the manuscript!
 #' ----------------------------------------------------------------
 
-```{r initialize, cache=FALSE}
+```{r initialize}
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores())
@@ -14,7 +17,6 @@ source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 library(sp)
 library(ggplot2)
 library(rasterVis)
-library(ggthemes)
 library(reshape2)
 library(plyr)
 
@@ -369,16 +371,19 @@ plotObservations <- function(i, params) {
   geom_point(mapping=aes(coords.x1, coords.x2, colour=Observed), data=subdata)
 }
 
-getPopulationDensity <- function(responses, timeModels, context, withHabitatWeights=FALSE, saveDensityPlots=TRUE) {
+getPopulationDensity <- function(responses, spatialModels, timeModels, context, withHabitatWeights=FALSE, saveDensityPlots=TRUE) {
   populationDensity <- list()
   for (i in 1:length(responses)) {
     response <- responses[i]
     timeModel <- timeModels[i]
+    spatialModel <- spatialModels[i]
     
     cat("Response = ", response, ", time model = ", timeModel, "\n")
     
     study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
-    estimates <- FinlandSmoothModelTemporal(study=study)$setModelName("nbinomial", timeModel)$loadEstimates()
+    estimates <- if (spatialModel) FinlandSmoothModelSpatioTemporal(study=study)$setModelName("nbinomial", paste("matern", timeModel, sep="-"))$loadEstimates()
+    else FinlandSmoothModelTemporal(study=study)$setModelName("nbinomial", timeModel)$loadEstimates()
+    estimates$offsetScale <- 1000^2 # TODO: quickfix
     estimates$collectEstimates()
     habitatWeightsRaster <- study$loadHabitatWeightsRaster()
     data <- cbind(estimates$getUnscaledObservationCoordinates(), estimates$data)
@@ -398,7 +403,8 @@ getPopulationDensity <- function(responses, timeModels, context, withHabitatWeig
 }
 
 timeModels <- c("ar1", "ar1", "rw2")
-weightedPopulationDensity <- getPopulationDensity(responses=responses, timeModels=timeModels, context=context, withHabitatWeights=TRUE, saveDensityPlots=TRUE)
+spatialModels <- c(T,T,F)
+weightedPopulationDensity <- getPopulationDensity(responses=responses, spatialModels=spatialModels, timeModels=timeModels, context=context, withHabitatWeights=TRUE, saveDensityPlots=TRUE)
 ```
 
 ######

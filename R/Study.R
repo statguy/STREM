@@ -303,20 +303,20 @@ FinlandWTCStudy <- setRefClass(
       return(populationDensity)
     },
     
-    getPopulationDensity2 = function(model, withHabitatWeights=TRUE, saveDensityPlots=FALSE, getSD=FALSE) {
-      estimates <- collectEstimates(model)
-      
-      habitatWeights <- if (withHabitatWeights) loadHabitatWeightsRaster() else HabitatWeights$new(study=study)$getWeightsRaster()
-      populationDensity <- estimates$getPopulationDensity2(templateRaster=habitatWeights, getSD=getSD)
-      populationDensity$mean$weight(habitatWeights)
-      
-      if (saveDensityPlots) {
-        populationDensity$mean$animate(name=estimates$modelName)
-        if (getSD) populationDensity$sd$animate(name=estimates$modelName)
-      }
-      
-      return(populationDensity)
-    },
+    #getPopulationDensity2 = function(model, withHabitatWeights=TRUE, saveDensityPlots=FALSE, getSD=FALSE) {
+    #  estimates <- collectEstimates(model)
+    #  
+    #  habitatWeights <- if (withHabitatWeights) loadHabitatWeightsRaster() else HabitatWeights$new(study=study)$getWeightsRaster()
+    #  populationDensity <- estimates$getPopulationDensity2(templateRaster=habitatWeights, getSD=getSD)
+    #  populationDensity$mean$weight(habitatWeights)
+    #  
+    #  if (saveDensityPlots) {
+    #    populationDensity$mean$animate(name=estimates$modelName)
+    #    if (getSD) populationDensity$sd$animate(name=estimates$modelName)
+    #  }
+    #  
+    #  return(populationDensity)
+    #},
     
     getPopulationSize = function(model, withHabitatWeights=TRUE, saveDensityPlots=FALSE) {
       populationDensity <- getPopulationDensity(model=model, withHabitatWeights=withHabitatWeights, saveDensityPlots=saveDensityPlots)

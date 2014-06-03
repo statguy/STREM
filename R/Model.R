@@ -477,7 +477,7 @@ SmoothModelSpatioTemporal <- setRefClass(
       return(invisible(projectionRaster))
     },
     
-    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
+    getPopulationDensity____ORIGINAL = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
       if (length(node) == 0)
         stop("Did you forgot to run collectEstimates() first?")
       
@@ -503,7 +503,7 @@ SmoothModelSpatioTemporal <- setRefClass(
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
     },
     
-    getPopulationDensity2 = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
+    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
       if (length(node) == 0)
         stop("Did you forgot to run collectEstimates() first?")
       
@@ -513,8 +513,8 @@ SmoothModelSpatioTemporal <- setRefClass(
       xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale, t=data$year)
       cellArea <- prod(res(templateRaster)) # m^2
       
-      meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=unique(xyztMean$t), weights=cellArea)
-      sdPopulationDensityRaster <- if (getSD) SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=unique(xyztMean$t), weights=cellArea)
+      meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=sort(unique(xyztMean$t)), weights=cellArea)
+      sdPopulationDensityRaster <- if (getSD) SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=sort(unique(xyztMean$t)), weights=cellArea)
       else SpatioTemporalRaster$new(study=study)
       
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
@@ -656,7 +656,7 @@ SimulatedSmoothModelSpatioTemporal <- setRefClass(
       }
       
       populationSize <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration))
-      if (missing(tracks)) populationSize$loadValidationData
+      if (missing(tracks)) populationSize$loadValidationData()
       else populationSize$loadValidationData(tracks=tracks)
       
       return(invisible(populationSize))
