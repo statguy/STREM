@@ -1,12 +1,9 @@
-#+ setup, include=FALSE
-library(knitr)
+```{r global_options, include=FALSE}
 opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, tidy=FALSE, fig.width=10, fig.height=15, cache=TRUE, cache.path="~/tmp/cache/")
-```{r check, cache=FALSE}
-message("cache path = ", opts_chunk$get("cache.path"))
 ```
 
-#' NOTE: Figures and tables may be out of sync with the manuscript!
-#' ----------------------------------------------------------------
+NOTE: Figures and tables may be out of sync with the manuscript!
+----------------------------------------------------------------
 
 ```{r initialize}
 library(parallel)
@@ -27,9 +24,8 @@ boundaryDF <- ggplot2::fortify(study$studyArea$boundary)
 responses <- c("canis.lupus", "lynx.lynx", "rangifer.tarandus.fennicus")
 ```
 
-######
-### Survey routes (Figure 1)
-######
+Survey routes (Figure 1)
+------------------------
 
 ```{r survey-routes}
 surveyRoutes <- study$loadSurveyRoutes(findLengths=FALSE)
@@ -42,9 +38,8 @@ print(p)
 #saveFigure(p, filename="SurveyRoutes.svg", bg="transparent")
 ```
 
-######
-### Number of counted survey routes
-######
+Number of counted survey routes
+-------------------------------
 
 ```{r number-of-counted-survey-routes}
 intersections <- study$loadIntersections(predictDistances=FALSE)
@@ -56,18 +51,16 @@ cat("sd = ", s, "\n")
 cat("range = ", m+c(-s,s), "\n")
 ```
 
-######
-### % of intersections D > 1
-######
+% of intersections D > 1
+------------------------
 
 ```{r percent-of-intersections-day-more-than-one, message=TRUE}
 intersections <- FinlandWTCIntersections$new(study=study, maxDuration=1)
 intersections$saveIntersections()
 ```
 
-######
-### Crossing rates (D > 1 removed) (Figure 2)
-######
+Crossing rates (D > 1 removed) (Figure 2)
+-----------------------------------------
 
 ```{r crossing-rates, fig.height=5}
 getIntersectionsRate <- function(responses, context) {
@@ -90,9 +83,8 @@ print(p)
 #saveFigure(p, filename="IntersectionsRate.svg", bg="transparent")
 ```
 
-######
-### GPS figures
-######
+GPS figures
+-----------
 
 ```{r gps-in-numbers, message=TRUE}
 getTracks <- function(responses, context) {
@@ -118,9 +110,8 @@ getTracks <- function(responses, context) {
 getTracks(responses=responses, context=context)
 ```
 
-######
-### GPS movements (Figure 3)
-######
+GPS movements (Figure 3)
+------------------------
 
 ```{r gps-movements, fig.height=10, fig.width=20}
 getTracks <- function(responses, context) {
@@ -158,9 +149,8 @@ print(p)
 #saveFigure(p, filename="GPS.svg", bg="transparent")
 ```
 
-######
-### Straight-line-distance-error (Figure 4)
-######
+Straight-line-distance-error (Figure 4)
+---------------------------------------
 
 ```{r straight-line-distance-error, fig.height=5}
 ss <- SimulationStudy$new(response="Intensive")$newInstance(context=context)
@@ -193,9 +183,8 @@ print(p)
 #saveFigure(p, filename="StraightLineDistanceError.svg", bg="transparent")
 ```
 
-######
-### Raw GPS sample intervals
-######
+Raw GPS sample intervals
+------------------------
 
 ```{r raw-gps-sample-intervals}
 intervals <- llply(responses, function(response, context) {
@@ -209,9 +198,8 @@ intervals <- llply(responses, function(response, context) {
 intervals
 ```
 
-######
-### Power law fits for distance - sampling interval (Figure 5)
-######
+Power law fits for distance - sampling interval (Figure 5)
+----------------------------------------------------------
 
 ```{r distance-fits, fig.height=5}
 distances <- ldply(responses, function(response, context) {
@@ -240,9 +228,8 @@ print(p)
 #saveFigure(p, filename=paste("DistanceCorrection-", response, ".svg", sep=""), bg="transparent")
 ```
 
-######
-### Observed distances - estimated distances (Table 1)
-######
+Observed distances - estimated distances (Table 1)
+--------------------------------------------------
 
 ```{r distance-estimates-init, results="hide"}
 observedDistances <- ldply(responses, function(response, context) {
@@ -269,16 +256,20 @@ ddply(predictedDistances, .(response), summarize, mean=mean(distance), sd=sd(dis
 cat("Prediction interval = 2h")
 ```
 
-# Distances from literature:
-# Wolf: 7-25 km/day
-# Lynx:
-# FFR: 
+Distances from literature
+-------------------------
+* Wolf: 7-25 km/day
+* Lynx:
+* FFR: 
 
+Power law fit estimates for distance - sampling interval (Table 1)
+------------------------------------------------------------------
 
-######
-### Power law fit estimates for distance - sampling interval (Table 1)
-######
-# Fixed effects: human population density, precipitation, snow cover, temperature
+Fixed effects:
+* human population density
+* precipitation
+* snow cover
+* temperature
 
 ```{r distance-fit-estimates}
 # Fixed effects: populationDensity + rrday + snow + tday
@@ -291,9 +282,9 @@ intervals <- l_ply(responses, function(response, context) {
 }, context=context)
 ```
 
-######
-### Crude distance estimates (Table 1)
-#####
+
+Crude distance estimates (Table 1)
+----------------------------------
 
 ```{r distance-crude-estimates}
 responses <- c("canis.lupus","lynx.lynx","rangifer.tarandus.fennicus")
@@ -333,9 +324,8 @@ for (response in responses) {
 }
 ```
 
-######
-### Habitat weights (Figure 6)
-######
+Habitat weights (Figure 6)
+--------------------------
 
 ```{r habitat-weights, fig.height=5, results="hide"}
 getHabitatWeights <- function(responses, context) {
@@ -360,11 +350,10 @@ print(p)
 #saveFigure(p, filename="HabitatWeights.svg", bg="transparent")
 ```
 
-######
-### Population density estimates
-######
+Population density estimates
+----------------------------
 
-```{r population-size-init, fig.keep="none"}
+```{r population-size-init, fig.keep="none", eval=TRUE}
 plotObservations <- function(i, params) {
   subdata <- params$data[params$data$year == min(params$data$year) + i - 1,]
   subdata$Observed <- subdata$intersections>0
@@ -407,11 +396,10 @@ spatialModels <- c(T,T,F)
 weightedPopulationDensity <- getPopulationDensity(responses=responses, spatialModels=spatialModels, timeModels=timeModels, context=context, withHabitatWeights=TRUE, saveDensityPlots=TRUE)
 ```
 
-######
-### Total population size estimates  (Figure 7)
-######
+Total population size estimates (Figure 7)
+------------------------------------------
 
-```{r population-size, fig.height=5}
+```{r population-size, fig.height=5, eval=TRUE}
 populationSize <- data.frame()
 for (i in 1:length(responses)) {
   response <- responses[i]
