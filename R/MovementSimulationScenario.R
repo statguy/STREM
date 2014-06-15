@@ -10,13 +10,11 @@ MovementSimulationScenario <- setRefClass(
     initialPopulation = "InitialPopulation",
     habitatWeights="ANY",
     nAgents = "integer",
-    nIterations = "integer",
     CRWCorrelation = "numeric",
     BCRWCorrelationBiasTradeoff = "ANY",
     homeRangeRadius = "ANY",
     distanceScale = "numeric",
     loadHabitatRasterInMemory = "logical",
-    runParallel = "logical",
     
     birthDeathParams = "list",
     nSteps = "integer",
@@ -33,8 +31,8 @@ MovementSimulationScenario <- setRefClass(
     },
     
     newInstance = function() {
-      BCRWCorrelationBiasTradeoff <<- rep(NA, nAgents)
-      homeRangeRadius <<- rep(NA, nAgents)
+      if (inherits(BCRWCorrelationBiasTradeoff, "uninitializedField")) BCRWCorrelationBiasTradeoff <<- rep(NA, nAgents)
+      if (inherits(homeRangeRadius, "uninitializedField")) homeRangeRadius <<- rep(NA, nAgents)
       nSteps.tmp <- 24 * days / stepIntervalHours
       message("Number of steps = ", nSteps.tmp, ", steps per day = ", 24 / stepIntervalHours)
       if (nSteps.tmp %% 1 != 0) stop("Number of steps must be integer.")
@@ -220,13 +218,13 @@ MovementSimulationScenario <- setRefClass(
               #  study$studyArea$readRasterIntoMemory()                
               #}
               
-              message("Iteration = ", iteration, " / ", nIterations, ", agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgentsCurrent, ", year = ", year,  " / ", years, ", days = ", days, "...")
+              message("Iteration = ", iteration, ", agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgentsCurrent, ", year = ", year,  " / ", years, ", days = ", days, "...")
               track <- randomizeBCRWTrack(initialLocation=initialLocations[agentIndex,,drop=F],
                                          initialAngle=initialAngles[agentIndex],
                                          isFirst=isFirst,
                                          CRWCorrelation=CRWCorrelation,
-                                         BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff[iteration],
-                                         homeRangeRadius=homeRangeRadius[iteration])
+                                         BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff[agentIndex],
+                                         homeRangeRadius=homeRangeRadius[agentIndex])
               track$id <- agents[agentIndex]
               
               return(track)
@@ -259,51 +257,32 @@ MovementSimulationScenario <- setRefClass(
       return(tracks)
     },
     
-    simulateSingle = function(iteration, save=TRUE) {
-      nIterations <<- as.integer(1)
+    simulate = function(iteration, save=TRUE) {
+      #nIterations <<- as.integer(1)
       tracksDF <- randomizeBCRWTracks(iteration=as.integer(iteration))
       #date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
       tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$id, date=tracksDF$date, dt=tracksDF$dt, dist=tracksDF$dist, burst=tracksDF$burst, year=tracksDF$year, yday=tracksDF$yday, iteration=as.integer(iteration))
       return(invisible(tracks))
     },
     
-    simulate = function(nIterations=as.integer(50), restartIteration=1, iterationVector=1:nIterations, save=FALSE) {
-      nIterations <<- nIterations
-      stopifnot(restartIteration <= nIterations)
-      
-      simulatedTracks <- SimulatedTracksCollection$new(study=study)
-      for (i in restartIteration:nIterations) {
-        message("Iteration ", i, " of ", nIterations, "...")
-        tracksDF <- randomizeBCRWTracks(iteration=i)
-        date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
-        tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=i)
-        simulatedTracks$addTracks(tracks)
-      }
-      
-      return(invisible(simulatedTracks))
-    },
+    #simulateMultiple = function(nIterations=as.integer(50), restartIteration=1, iterationVector=1:nIterations, save=FALSE) {
+    #  nIterations <<- nIterations
+    #  stopifnot(restartIteration <= nIterations)
+    #  
+    #  simulatedTracks <- SimulatedTracksCollection$new(study=study)
+    #  for (i in restartIteration:nIterations) {
+    #    message("Iteration ", i, " of ", nIterations, "...")
+    #    tracksDF <- randomizeBCRWTracks(iteration=i)
+    #    date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
+    #    tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=i)
+    #    simulatedTracks$addTracks(tracks)
+    #  }
+    #  
+    #  return(invisible(simulatedTracks))
+    #},
     
     hasHabitatWeights = function() {
       return(!inherits(mss$habitatWeights, "uninitializedField"))
-    }
-  )
-)
-
-# 6 minutes step length for distance correction
-MovementSimulationScenarioIntensive <- setRefClass(
-  Class = "MovementSimulationScenarioIntensive",
-  contains = "MovementSimulationScenario",
-  methods = list(
-    initialize = function(nAgents=as.integer(50), years=as.integer(1), days=as.integer(60), stepIntervalHours=0.1, runParallel=T, ...) {
-      callSuper(years=years, nAgents=nAgents, nIterations=nIterations, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=0.8, runParallel=runParallel, ...)
-      return(invisible(.self))
-    },
-    
-    newInstance = function(context, response="Intensive") {
-      callSuper()
-      study <<- SimulationStudy$new(response=response)$newInstance(context=context)
-      initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
-      return(invisible(.self))
     }
   )
 )
@@ -313,14 +292,14 @@ MovementSimulationScenarioA <- setRefClass(
   Class = "MovementSimulationScenarioA",
   contains = "MovementSimulationScenario",
   methods = list(
-    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.8, runParallel=T, ...) {
-      callSuper(years=years, nAgents=nAgents, nIterations=nIterations, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, runParallel=runParallel, ...)
+    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.8, ...) {
+      callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, ...)
       return(invisible(.self))
     },
     
-    newInstance = function(context, response="A") {
+    newInstance = function(context, response="A", isTest=F) {
       callSuper()
-      study <<- SimulationStudy$new(response=response)$newInstance(context=context)
+      study <<- SimulationStudy$new(response=response)$newInstance(context=context, isTest=isTest)
       initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
       return(invisible(.self))
     }
@@ -328,25 +307,51 @@ MovementSimulationScenarioA <- setRefClass(
 )
 
 # Biased correlated random walk in a homogenous landscape, random initial locations
+# 10% of the agents are simulated like in the scenario A
 MovementSimulationScenarioB <- setRefClass(
   Class = "MovementSimulationScenarioB",
   contains = "MovementSimulationScenario",
   fields = list(
   ),
   methods = list(
-    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, runParallel=T, ...) {
-      callSuper(years=years, nAgents=nAgents, nIterations=nIterations, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, runParallel=runParallel, ...)
-
+    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.8, BCRWCorrelationBiasTradeoff=0.3, homeRangeRadius=10000, ...) {
+      callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, ...)
+      
       pAgentsA <- 0.1
-      nAgentsA <- pAgentsA * nAgents
+      nAgentsA <- round(pAgentsA * nAgents)
       nAgentsB <- nAgents - nAgentsA
-      BCRWCorrelationBiasTradeoff <<- c(rep(NA, nAgentsA), rep(0.3, nAgentsB))
-      homeRangeRadius <<- c(rep(NA, nAgentsA), rep(10000, nAgentsB))
+      BCRWCorrelationBiasTradeoff <<- c(rep(NA, nAgentsA), rep(BCRWCorrelationBiasTradeoff, nAgentsB))
+      homeRangeRadius <<- c(rep(NA, nAgentsA), rep(homeRangeRadius, nAgentsB))
       
       return(invisible(.self))
     },
     
-    newInstance = function(context, response="B") {
+    newInstance = function(context, response="B", isTest=F) {
+      callSuper()
+      study <<- SimulationStudy$new(response=response)$newInstance(context=context, isTest=isTest)
+      initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
+      return(invisible(.self))
+    }
+  )
+)
+
+
+
+
+##############
+
+
+# 6 minutes step length for distance correction
+MovementSimulationScenarioIntensive <- setRefClass(
+  Class = "MovementSimulationScenarioIntensive",
+  contains = "MovementSimulationScenario",
+  methods = list(
+    initialize = function(nAgents=as.integer(50), years=as.integer(1), days=as.integer(60), stepIntervalHours=0.1, ...) {
+      callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=0.8, ...)
+      return(invisible(.self))
+    },
+    
+    newInstance = function(context, response="Intensive") {
       callSuper()
       study <<- SimulationStudy$new(response=response)$newInstance(context=context)
       initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
