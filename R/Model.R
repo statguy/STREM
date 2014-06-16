@@ -476,8 +476,8 @@ SmoothModelSpatioTemporal <- setRefClass(
       
       return(invisible(projectionRaster))
     },
-    
-    getPopulationDensity____ORIGINAL = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
+        
+    getPopulationDensityAtMesh = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
       if (length(node) == 0)
         stop("Did you forgot to run collectEstimates() first?")
       
@@ -518,6 +518,16 @@ SmoothModelSpatioTemporal <- setRefClass(
       else SpatioTemporalRaster$new(study=study)
       
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
+    },
+    
+    switchToMesh = function() {
+      assign("getPopulationDensityAtObserved", .self$getPopulationDensity, envir=as.environment(.self))
+      assign("getPopulationDensity", .self$getPopulationDensityAtMesh, envir=as.environment(.self))
+    },
+
+    switchToObservations = function() {
+      assign("getPopulationDensityAtMesh", .self$getPopulationDensity, envir=as.environment(.self))
+      assign("getPopulationDensity", .self$getPopulationDensityAtObserved, envir=as.environment(.self))
     },
     
     associateMeshLocationsWithDate = function() {

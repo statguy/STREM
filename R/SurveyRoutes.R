@@ -42,6 +42,7 @@ SurveyRoutes <- setRefClass(
     },
     
     getLengths = function() {
+      library(rgeos)
       library(plyr)
       message("Finding survey route lengths...")
       

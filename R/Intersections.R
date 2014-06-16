@@ -194,10 +194,13 @@ SimulatedIntersections <- setRefClass(
       #if (length(tracks$distance) == 0)
       #  stop("Did you forgot to run getDistances() for tracks first?")
       
+      distances <- tracks$getDistances()
+      distance <- mean(distances, na.rm=T)
+      
       tracksObj <- tracks$getTracks()
       tracksDF <- if (inherits(tracksObj, "ltraj")) ld(tracksObj) else tracksObj
       
-      burstYear <- ddply(tracksDF, .(id,year), function(x) {
+      burstYear <- ddply(tracksDF, .(id, year), function(x) {
         date <- as.POSIXlt(x$date)
         data.frame(burst=x$burst[1],
                    year=date$year[1] + 1900,
@@ -217,7 +220,7 @@ SimulatedIntersections <- setRefClass(
                         intersections=rowSums(intersectionsMatrix[,bursts,drop=F]),
                         duration=duration,
                         length=surveyRoutes$lengths,
-                        distance=1) # Correct for distance after estimation if not set elsewhere
+                        distance=distance) # Correct for distance after estimation if not set elsewhere
         data <- rbind(data, x)
       }
       
