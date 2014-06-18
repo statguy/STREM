@@ -181,3 +181,5 @@ getPolygonRectangle <- function(xrange, yrange, proj4string) {
 }
 
 hasMember <- function(lst, name) if (any(name %in% names(lst))) TRUE else FALSE
+
+colSDs <- function(x, na.rm=T) sapply(x, sd, na.rm=na.rm)

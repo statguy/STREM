@@ -1,7 +1,6 @@
 library(INLA)
 setOldClass("inla.mesh")
 setOldClass("inla.spde2")
-library(sp)
 
 InitialPopulation <- setRefClass(
   Class = "InitialPopulation",
@@ -18,6 +17,7 @@ InitialPopulation <- setRefClass(
       library(sp)
       plot(locations, col="blue")
       plot(studyArea$boundary, add=T)
+      return(invisible(.self))
     }
   )
 )
@@ -29,8 +29,9 @@ RandomInitialPopulation <- setRefClass(
   ),
   methods = list(
     randomize = function(n) {
+      library(sp)
       locations <<- spsample(studyArea$boundary, n, type="random", iter=10)
-      invisible(locations)
+      return(locations)
     }
   )
 )
@@ -48,46 +49,52 @@ ClusteredInitialPopulation <- setRefClass(
   ),
   
   methods = list(
-    initialize = function(studyArea, habitatWeights=HabitatWeights(), max.edge=5000, mu=-22, sigma=1, range=100*1e3, fun=exp, seed=1L, ...) {
+    initialize = function(studyArea, habitatWeights=HabitatWeights(), max.edge=5000, sigma=1, range=100*1e3, fun=exp, seed=1L, ...) {
       callSuper(...)
       studyArea <<- studyArea
       habitatWeights <<- habitatWeights
       
-      sampleMaternRandomField(range=range, mu=mu, sigma=sigma, seed=seed, max.edge=max.edge, fun=fun)
+      sampleMaternRandomField(range=range, sigma=sigma, seed=seed, max.edge=max.edge, fun=fun)
       if (inherits(habitatWeights, "HabitatWeights")) weights <<- 1
-      else setHabitatWeightsForField()      
+      else setHabitatWeightsForField()
     },
     
-    sampleMaternRandomField = function(range=100e3, mu=-22, sigma=1, seed=1L, max.edge=5000, fun=exp) {
-      message("Sampling from MRF with range = ", range, ", sigma = ", sigma, ", mu = ", mu, ", seed = ", seed, "...")
+    sampleMaternRandomField = function(range=100e3, sigma=1, seed=1L, max.edge=5000, fun=exp) {
+      library(INLA)
+      message("Sampling from GMRF with range = ", range, ", sigma = ", sigma, ", seed = ", seed, "...")
       fun <- match.fun(fun)
       mesh <<- inla.mesh.create(boundary=inla.sp2segment(studyArea$boundary), refine=list(max.edge=max.edge))
       message("Nodes for randomizing individual locations = ", mesh$n)
       kappa <- sqrt(8) / range
       spde <<- inla.spde2.matern(mesh, alpha=2)
       theta <- c(-0.5 * log(4 * pi * sigma^2 * kappa^2), log(kappa))
-      #message("theta1 = ", theta[1], ", theta2 = ", theta[2])
       Q <<- inla.spde2.precision(spde, theta)
-      samples <<- fun(as.vector(inla.qsample(mu=rep(mu, times=nrow(Q)), Q=Q, seed=seed)))
+      samples <<- fun(as.vector(inla.qsample(Q=Q, seed=seed)))
       #message("sample mean = ", mean(samples), " sd = ", sd(samples))
+      return(invisible(.self))
     },
     
     setHabitatWeightsForField = function() {
+      library(raster)
       message("Extracting habitat types...")
       meshLocations <- mesh$loc[,1:2,drop=F]
-      habitatTypes <- extract(studyArea$habitat, mehsLocations)
+      habitatTypes <- extract(studyArea$habitat, meshLocations)
       weights <<- habitatWeights$getWeights(habitatTypes)
+      return(invisible(.self))
     },
     
     randomize = function(n) {
+      library(sp)
       index <- sample(1:mesh$n, size=n, replace=T, prob=samples * weights)
       xy <- mesh$loc[index,]
       locations <<- SpatialPoints(xy[,1:2,drop=F], proj4string=studyArea$proj4string)
-      invisible(locations)
+      return(locations)
     },
     
     plotMesh = function() {
+      library(INLA)
       plot(mesh)
+      return(invisible(.self))
     },
     
     plotLocations = function() {
@@ -108,6 +115,8 @@ ClusteredInitialPopulation <- setRefClass(
       
       p <- levelplot(row.values=proj$x, column.values=proj$y, x=z, panel=panel)
       print(p)
+      
+      return(invisible(.self))
     }
   )
 )

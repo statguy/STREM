@@ -335,6 +335,25 @@ MovementSimulationScenarioB <- setRefClass(
   )
 )
 
+# Same as scenario A, but with clustered initial locations
+MovementSimulationScenarioD <- setRefClass(
+  Class = "MovementSimulationScenarioD",
+  contains = "MovementSimulationScenario",
+  methods = list(
+    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.8, ...) {
+      callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, ...)
+      return(invisible(.self))
+    },
+    
+    newInstance = function(context, response="D", isTest=F) {
+      callSuper()
+      study <<- SimulationStudy$new(response=response)$newInstance(context=context, isTest=isTest)
+      initialPopulation <<- if (isTest) ClusteredInitialPopulation$new(studyArea=study$studyArea, range=100e3, sigma=4, max.edge=3000)
+      else ClusteredInitialPopulation$new(studyArea=study$studyArea)
+      return(invisible(.self))
+    }
+  )
+)
 
 
 
