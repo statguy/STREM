@@ -221,7 +221,8 @@ TestStudyArea <- setRefClass(
     
     loadBoundary = function(thin, tolerance) {
       x <- -5
-      boundary <<- SpatialPolygons(list(Polygons(list(Polygon(matrix(c(325+x,700, 325+x,712, 338+x,712, 338+x,700, 325+x,700)*10000, ncol=2, byrow=T))), ID=1)), proj4string=proj4string)
+      y <- -6
+      boundary <<- SpatialPolygons(list(Polygons(list(Polygon(matrix(c(325+x,700+y, 325+x,712+y, 338+x,712+y, 338+x,700+y, 325+x,700+y)*10000, ncol=2, byrow=T))), ID=1)), proj4string=proj4string)
       return(invisible(.self))
     },
     

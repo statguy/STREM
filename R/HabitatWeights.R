@@ -97,13 +97,13 @@ CORINEHabitatWeights <- setRefClass(
     
     classify = function(habitatValues, na.value=NA) {
       x <- weights$type[match(habitatValues, weights$habitat)]
-      x[is.na(x)] <- na.value
+      x[is.na(habitatValues) | is.na(x)] <- na.value
       return(x)
     },
 
     getWeights = function(habitatValues, na.value=NA) {
       x <- weights$weight[match(habitatValues, weights$habitat)]
-      x[is.na(x)] <- na.value
+      x[is.na(habitatValues) | is.na(x)] <- na.value
       return(x)
     },
     

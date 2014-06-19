@@ -52,24 +52,34 @@ ClusteredInitialPopulation <- setRefClass(
     initialize = function(studyArea, habitatWeights=HabitatWeights(), max.edge=5000, sigma=1, range=100*1e3, fun=exp, seed=1L, ...) {
       callSuper(...)
       studyArea <<- studyArea
-      habitatWeights <<- habitatWeights
-      
+
       sampleMaternRandomField(range=range, sigma=sigma, seed=seed, max.edge=max.edge, fun=fun)
-      if (inherits(habitatWeights, "HabitatWeights")) weights <<- 1
-      else setHabitatWeightsForField()
+      
+      if (!missing(habitatWeights)) {
+        habitatWeights <<- habitatWeights
+        setHabitatWeightsForField()
+      }
+      else weights <<- 1
     },
     
     sampleMaternRandomField = function(range=100e3, sigma=1, seed=1L, max.edge=5000, fun=exp) {
       library(INLA)
-      message("Sampling from GMRF with range = ", range, ", sigma = ", sigma, ", seed = ", seed, "...")
       fun <- match.fun(fun)
       mesh <<- inla.mesh.create(boundary=inla.sp2segment(studyArea$boundary), refine=list(max.edge=max.edge))
       message("Nodes for randomizing individual locations = ", mesh$n)
-      kappa <- sqrt(8) / range
-      spde <<- inla.spde2.matern(mesh, alpha=2)
-      theta <- c(-0.5 * log(4 * pi * sigma^2 * kappa^2), log(kappa))
-      Q <<- inla.spde2.precision(spde, theta)
-      samples <<- fun(as.vector(inla.qsample(Q=Q, seed=seed)))
+
+      if (range==Inf) {
+        samples <<- 1
+      }
+      else {
+        message("Sampling from GMRF with range = ", range, ", sigma = ", sigma, ", seed = ", seed, "...")
+        kappa <- sqrt(8) / range
+        spde <<- inla.spde2.matern(mesh, alpha=2)
+        theta <- c(-0.5 * log(4 * pi * sigma^2 * kappa^2), log(kappa))
+        Q <<- inla.spde2.precision(spde, theta)
+        samples <<- fun(as.vector(inla.qsample(Q=Q, seed=seed)))        
+      }
+      
       #message("sample mean = ", mean(samples), " sd = ", sd(samples))
       return(invisible(.self))
     },

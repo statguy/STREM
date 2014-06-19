@@ -20,12 +20,16 @@ MovementSimulationScenario <- setRefClass(
     nSteps = "integer",
     agents = "integer",
     newAgentId = "integer",
-    nProposal = "integer"
+    nProposal = "integer",
+    maxTry = "integer",
+    debug = "logical"
   ),
   methods = list(
     initialize = function(...) {
       distanceScale <<- 1e3
       loadHabitatRasterInMemory <<- FALSE
+      maxTry <<- as.integer(100)
+      debug <<- FALSE
       callSuper(...)
       return(invisible(.self))
     },
@@ -52,9 +56,9 @@ MovementSimulationScenario <- setRefClass(
       if (nrow(locations) < 1 | ncol(locations) != 2 | any(is.nan(locations))) {
         print(locations)
         stop("Invalid locations argument.")
-      }  
+      }
       
-      point <- SpatialPoints(locations[,,drop=F], proj4string=study$studyArea$boundary@proj4string)
+      point <- SpatialPoints(locations[,,drop=F], proj4string=study$studyArea$proj4string)
       
       if (inherits(point, "numeric")) {
         print(locations)
@@ -74,7 +78,7 @@ MovementSimulationScenario <- setRefClass(
         w <- habitatWeights$getWeights(habitatTypes)
         w[outsideBoundary] <- 0
         
-        if (all(w==0)) return(NULL)
+        if (all(w == 0)) return(NULL)
         k <- sample(1:nrow(locations), 1, prob=w)
         return(list(index=k, coords=locations[k,,drop=F]))
       }
@@ -83,8 +87,6 @@ MovementSimulationScenario <- setRefClass(
     randomizeBCRWTrack = function(initialLocation, initialAngle, isFirst, CRWCorrelation, BCRWCorrelationBiasTradeoff, homeRangeRadius) {
       library(CircStats)
       library(sp)
-      
-      maxTry <- 10000
       
       coords <- matrix(NA, nrow=nSteps + 1, ncol=2)
       coords[1,] <- initialLocation
@@ -131,7 +133,7 @@ MovementSimulationScenario <- setRefClass(
         
         if (j == maxTry) {
           fileName <- file.path(getwd(), "boundary_reflection_failed_points.RData")
-          save(coords, proposedVectors, acceptedVectors, step, proposedVectorsFailed[-1,], file=fileName)
+          save(coords, proposedVectors, acceptedVectors, step, proposedVectorsFailed[-1,], file=fileName) # TODO: unidentified bug here, fix
           stop("Boundary reflection failed. File saved to ", fileName)
           
           x <- range(coords[,1], proposedVectors[,1], acceptedVectors[,1], na.rm=T) + c(-1,1) * 1e4
@@ -194,9 +196,14 @@ MovementSimulationScenario <- setRefClass(
       
       initialLocations <- initialPopulation$randomize(nAgents)
       habitatTypes <- raster::extract(study$studyArea$habitat, initialLocations)
-      if (any(is.na(habitatTypes))) stop("Invalid initial coordinates.")
-      
-      nProposal <<- if (inherits(habitatWeights, "uninitializedField") | is.null(habitatWeights)) as.integer(1) else as.integer(10)
+      if (inherits(habitatWeights, "uninitializedField") | is.null(habitatWeights)) {
+        if (any(is.na(habitatTypes))) stop("Invalid initial coordinates.")
+        nProposal <<- as.integer(1)
+      }
+      else {
+        if (any(habitatWeights$getWeights(habitatTypes) == 0)) stop("Invalid initial coordinates.")
+        nProposal <<- as.integer(10)
+      }
       message("Number of proposals = ", nProposal)
       
       agents <<- 1:nAgents
@@ -229,7 +236,7 @@ MovementSimulationScenario <- setRefClass(
               
               return(track)
             },
-            initialLocations=initialLocations, initialAngles=initialAngles, nAgentsCurrent=nAgentsCurrent, isFirst=isFirst, iteration=iteration, .parallel=TRUE)
+            initialLocations=initialLocations, initialAngles=initialAngles, nAgentsCurrent=nAgentsCurrent, isFirst=isFirst, iteration=iteration, .parallel=TRUE & !debug, .inform=debug)
           
           if (year < years) {
             rdReturn <- randomizeBirthDeath()
@@ -292,7 +299,7 @@ MovementSimulationScenarioA <- setRefClass(
   Class = "MovementSimulationScenarioA",
   contains = "MovementSimulationScenario",
   methods = list(
-    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.8, ...) {
+    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.7, ...) {
       callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, ...)
       return(invisible(.self))
     },
@@ -314,7 +321,7 @@ MovementSimulationScenarioB <- setRefClass(
   fields = list(
   ),
   methods = list(
-    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.8, BCRWCorrelationBiasTradeoff=0.3, homeRangeRadius=10000, ...) {
+    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.7, BCRWCorrelationBiasTradeoff=0.3, homeRangeRadius=10000, ...) {
       callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, ...)
       
       pAgentsA <- 0.1
@@ -340,7 +347,7 @@ MovementSimulationScenarioD <- setRefClass(
   Class = "MovementSimulationScenarioD",
   contains = "MovementSimulationScenario",
   methods = list(
-    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.8, ...) {
+    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.7, ...) {
       callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, ...)
       return(invisible(.self))
     },
@@ -355,6 +362,30 @@ MovementSimulationScenarioD <- setRefClass(
   )
 )
 
+# Same as scenario A, but movements occur on heterogenous landscape
+MovementSimulationScenarioE <- setRefClass(
+  Class = "MovementSimulationScenarioE",
+  contains = "MovementSimulationScenario",
+  methods = list(
+    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.7, ...) {
+      callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, ...)
+      return(invisible(.self))
+    },
+    
+    newInstance = function(context, response="E", isTest=F) {
+      callSuper()
+      study <<- SimulationStudy$new(response=response)$newInstance(context=context, isTest=isTest)
+      
+      samplingWeights <- CORINEHabitatWeights$new(list(Urban=0.1, Agriculture=0.1, Forestland=1, Peatland=0.5, Water=0))
+      initialPopulation <<- if (isTest) ClusteredInitialPopulation$new(studyArea=study$studyArea, range=Inf, max.edge=3000, habitatWeights=samplingWeights)
+      else ClusteredInitialPopulation$new(studyArea=study$studyArea, range=Inf, habitatWeights=samplingWeights)
+      
+      habitatWeights <<- CORINEHabitatWeights$new(list(Urban=0.1, Agriculture=0.1, Forestland=1, Peatland=0.5, Water=0.05))
+      
+      return(invisible(.self))
+    }
+  )
+)
 
 
 ##############

@@ -80,13 +80,15 @@ Tracks <- setRefClass(
       return(tracksSP)
     },
     
-    plotTracks = function(surveyRoutes, intersects=FALSE) {
+    plotTracks = function(surveyRoutes, intersects=FALSE, habitat=FALSE) {
       library(sp)
       #library(adehabitatLT)
       
+      if (habitat) plot(study$studyArea$habitat)
+      
       op <- par(mar=rep(0, 4))
       tracksSP <- getSpatialLines(variables=.(id, year))
-      plot(tracksSP, col=1:16)
+      plot(tracksSP, col=1:16, add=habitat)
       plot(study$studyArea$boundary, add=T)
       if (!missing(surveyRoutes)) {
         col <- rep("blue", length(intersects))
@@ -271,6 +273,7 @@ SimulatedTracks <- setRefClass(
     
     setTracks = function(xy, id, date, dt, dist, burst, year, yday) {  
       tracks <<- data.frame(xy, id=id, burst=burst, date=date, year=year, yday=yday, dt=dt, dist=dist)
+      tracks <<- addDtDist(tracks)
       return(invisible(.self))
     },
     

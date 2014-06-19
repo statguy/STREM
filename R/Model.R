@@ -661,7 +661,7 @@ SimulatedSmoothModelSpatioTemporal <- setRefClass(
         if (missing(tracks)) tracks <- study$loadTracks(iteration=iteration)
         habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=FALSE) # TODO: save
         habitatWeights$setHabitatSelectionWeights(habitatSelection)
-        habitatWeighstRaster <- habitatWeights$getWeightsRaster(save=FALSE)
+        habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=FALSE)
         populationDensity$mean$weight(habitatWeightsRaster)
       }
       

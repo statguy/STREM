@@ -4,7 +4,7 @@ registerDoMC(cores=detectCores())
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
-task_id <- 4
+task_id <- 5
 
 nSurveyRoutes <- as.integer(100)
 nAgents <- as.integer(20)
@@ -18,20 +18,23 @@ BCRWCorrelationBiasTradeoff <- 0.7
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
 {
-mss <- if (task_id == 1) MovementSimulationScenarioB$new(nAgents=nAgents, years=nYears, days=nDays)$newInstance(context=context, isTest=T)
+mss <- if (task_id == 1) MovementSimulationScenarioA$new(nAgents=nAgents, years=nYears, days=nDays)$newInstance(context=context, isTest=T)
 else if (task_id == 2) MovementSimulationScenarioB$new(nAgents=nAgents, years=nYears, days=nDays, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff)$newInstance(context=context, isTest=T)
+
 else if (task_id == 4) MovementSimulationScenarioD$new(nAgents=nAgents, years=nYears, days=nDays)$newInstance(context=context, isTest=T)
+else if (task_id == 5) MovementSimulationScenarioE$new(nAgents=nAgents, years=nYears, days=nDays)$newInstance(context=context, isTest=T)
 
 }
 
 study <- mss$study
+message("Study area = ", study$studyArea$boundary@polygons[[1]]@area / 1000^2, " km^2")
 surveyRoutes <- FinlandRandomWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
-
 size <- c()
 
 for (iteration in 1:nIterations) {
+  #mss$debug <- TRUE
   tracks <- mss$simulate(iteration=iteration, save=F)
-  #tracks$plotTracks(surveyRoutes=surveyRoutes)
+  #tracks$plotTracks(surveyRoutes=surveyRoutes, habitat=T)
   #plot(mss$initialPopulation$locations, add=T)
   
   intersections <- SimulatedIntersections$new(study=study, iteration=iteration)
@@ -43,10 +46,10 @@ for (iteration in 1:nIterations) {
   model$estimate()
   model$collectEstimates()
 
-  populationSize <- model$getPopulationSize(tracks=tracks, withHabitatWeights=FALSE)
+  populationSize <- model$getPopulationSize(tracks=tracks, withHabitatWeights=mss$hasHabitatWeights())
   x <- populationSize$sizeData$Estimated
   model$switchToMesh()
-  populationSize <- model$getPopulationSize(tracks=tracks, withHabitatWeights=FALSE)
+  populationSize <- model$getPopulationSize(tracks=tracks, withHabitatWeights=mss$hasHabitatWeights())
   
   size <- rbind(size, data.frame(obs=sum(model$data$intersections), fitted=sum(model$data$fittedMean * model$getObservedOffset()), sizeobs=x, sizenode=populationSize$sizeData$Estimated, iteration=iteration))
 }

@@ -119,7 +119,7 @@ saveFigure <- function(p, filename, width=8, height=6, dimensions, ...) {
   ggsave(p, filename=filename, width=width, height=height, ...)
 }
 
-addDtDist <- function(tracksDF, .parallel=TRUE) {
+addDtDist <- function(tracksDF) {
   library(data.table)
   
   if (any(!c("date", "id", "x", "y") %in% names(tracksDF)))
@@ -130,18 +130,20 @@ addDtDist <- function(tracksDF, .parallel=TRUE) {
   tracksDF$burst <- paste(tracksDF$id, tracksDF$year)
   tracksDT <- data.table(tracksDF)
   
-  getDtDist <- function(date,x,y) {
+  getDxDyDtDist <- function(date,x,y) {
     n <- length(date)
     if (n == 1) return(as.numeric(NA))
-    date <- as.POSIXct(date, origin="1900-01-01 00:00:00")
     n1 <- n-1
+    dx <- c(x[2:n] - x[1:n1], NA)
+    dy <- c(y[2:n] - y[1:n1], NA)
+    date <- as.POSIXct(date, origin="1900-01-01 00:00:00")
     dt <- c(difftime(date[2:n], date[1:n1], units="secs"), NA)
     if (any(dt[!is.na(dt)] <= 0)) warning("dt <= 0, something wrong with the data...")
     dist <- c(euclidean(cbind(x[1:n1], y[1:n1]), cbind(x[2:n], y[2:n])), NA)
-    return(list(dt=dt, dist=dist))
+    return(list(dx=dx, dy=dy, dt=dt, dist=dist))
   }
   
-  tracksDT[,c("dt","dist") := getDtDist(date,x,y), by=burst]
+  tracksDT[,c("dx","dy","dt","dist") := getDxDyDtDist(date,x,y), by=burst]
   
   return(as.data.frame(tracksDT))
 }
