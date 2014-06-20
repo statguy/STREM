@@ -49,13 +49,13 @@ ClusteredInitialPopulation <- setRefClass(
   ),
   
   methods = list(
-    initialize = function(studyArea, habitatWeights=HabitatWeights(), max.edge=5000, sigma=1, range=100*1e3, fun=exp, seed=1L, ...) {
+    initialize = function(studyArea, habitatWeights, max.edge=5000, sigma=1, range=100*1e3, fun=exp, seed=1L, ...) {
       callSuper(...)
       studyArea <<- studyArea
 
       sampleMaternRandomField(range=range, sigma=sigma, seed=seed, max.edge=max.edge, fun=fun)
       
-      if (!missing(habitatWeights)) {
+      if (!missing(habitatWeights) | !is.null(habitatWeights)) {
         habitatWeights <<- habitatWeights
         setHabitatWeightsForField()
       }

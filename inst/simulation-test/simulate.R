@@ -28,12 +28,13 @@ else if (task_id == 5) MovementSimulationScenarioE$new(nAgents=nAgents, years=nY
 
 study <- mss$study
 message("Study area = ", study$studyArea$boundary@polygons[[1]]@area / 1000^2, " km^2")
-surveyRoutes <- FinlandRandomWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
+habitatWeights <- CORINEHabitatWeights$new(study=study)
 size <- c()
 
 for (iteration in 1:nIterations) {
   #mss$debug <- TRUE
   tracks <- mss$simulate(iteration=iteration, save=F)
+  surveyRoutes <- mss$getSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
   #tracks$plotTracks(surveyRoutes=surveyRoutes, habitat=T)
   #plot(mss$initialPopulation$locations, add=T)
   
@@ -42,16 +43,30 @@ for (iteration in 1:nIterations) {
   
   model <- SimulatedSmoothModelSpatioTemporal$new(study=study, iteration=iteration)
   model$setup(intersections=intersections, params=modelParams)
-  #plot(model$mesh)
+  #plot(model$getUnscaledMesh()); plot(study$studyArea$boundary, add=T, border="blue")
   model$estimate()
   model$collectEstimates()
-
-  populationSize <- model$getPopulationSize(tracks=tracks, withHabitatWeights=mss$hasHabitatWeights())
-  x <- populationSize$sizeData$Estimated
-  model$switchToMesh()
-  populationSize <- model$getPopulationSize(tracks=tracks, withHabitatWeights=mss$hasHabitatWeights())
   
-  size <- rbind(size, data.frame(obs=sum(model$data$intersections), fitted=sum(model$data$fittedMean * model$getObservedOffset()), sizeobs=x, sizenode=populationSize$sizeData$Estimated, iteration=iteration))
+  habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=FALSE)
+  habitatWeights$setHabitatSelectionWeights(habitatSelection)
+  habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=FALSE)
+  #habitatWeights; plot(habitatWeightsRaster)
+  populationDensity <- model$getPopulationDensity(getSD=FALSE)
+  
+  populationSize <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration))
+  populationDensity$mean$weight(habitatWeightsRaster)
+  populationSizeWeighted <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration))
+  
+  habitatWeights; populationSize; populationSizeWeighted
+  size <- rbind(size, data.frame(obs=sum(model$data$intersections), fitted=sum(model$data$fittedMean * model$getObservedOffset()), sizew=populationSizeWeighted$sizeData$Estimated, size=populationSize$sizeData$Estimated, iteration=iteration))
+  
+  
+  #populationSize <- model$getPopulationSize(tracks=tracks, withHabitatWeights=mss$hasHabitatWeights())
+  #x <- populationSize$sizeData$Estimated
+  #model$switchToMesh()
+  #populationSize <- model$getPopulationSize(tracks=tracks, withHabitatWeights=mss$hasHabitatWeights())
+  
+  #size <- rbind(size, data.frame(obs=sum(model$data$intersections), fitted=sum(model$data$fittedMean * model$getObservedOffset()), sizeobs=x, sizenode=populationSize$sizeData$Estimated, iteration=iteration))
 }
 
 colMeans(size); colSDs(size)

@@ -91,10 +91,12 @@ FinlandRandomWTCSurveyRoutes <- setRefClass(
       callSuper(...)
       return(invisible(.self))
     },
-    
+
     randomizeSurveyRoutes = function(nSurveyRoutes, save=FALSE) {
-      initialPopulation <- RandomInitialPopulation$new(studyArea=study$studyArea)
-      centroids <<- initialPopulation$randomize(nSurveyRoutes)
+      #initialPopulation <- RandomInitialPopulation$new(studyArea=study$studyArea)
+      #centroids <<- initialPopulation$randomize(nSurveyRoutes)
+      candidateArea <- RandomInitialPopulation$new(studyArea=study$studyArea)
+      centroids <<- candidateArea$randomize(nSurveyRoutes)
       angles <- runif(length(centroids), 0, 2*pi)
       surveyRoutes <<- getTriangles(centroids, angles, 4000)
       getLengths()
@@ -103,9 +105,56 @@ FinlandRandomWTCSurveyRoutes <- setRefClass(
     },
     
     getSurveyRoutesFileName = function() {
-      return(context$getFileName(dir=context$resultDataDirectory, name="SurveyRoutes", response="Random", region=study$studyArea$region))
+      return(context$getFileName(dir=context$resultDataDirectory, name="SurveyRoutes", response="FinlandRandomWTC", region=study$studyArea$region))
     }
-  )  
+  )
+)
+
+FinlandRandomForestWTCSurveyRoutes <- setRefClass(
+  Class = "FinlandRandomForestWTCSurveyRoutes",
+  contains = "SurveyRoutes",
+  fields = list(
+  ),
+  methods = list(
+    initialize = function(...) {
+      callSuper(...)
+      return(invisible(.self))
+    },
+    
+    randomizeSurveyRoutes = function(nSurveyRoutes, save=FALSE, isTest=FALSE) {
+      library(sp)
+      library(raster)
+      library(rgeos)
+      
+      candidateArea <- RandomInitialPopulation$new(studyArea=study$studyArea)
+      
+      triangles <- llply(1:nSurveyRoutes, function(i, nSurveyRoutes, candidateArea, habitat) {
+        message("Randomizing survey route ", i, "/", nSurveyRoutes, "...")
+        
+        habitatWeights <- CORINEHabitatWeights$new()
+        candidateCentroids <- candidateArea$randomize(100) # Max tries
+        angles <- runif(length(candidateCentroids), 0, 2*pi)
+        candidateSurveyRoutes <- getTriangles(candidateCentroids, angles, 4000)
+        for (i in 1:length(candidateSurveyRoutes)) {
+          habitatTypes <- extract(habitat, candidateSurveyRoutes[i])[[1]]
+          classifiedHabitatTypes <- habitatWeights$classify(habitatTypes) == 3 # Forest
+          if (sum(classifiedHabitatTypes) / length(classifiedHabitatTypes) > .9) return(candidateSurveyRoutes[i]@lines[[1]])
+        }
+        
+        stop("Failed to find survey routes with the given condition.")
+      }, nSurveyRoutes=nSurveyRoutes, candidateArea=candidateArea, habitat=habitat, .parallel=T)
+      
+      surveyRoutes <<- SpatialLines(triangles, proj4string=study$studyArea$proj4string)
+      centroids <<- gCentroid(surveyRoutes, byid=TRUE)
+      getLengths()
+      if (save) saveSurveyRoutes()
+      return(invisible(.self))
+    },
+    
+    getSurveyRoutesFileName = function() {
+      return(context$getFileName(dir=context$resultDataDirectory, name="SurveyRoutes", response="FinlandRandomForestWTC", region=study$studyArea$region))
+    }
+  )
 )
 
 FinlandWTCSurveyRoutes <- setRefClass(
