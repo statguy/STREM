@@ -55,7 +55,7 @@ ClusteredInitialPopulation <- setRefClass(
 
       sampleMaternRandomField(range=range, sigma=sigma, seed=seed, max.edge=max.edge, fun=fun)
       
-      if (!missing(habitatWeights) | !is.null(habitatWeights)) {
+      if (!missing(habitatWeights) & !is.null(habitatWeights)) {
         habitatWeights <<- habitatWeights
         setHabitatWeightsForField()
       }

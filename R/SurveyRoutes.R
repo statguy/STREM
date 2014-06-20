@@ -93,8 +93,6 @@ FinlandRandomWTCSurveyRoutes <- setRefClass(
     },
 
     randomizeSurveyRoutes = function(nSurveyRoutes, save=FALSE) {
-      #initialPopulation <- RandomInitialPopulation$new(studyArea=study$studyArea)
-      #centroids <<- initialPopulation$randomize(nSurveyRoutes)
       candidateArea <- RandomInitialPopulation$new(studyArea=study$studyArea)
       centroids <<- candidateArea$randomize(nSurveyRoutes)
       angles <- runif(length(centroids), 0, 2*pi)
@@ -122,6 +120,7 @@ FinlandRandomForestWTCSurveyRoutes <- setRefClass(
     },
     
     randomizeSurveyRoutes = function(nSurveyRoutes, save=FALSE, isTest=FALSE) {
+      library(plyr)
       library(sp)
       library(raster)
       library(rgeos)

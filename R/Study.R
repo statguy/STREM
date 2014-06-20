@@ -101,17 +101,6 @@ SimulationStudy <- setRefClass(
       populationSize <- estimates$getPopulationSize(withHabitatWeights=withHabitatWeights)
       if (save) populationSize$savePopulationSize()
       return(invisible(populationSize))
-    },
-    
-    getInitialPopulation = function(clustered=FALSE, isTest=FALSE, samplingWeights=NULL) {
-      range <- if (clustered) 100e3 else Inf
-      sigma <- if (clustered) if (test) 4 else 1 else 1
-      
-      # TODO: should actually get this from the study area object so can get optimal initial population or should ask user to give the object directly
-      initialPopulation <- if (isTest) ClusteredInitialPopulation$new(studyArea=studyArea, range=range, sigma=sigma, max.edge=3000, habitatWeights=samplingWeights)
-      else ClusteredInitialPopulation$new(studyArea=studyArea, range=range, sigma=sigma, habitatWeights=samplingWeights)
-
-      return(initialPopulation)
     }
   )
 )
