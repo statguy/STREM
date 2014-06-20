@@ -142,7 +142,7 @@ FinlandRandomForestWTCSurveyRoutes <- setRefClass(
         }
         
         stop("Failed to find survey routes with the given condition.")
-      }, nSurveyRoutes=nSurveyRoutes, candidateArea=candidateArea, habitat=habitat, .parallel=T)
+      }, nSurveyRoutes=nSurveyRoutes, candidateArea=candidateArea, habitat=study$studyArea$habitat, .parallel=T)
       
       surveyRoutes <<- SpatialLines(triangles, proj4string=study$studyArea$proj4string)
       centroids <<- gCentroid(surveyRoutes, byid=TRUE)
