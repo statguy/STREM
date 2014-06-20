@@ -374,7 +374,8 @@ MovementSimulationScenarioE <- setRefClass(
   Class = "MovementSimulationScenarioE",
   contains = "MovementSimulationScenario",
   fields = list(
-    surveyRoutes = "ANY"
+    surveyRoutes = "ANY",
+    nSurveyRoutes = "integer"
   ),
   methods = list(
     initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.7, ...) {

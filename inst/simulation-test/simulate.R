@@ -24,7 +24,7 @@ mss <- if (task_id == 1) MovementSimulationScenarioA$new(nAgents=nAgents, years=
 else if (task_id == 2) MovementSimulationScenarioB$new(nAgents=nAgents, years=nYears, days=nDays, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff)$newInstance(context=context, isTest=T)
 
 else if (task_id == 4) MovementSimulationScenarioD$new(nAgents=nAgents, years=nYears, days=nDays)$newInstance(context=context, isTest=T)
-else if (task_id == 5) MovementSimulationScenarioE$new(nAgents=nAgents, years=nYears, days=nDays)$newInstance(context=context, isTest=T)
+else if (task_id == 5) MovementSimulationScenarioE$new(nAgents=nAgents, years=nYears, days=nDays, nSurveyRoutes=nSurveyRoutes)$newInstance(context=context, isTest=T)
 
 }
 
