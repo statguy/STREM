@@ -135,10 +135,14 @@ FinlandRandomForestWTCSurveyRoutes <- setRefClass(
         candidateCentroids <- candidateArea$randomize(100) # Max tries
         angles <- runif(length(candidateCentroids), 0, 2*pi)
         candidateSurveyRoutes <- getTriangles(candidateCentroids, angles, 4000)
-        for (i in 1:length(candidateSurveyRoutes)) {
-          habitatTypes <- extract(habitat, candidateSurveyRoutes[i])[[1]]
+        for (j in 1:length(candidateSurveyRoutes)) {
+          habitatTypes <- extract(habitat, candidateSurveyRoutes[j])[[1]]
           classifiedHabitatTypes <- habitatWeights$classify(habitatTypes) == 3 # Forest
-          if (sum(classifiedHabitatTypes) / length(classifiedHabitatTypes) > .9) return(candidateSurveyRoutes[i]@lines[[1]])
+          if (sum(classifiedHabitatTypes) / length(classifiedHabitatTypes) > .9) {
+            triangle <- candidateSurveyRoutes[j]@lines[[1]]
+            triangle@ID <- i
+            return(triangle)
+          }
         }
         
         stop("Failed to find survey routes with the given condition.")
