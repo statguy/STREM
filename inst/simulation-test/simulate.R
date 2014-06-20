@@ -1,3 +1,5 @@
+# library(devtools); install_github("statguy/Winter-Track-Counts")
+
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores())

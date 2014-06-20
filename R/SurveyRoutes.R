@@ -140,7 +140,7 @@ FinlandRandomForestWTCSurveyRoutes <- setRefClass(
           classifiedHabitatTypes <- habitatWeights$classify(habitatTypes) == 3 # Forest
           if (sum(classifiedHabitatTypes) / length(classifiedHabitatTypes) > .9) {
             triangle <- candidateSurveyRoutes[j]@lines[[1]]
-            triangle@ID <- i
+            triangle@ID <- as.character(i)
             return(triangle)
           }
         }
