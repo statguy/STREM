@@ -452,6 +452,10 @@ saveFigure(p, filename="HabitatUsageSampling.svg", bg="transparent")
 ### Simulations
 ######
 
+if (F) {
+  library(doMC)
+  registerDoMC(cores=detectCores())
+}
 task_id <- 0; source(file.path(path.package("WTC"), "simulation-test", "simulate.R"))
 
 simulate(scenario="A", nIterations=as.integer(1), plot=TRUE)
