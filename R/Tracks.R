@@ -17,6 +17,13 @@ Tracks <- setRefClass(
       return(.self)
     },
     
+    toGGDF = function(response) {
+      library(ggplot2)
+      tracksDF <- fortify(getSpatialLines())
+      if (!missing(response)) tracksDF$response <- study$getPrettyResponse(response)
+      return(tracksDF)
+    },
+    
     getTracksDirectory = function() return(study$context$processedDataDirectory),
     
     getTracksFileName = function() {

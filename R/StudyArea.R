@@ -29,6 +29,11 @@ StudyArea <- setRefClass(
       return(invisible(.self))
     },
     
+    toGGDF = function() {
+      library(ggplot2)
+      return(fortify(boundary))
+    },
+    
     loadBoundary = function(thin, tolerance) {
       stop("Override loadBoundary().")
     },

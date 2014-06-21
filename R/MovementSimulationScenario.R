@@ -293,7 +293,7 @@ MovementSimulationScenario <- setRefClass(
     #},
     
     hasHabitatWeights = function() {
-      return(!inherits(mss$habitatWeights, "uninitializedField"))
+      return(!inherits(habitatWeights, "uninitializedField"))
     }
   )
 )

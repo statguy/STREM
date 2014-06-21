@@ -10,7 +10,7 @@ library(plyr)
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
 study <- FinlandWTCStudy$new(context=context, response="canis.lupus")
 study$studyArea$loadBoundary(thin=TRUE, tolerance=0.001)
-boundaryDF <- ggplot2::fortify(study$studyArea$boundary)
+boundaryDF <- study$studyArea$toGGDF()
 responses <- c("canis.lupus", "lynx.lynx", "rangifer.tarandus.fennicus")
 
 ######
@@ -18,10 +18,8 @@ responses <- c("canis.lupus", "lynx.lynx", "rangifer.tarandus.fennicus")
 ######
 
 surveyRoutes <- study$loadSurveyRoutes(findLengths=FALSE)
-surveyRoutesSP <- SpatialLinesDataFrame(surveyRoutes$surveyRoutes, data=data.frame(x=1:length(surveyRoutes$surveyRoutes)), match.ID=FALSE)
-surveyRoutesDF <- ggplot2::fortify(surveyRoutesSP)
 p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_polygon(colour="black", fill=NA) +
-  geom_polygon(data=surveyRoutesDF, aes(long, lat, group=group), colour="blue", fill=NA) +
+  geom_polygon(data=surveyRoutes$toGGDF(), aes(long, lat, group=group), colour="blue", fill=NA) +
   coord_equal() + theme_raster()
 print(p)
 saveFigure(p, filename="SurveyRoutes.svg", bg="transparent")
@@ -32,8 +30,8 @@ p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_polygon(colour="blac
 print(p)
 saveFigure(p, filename="SurveyRoutesZoom.svg", bg="transparent", width=3, height=3)
 
-surveyRouteDF <- ggplot2::fortify(surveyRoutesSP[1,])
-p <- ggplot(surveyRouteDF, aes(long, lat, group=group)) + geom_polygon(colour="blue", fill=NA) + coord_equal() + theme_raster()
+#surveyRouteDF <- ggplot2::fortify(surveyRoutesSP[1,])
+p <- ggplot(subset(surveyRoutes$toGGDF(), id==1), aes(long, lat, group=group)) + geom_polygon(colour="blue", fill=NA) + coord_equal() + theme_raster()
 print(p)
 saveFigure(p, filename="SurveyRoute.svg", bg="transparent", width=2, height=2)
 
@@ -62,9 +60,7 @@ getTracks <- function(responses, context) {
     study <- FinlandWTCStudy$new(context=context, response=response)
     tracks <- FinlandWTCTracks$new(study=study)
     tracks$loadTracks()
-    tracksSP <- tracks$getSpatialLines()
-    tracksDF <- ggplot2::fortify(tracksSP)
-    tracksDF$response <- study$getPrettyResponse(response)
+    tracksDF <- tracks$toGGDF(response)
     return(tracksDF)
   }, context=context)
   return(x)
@@ -355,15 +351,16 @@ getPopulationDensity <- function(responses, timeModels, spatialModels, context, 
 # TODO: legend
 # TODO: standard deviation, include all focal species when data available
 populationDensity <- getPopulationDensity(responses=responses, timeModels=c("ar1", "ar1", "rw2"), spatialModels=c(T, T, F), context=context)
-weightedPopulationDensity <- getPopulationDensity(responses=responses, timeModels=c("ar1", "ar1", "rw2"), spatialModels=c(T, T, F), context=context, withHabitatWeights=TRUE)
-
 for (response in responses) {
-  study <- FinlandWTCStudy$new(context=context, response=response)
-  
+  study <- FinlandWTCStudy$new(context=context, response=response)  
   popdens <- populationDensity[[response]]$mean
   popdens$ext="svg"
   popdens$animate(name="PopulationDensity", delay=50, ggfun=function(p) p + theme_raster(20))
+}
 
+weightedPopulationDensity <- getPopulationDensity(responses=responses, timeModels=c("ar1", "ar1", "rw2"), spatialModels=c(T, T, F), context=context, withHabitatWeights=TRUE)
+for (response in responses) {
+  study <- FinlandWTCStudy$new(context=context, response=response)
   wpopdens <- weightedPopulationDensity[[response]]$mean
   wpopdens$ext="svg"
   wpopdens$animate(name="WeightedPopulationDensity", delay=50, ggfun=function(p) p + theme_raster(20))
@@ -390,19 +387,20 @@ for (response in responses) {
   }
   else if (response == "rangifer.tarandus.fennicus") {
     y$"Adjusted estimated" <- y$Estimated / 2
-    y$Validation <- with(y, approx(Year, Validation, n=nrow(y)))$y
+    #y$Validation <- with(y, approx(Year, Validation, n=nrow(y)))$y
   }
   populationSize <- rbind(populationSize, y)
 }
 
 x <- melt(populationSize, id.vars=c("Year","response"), variable.name="Variable")
-p <- ggplot(x, aes(Year, value, group=Variable, colour=Variable)) + geom_line(size=1) + facet_wrap(~response, scales="free_y") +
-  scale_colour_manual(values=c("steelblue","violetred1","steelblue1")) +
+p <- ggplot(x, aes(Year, value, group=Variable, colour=Variable, fill=Variable)) + facet_wrap(~response, scales="free_y") +
+  geom_bar(subset=.(Variable=="Validation"), stat="identity") + geom_line(subset=.(Variable!="Validation"), size=2)  +
+  scale_colour_manual(values=c("steelblue","violetred1","darkgreen")) +
+  scale_fill_manual(values=c(NA,NA,"darkgreen")) +
   xlab("Year") + ylab("Population size") +
   theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1)) + theme(legend.position="bottom")
 print(p)
 saveFigure(p, filename="PopulationSize.svg", bg="transparent")
-#saveFigure(p, filename="PopulationSize.png", bg="transparent")
 
 
 ######
@@ -448,6 +446,31 @@ tracks <- study$loadTracks()
 p <- usage$plotSampleSteps(tracks=tracks, index=0:3+800-69)
 print(p)
 saveFigure(p, filename="HabitatUsageSampling.svg", bg="transparent")
+
+
+######
+### Simulations
+######
+
+task_id <- 0; source(file.path(path.package("WTC"), "simulation-test", "simulate.R"))
+
+simulate(scenario="A", nIterations=as.integer(1), plot=TRUE)
+simulate(scenario="B", nIterations=as.integer(1), plot=TRUE)
+
+simulate(scenario="D", nIterations=as.integer(1), plot=TRUE)
+simulate(scenario="E", nIterations=as.integer(1), plot=TRUE)
+
+
+context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+study <- SimulationStudy$new()$newInstance(context=context, isTest=T)
+png(file.path(context$figuresDirectory, "SimulationStudyArea-D-test.png"))
+plot(study$studyArea$habitat)
+dev.off()
+
+p <- ggplot(study$studyArea$toGGDF(), aes(long, lat, group=group)) + geom_path(size=1) + theme_raster()
+plot(p)
+saveFigure(p, filename="SimulationStudyArea-A-test.svg", bg="transparent")
+
 
 ######
 ### Russian data

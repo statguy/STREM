@@ -14,7 +14,14 @@ SurveyRoutes <- setRefClass(
       plot(surveyRoutes, col="blue", add=T)
       return(invisible(.self))
     },
-
+    
+    toGGDF = function() {
+      library(sp)
+      library(ggplot2)
+      surveyRoutesSP <- SpatialLinesDataFrame(surveyRoutes, data=data.frame(x=1:length(surveyRoutes)), match.ID=FALSE)
+      return(ggplot2::fortify(surveyRoutesSP))
+    },
+    
     getSurveyRoutesFileName = function() {
       return(context$getFileName(dir=context$resultDataDirectory, name="SurveyRoutes", response=study$response, region=study$studyArea$region))
     },
