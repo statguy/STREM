@@ -111,6 +111,7 @@ if (task_id > 0) {
   
   size <- if (task_id == 1) simulate("A")
   else if (task_id == 2) simulate("B")
+  else if (task_id == 3) simulate("B")
   else if (task_id == 4) simulate("D")
   else if (task_id == 5) simulate("E")
   
