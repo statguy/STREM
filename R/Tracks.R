@@ -19,7 +19,7 @@ Tracks <- setRefClass(
     
     toGGDF = function(response) {
       library(ggplot2)
-      tracksDF <- fortify(getSpatialLines())
+      tracksDF <- ggplot2::fortify(getSpatialLines())
       if (!missing(response)) tracksDF$response <- study$getPrettyResponse(response)
       return(tracksDF)
     },
@@ -80,10 +80,7 @@ Tracks <- setRefClass(
         id <- ldply(lines, function(x) data.frame(ID=x@ID))
         tracksSP <- SpatialLinesDataFrame(SpatialLines(lines, proj4string=study$studyArea$proj4string), data=id, match.ID=FALSE)
       }
-      #else if (inherits(tracks, "ltraj")) {
-      #  tracksSP <- ltraj2sldf(tracks, byid=TRUE)
-      #  proj4string(tracksSP) <- study$studyArea$proj4string
-      #}
+
       return(tracksSP)
     },
     
@@ -273,13 +270,13 @@ SimulatedTracks <- setRefClass(
     truePopulationSize = "data.frame"
   ),
   methods = list(
-    initialize = function(xy, id, date, dt, dist, burst, year, yday, preprocessData=FALSE, ...) {
-      if (!missing(xy) && !missing(id) && !missing(date)) setTracks(xy=xy, id=id, date=date, dt=dt, dist=dist, burst=burst, year=year, yday=yday)
+    initialize = function(xy, id, date, dt, dist, burst, year, yday, herdSize, preprocessData=FALSE, ...) {
+      if (!missing(xy) && !missing(id) && !missing(date)) setTracks(xy=xy, id=id, date=date, dt=dt, dist=dist, burst=burst, year=year, yday=yday, herdSize=herdSize)
       callSuper(preprocessData=preprocessData, ...)
     },
     
-    setTracks = function(xy, id, date, dt, dist, burst, year, yday) {  
-      tracks <<- data.frame(xy, id=id, burst=burst, date=date, year=year, yday=yday, dt=dt, dist=dist)
+    setTracks = function(xy, id, date, dt, dist, burst, year, yday, herdSize) {  
+      tracks <<- data.frame(xy, id=id, burst=burst, date=date, year=year, yday=yday, dt=dt, dist=dist, herdSize=herdSize)
       tracks <<- addDtDist(tracks)
       return(invisible(.self))
     },
@@ -357,7 +354,12 @@ SimulatedTracks <- setRefClass(
     setTruePopulationSize = function() {
       library(plyr)
       message("Finding true population size...")
-      truePopulationSize <<- ddply(tracks, .(year), function(x) return(data.frame(Observed=length(unique(x$id)))))
+      truePopulationSize <<- ddply(tracks, .(year), function(x) {
+        n <- daply(x, .(id), function(y) y$herdSize[1])
+        return(sum(n))
+      })
+      
+      #return(data.frame(Observed=length(unique(x$id)) * x$herdSize)))
       names(truePopulationSize) <<- c("Year","Observed")
       return(invisible(.self))
     },

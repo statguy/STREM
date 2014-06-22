@@ -202,9 +202,12 @@ SimulatedIntersections <- setRefClass(
       
       burstYear <- ddply(tracksDF, .(id, year), function(x) {
         date <- as.POSIXlt(x$date)
-        data.frame(burst=x$burst[1],
-                   year=date$year[1] + 1900,
-                   duration=round(as.numeric(difftime(max(x$date), min(x$date), units="days")))) # Here it is assumed that the observation period is continuous
+        if (length(unique(x$herdSize)) != 1) stop("Herd size must be constant within a track.")
+        y <- data.frame(burst=x$burst[1],
+                        year=date$year[1] + 1900,
+                        duration=round(as.numeric(difftime(max(x$date), min(x$date), units="days"))), # Here it is assumed that the observation period is continuous
+                        herdSize=x$herdSize[1]) # Herd size does not change within track
+        return(y)
       })
       
       data <- data.frame()
@@ -212,15 +215,16 @@ SimulatedIntersections <- setRefClass(
         yearToBurstsIndex <- burstYear$year == year
         bursts <- as.character(burstYear[yearToBurstsIndex,]$burst)
         duration <- burstYear[yearToBurstsIndex,]$duration[1]
+        herdSize <- burstYear[yearToBurstsIndex,]$herdSize
         centroids <- coordinates(surveyRoutes$centroids)
         x <- data.frame(surveyRoute=rownames(intersectionsMatrix[,bursts,drop=F]),
                         x=centroids[,1], y=centroids[,2],
                         year=year,
                         response=study$response,
-                        intersections=rowSums(intersectionsMatrix[,bursts,drop=F]),
+                        intersections=rowSums(intersectionsMatrix[,bursts,drop=F] * herdSize),
                         duration=duration,
                         length=surveyRoutes$lengths,
-                        distance=distance) # Correct for distance after estimation if not set elsewhere
+                        distance=distance)
         data <- rbind(data, x)
       }
       

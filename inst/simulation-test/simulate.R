@@ -14,13 +14,13 @@ simulate = function(scenario, nSurveyRoutes=as.integer(50), nAgents=as.integer(2
   mss <- {
     if (scenario == "A") MovementSimulationScenarioA$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$newInstance(context=context, isTest=T)
     else if (scenario == "B") MovementSimulationScenarioB$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff)$newInstance(context=context, isTest=T)
-    else if (scenario == "C") stop("unsupported")
+    else if (scenario == "C") MovementSimulationScenarioC$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$newInstance(context=context, isTest=T)
     else if (scenario == "D") MovementSimulationScenarioD$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$newInstance(context=context, isTest=T)
     else if (scenario == "E") MovementSimulationScenarioE$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, nSurveyRoutes=nSurveyRoutes)$newInstance(context=context, isTest=T)
     else if (scenario == "F") stop("unsupported")
     else stop("unsupported")
   }
-
+  
   study <- mss$study
   message("Study area = ", study$studyArea$boundary@polygons[[1]]@area / 1000^2, " km^2")
   habitatWeights <- CORINEHabitatWeights$new(study=study)
@@ -38,12 +38,17 @@ simulate = function(scenario, nSurveyRoutes=as.integer(50), nAgents=as.integer(2
       boundaryDF <- study$studyArea$toGGDF()
       
       p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_path() +
-        geom_path(data=tracks$toGGDF(), aes(long, lat, group=group, colour=id), size=1) + theme_raster()
+        geom_point(data=mss$initialPopulation$toGGDF(), aes(x, y, group=NA), shape="+", size=8, colour="red", alpha=0.7) + theme_raster()
+      plot(p)
+      saveFigure(p, filename=paste("SimulatedInitialLocations-", scenario, "-", study$studyArea$region, ".svg", sep=""), bg="transparent")
+      
+      p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_path() +
+        geom_path(data=tracks$toGGDF(), aes(long, lat, group=group, colour=id), size=1, alpha=0.7) + theme_raster()
       plot(p)
       saveFigure(p, filename=paste("SimulatedTracks-", scenario, "-", study$studyArea$region, ".svg", sep=""), bg="transparent")
       
       p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_path() +
-        geom_path(data=surveyRoutes$toGGDF(), aes(long, lat, group=group), size=1, colour="blue") + theme_raster()
+        geom_path(data=surveyRoutes$toGGDF(), aes(long, lat, group=group), size=1, colour="blue", alpha=0.7) + theme_raster()
       plot(p)
       saveFigure(p, filename=paste("SimulatedSurveyRoutes-", scenario, "-", study$studyArea$region, ".svg", sep=""), bg="transparent")
     }
@@ -51,12 +56,29 @@ simulate = function(scenario, nSurveyRoutes=as.integer(50), nAgents=as.integer(2
     intersections <- SimulatedIntersections$new(study=study, iteration=iteration)
     intersections$findIntersections(tracks, surveyRoutes,  dimension=1)
     
+    if (plot) {
+      if (F) {
+        tracks2 <- tracks$copy()
+        tracks2$tracks$herdSize <- 1
+        intersections2 <- SimulatedIntersections$new(study=study, iteration=iteration)
+        intersections2$findIntersections(tracks2, surveyRoutes,  dimension=1)
+        cbind(intersections$intersections@data, intersections2$intersections@data)
+      }
+
+      x <- ddply(tracks$tracks, .(id), function(y) data.frame(size=y$herdSize[1]))
+      colnames(x) <- c("Agent id", "Herd size")
+      p <- ggplot(x, aes(`Agent id`, `Herd size`)) + geom_bar(stat="identity") +
+        scale_y_discrete() + theme_minimal()
+      plot(p)
+      saveFigure(p, filename=paste("SimulatedHerdSize-", scenario, "-", study$studyArea$region, ".svg", sep=""), bg="transparent")
+    }
+    
     model <- SimulatedSmoothModelSpatioTemporal$new(study=study, iteration=iteration)
     model$setup(intersections=intersections, params=modelParams)
     #plot(model$getUnscaledMesh()); plot(study$studyArea$boundary, add=T, border="blue")
     model$estimate()
     model$collectEstimates()
-        
+    
     populationDensity <- model$getPopulationDensity(getSD=FALSE)
     populationSize <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration))
     if (mss$hasHabitatWeights()) {

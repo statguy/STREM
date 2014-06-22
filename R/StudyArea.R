@@ -31,7 +31,7 @@ StudyArea <- setRefClass(
     
     toGGDF = function() {
       library(ggplot2)
-      return(fortify(boundary))
+      return(ggplot2::fortify(boundary))
     },
     
     loadBoundary = function(thin, tolerance) {

@@ -189,7 +189,15 @@ MovementSimulationScenario <- setRefClass(
       if (nBorn > 0) agents <<- c(agents, newAgentId:(newAgentId + nBorn - 1))
       newAgentId <<- as.integer(newAgentId + nBorn)
       
-      return(list(survivedBornIndex=survivedBornIndex))
+      # TODO: determine herd size as a group level event
+      # note: if herd size changes, change also track id
+      herdSize <- randomizeHerdSize()
+      
+      return(list(survivedBornIndex=survivedBornIndex, herdSize=herdSize))
+    },
+    
+    randomizeHerdSize = function() {
+      return(rep(1, length(agents)))
     },
     
     randomizeBCRWTracks = function(iteration) {
@@ -212,6 +220,7 @@ MovementSimulationScenario <- setRefClass(
       
       agents <<- 1:nAgents
       newAgentId <<- as.integer(nAgents + 1)
+      herdSize <- randomizeHerdSize()
       
       tracks <- data.frame()
       initialLocations <- coordinates(initialLocations)
@@ -237,10 +246,10 @@ MovementSimulationScenario <- setRefClass(
                                          BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff[agentIndex],
                                          homeRangeRadius=homeRangeRadius[agentIndex])
               track$id <- agents[agentIndex]
+              track$herdSize <- herdSize[agentIndex]
               
               return(track)
-            },
-            initialLocations=initialLocations, initialAngles=initialAngles, nAgentsCurrent=nAgentsCurrent, isFirst=isFirst, iteration=iteration, .parallel=TRUE & !debug, .inform=debug)
+            }, initialLocations=initialLocations, initialAngles=initialAngles, nAgentsCurrent=nAgentsCurrent, isFirst=isFirst, iteration=iteration, .parallel=TRUE & !debug, .inform=debug)
           
           if (year < years) {
             rdReturn <- randomizeBirthDeath()
@@ -249,6 +258,7 @@ MovementSimulationScenario <- setRefClass(
             initialAngles <- track[survivedBornLastStepIndex, c("angle")]
             isFirst <- FALSE
             nAgentsCurrent <- length(agents)
+            herdSize <- rdReturn$herdSize
           }        
 
           track$year <- year
@@ -269,10 +279,8 @@ MovementSimulationScenario <- setRefClass(
     },
     
     simulate = function(iteration, save=TRUE) {
-      #nIterations <<- as.integer(1)
       tracksDF <- randomizeBCRWTracks(iteration=as.integer(iteration))
-      #date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
-      tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$id, date=tracksDF$date, dt=tracksDF$dt, dist=tracksDF$dist, burst=tracksDF$burst, year=tracksDF$year, yday=tracksDF$yday, iteration=as.integer(iteration))
+      tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$id, date=tracksDF$date, dt=tracksDF$dt, dist=tracksDF$dist, burst=tracksDF$burst, year=tracksDF$year, yday=tracksDF$yday, iteration=as.integer(iteration), herdSize=tracksDF$herdSize)
       return(invisible(tracks))
     },
     
@@ -346,6 +354,34 @@ MovementSimulationScenarioB <- setRefClass(
   )
 )
 
+
+# Same as scenario A, but with animals moving in groups
+MovementSimulationScenarioC <- setRefClass(
+  Class = "MovementSimulationScenarioC",
+  contains = "MovementSimulationScenario",
+  fields = list(
+    averageHerdSize = "integer"
+  ),
+  methods = list(
+    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.7, averageHerdSize=as.integer(4), ...) {
+      callSuper(years=years, nAgents=as.integer(round(nAgents / (averageHerdSize + 1))), days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, ...)
+      averageHerdSize <<- averageHerdSize
+      return(invisible(.self))
+    },
+    
+    newInstance = function(context, response="C", isTest=F) {
+      callSuper()
+      study <<- SimulationStudy$new(response=response)$newInstance(context=context, isTest=isTest)
+      initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
+      return(invisible(.self))
+    },
+    
+    randomizeHerdSize = function() {
+      return(rpois(length(agents), averageHerdSize) + 1)
+    }
+  )
+)
+
 # Same as scenario A, but with clustered initial locations
 MovementSimulationScenarioD <- setRefClass(
   Class = "MovementSimulationScenarioD",
@@ -361,7 +397,6 @@ MovementSimulationScenarioD <- setRefClass(
       study <<- SimulationStudy$new(response=response)$newInstance(context=context, isTest=isTest)
       initialPopulation <<- if (isTest) ClusteredInitialPopulation$new(studyArea=study$studyArea, range=100e3, sigma=4, max.edge=3000)
       else ClusteredInitialPopulation$new(studyArea=study$studyArea)
-      initialPopulation <<- study$getInitialPopulation(clustered=TRUE, isTest=isTest)
       return(invisible(.self))
     }
   )

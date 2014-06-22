@@ -18,8 +18,8 @@ SurveyRoutes <- setRefClass(
     toGGDF = function() {
       library(sp)
       library(ggplot2)
-      surveyRoutesSP <- SpatialLinesDataFrame(surveyRoutes, data=data.frame(x=1:length(surveyRoutes)), match.ID=FALSE)
-      return(ggplot2::fortify(surveyRoutesSP))
+      surveyRoutesSPDF <- SpatialLinesDataFrame(surveyRoutes, data=data.frame(dummy=1:length(surveyRoutes)), match.ID=FALSE)
+      return(ggplot2::fortify(surveyRoutesSPDF))
     },
     
     getSurveyRoutesFileName = function() {

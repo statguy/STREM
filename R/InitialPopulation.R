@@ -13,6 +13,13 @@ InitialPopulation <- setRefClass(
       stop("randomize() undefined.")
     },
     
+    toGGDF = function() {
+      library(sp)
+      locationsDF <- as.data.frame(coordinates(locations))
+      colnames(locationsDF) <- c("x","y")
+      return(locationsDF)
+    },
+    
     plotLocations = function() {
       library(sp)
       plot(locations, col="blue")
@@ -55,7 +62,7 @@ ClusteredInitialPopulation <- setRefClass(
 
       sampleMaternRandomField(range=range, sigma=sigma, seed=seed, max.edge=max.edge, fun=fun)
       
-      if (!missing(habitatWeights) & !is.null(habitatWeights)) {
+      if (!missing(habitatWeights) && !is.null(habitatWeights)) {
         habitatWeights <<- habitatWeights
         setHabitatWeightsForField()
       }
