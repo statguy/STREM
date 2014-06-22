@@ -285,6 +285,7 @@ SmoothModelSpatioTemporal <- setRefClass(
     
     setup = function(intersections, params) {
       library(INLA)
+      library(R.utils)
       
       callSuper(intersections=intersections, params=params)
       setModelName(family=params$family, randomEffect=paste("matern", params$timeModel, sep="-"))
@@ -300,10 +301,16 @@ SmoothModelSpatioTemporal <- setRefClass(
       
       coordsScale <<- params$meshParams$coordsScale
       locations <<- intersections$getCoordinates() * coordsScale
-      mesh <<- inla.mesh.create.helper(points.domain=locations,
-                                       min.angle=params$meshParams$minAngle,
-                                       max.edge=params$meshParams$maxEdge * coordsScale,
-                                       cutoff=params$meshParams$cutOff * coordsScale)
+      
+      mesh <<- evalWithTimeout(inla.mesh.create.helper(points.domain=locations,
+                                                       min.angle=params$meshParams$minAngle,
+                                                       max.edge=params$meshParams$maxEdge * coordsScale,
+                                                       cutoff=params$meshParams$cutOff * coordsScale),
+                               timeout=10, onTimeout="error")
+      #mesh <<- inla.mesh.create.helper(points.domain=locations,
+      #                                 min.angle=params$meshParams$minAngle,
+      #                                 max.edge=params$meshParams$maxEdge * coordsScale,
+      #                                 cutoff=params$meshParams$cutOff * coordsScale)
 
       nYears <- length(years)
       groupYears <- as.integer(data$year - min(years) + 1)

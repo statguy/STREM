@@ -91,7 +91,7 @@ simulate = function(scenario, nSurveyRoutes=as.integer(50), nAgents=as.integer(2
     populationSizeWeighted <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration))
     
     habitatWeights; populationSize; populationSizeWeighted
-    size <- rbind(size, data.frame(obs=sum(model$data$intersections), fitted=sum(model$data$fittedMean * model$getObservedOffset()), sizew=populationSizeWeighted$sizeData$Estimated, size=populationSize$sizeData$Estimated, iteration=iteration))
+    size <- rbind(size, data.frame(obs=sum(model$data$intersections), fitted=sum(model$data$fittedMean * model$getObservedOffset()), truesize=tracks$getTruePopulationSize()$Observed, estwsize=populationSizeWeighted$sizeData$Estimated, estsize=populationSize$sizeData$Estimated, iteration=iteration))
     
     
     #populationSize <- model$getPopulationSize(tracks=tracks, withHabitatWeights=mss$hasHabitatWeights())
@@ -111,7 +111,7 @@ if (task_id > 0) {
   
   size <- if (task_id == 1) simulate("A")
   else if (task_id == 2) simulate("B")
-  else if (task_id == 3) simulate("B")
+  else if (task_id == 3) simulate("C")
   else if (task_id == 4) simulate("D")
   else if (task_id == 5) simulate("E")
   

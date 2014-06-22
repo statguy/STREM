@@ -238,7 +238,7 @@ MovementSimulationScenario <- setRefClass(
               #  study$studyArea$readRasterIntoMemory()                
               #}
               
-              message("Iteration = ", iteration, ", agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgentsCurrent, ", year = ", year,  " / ", years, ", days = ", days, "...")
+              message("Iteration = ", iteration, ", agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgentsCurrent, ", year = ", year,  " / ", years, ", days = ", days, ", herd size = ", herdSize[agentIndex], "...")
               track <- randomizeBCRWTrack(initialLocation=initialLocations[agentIndex,,drop=F],
                                          initialAngle=initialAngles[agentIndex],
                                          isFirst=isFirst,
@@ -363,8 +363,8 @@ MovementSimulationScenarioC <- setRefClass(
     averageHerdSize = "integer"
   ),
   methods = list(
-    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.7, averageHerdSize=as.integer(4), ...) {
-      callSuper(years=years, nAgents=as.integer(round(nAgents / (averageHerdSize + 1))), days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, ...)
+    initialize = function(nAgents=as.integer(200/5), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.7, averageHerdSize=as.integer(4), ...) {
+      callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, ...)
       averageHerdSize <<- averageHerdSize
       return(invisible(.self))
     },
