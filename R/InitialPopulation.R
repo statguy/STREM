@@ -95,7 +95,7 @@ ClusteredInitialPopulation <- setRefClass(
       library(raster)
       message("Extracting habitat types...")
       meshLocations <- mesh$loc[,1:2,drop=F]
-      habitatTypes <- extract(studyArea$habitat, meshLocations)
+      habitatTypes <- raster::extract(studyArea$habitat, meshLocations)
       weights <<- habitatWeights$getWeights(habitatTypes)
       return(invisible(.self))
     },

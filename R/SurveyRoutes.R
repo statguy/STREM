@@ -142,7 +142,7 @@ FinlandRandomForestWTCSurveyRoutes <- setRefClass(
         angles <- runif(length(candidateCentroids), 0, 2*pi)
         candidateSurveyRoutes <- getTriangles(candidateCentroids, angles, 4000)
         for (j in 1:length(candidateSurveyRoutes)) {
-          habitatTypes <- extract(habitat, candidateSurveyRoutes[j])[[1]]
+          habitatTypes <- raster::extract(habitat, candidateSurveyRoutes[j])[[1]]
           classifiedHabitatTypes <- habitatWeights$classify(habitatTypes) == 3 # Forest
           if (sum(classifiedHabitatTypes) / length(classifiedHabitatTypes) > .9) {
             triangle <- candidateSurveyRoutes[j]@lines[[1]]

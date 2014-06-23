@@ -32,7 +32,7 @@ HabitatSelection <- setRefClass(
           randomizedLocations <- randomizeSteps(movements=m, location=location, nSamples=nSamples)
           #randomizedSteps <- m[sample(1:nrow(m), min(nSamples, nrow(m))), c("dx","dy")]
           #randomizedLocations <- cbind(x=location$x + randomizedSteps$dx, y=location$y + randomizedSteps$dy)
-          habitatSample <- extract(habitat, SpatialPoints(randomizedLocations, CRS(projection(habitat))))    
+          habitatSample <- raster::extract(habitat, SpatialPoints(randomizedLocations, CRS(projection(habitat))))    
           p <- p + habitatWeightsTemplate$getHabitatFrequencies(habitatSample)
         }
         
@@ -53,7 +53,7 @@ HabitatSelection <- setRefClass(
         message("Processing burst = ", m$burst[1], " n = ", nrow(m), "...")
         
         locations <- m[,c("x","y")]
-        habitatSample <- extract(habitat, SpatialPoints(locations, CRS(projection(habitat))))  
+        habitatSample <- raster::extract(habitat, SpatialPoints(locations, CRS(projection(habitat))))  
         p <- prop.table(habitatWeightsTemplate$getHabitatFrequencies(habitatSample))
         return(p)
       }, habitat=study$studyArea$habitat, habitatWeightsTemplate=habitatWeightsTemplate, .parallel=TRUE, .paropts=list(.packages=c("raster","sp")))

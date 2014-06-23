@@ -78,7 +78,7 @@ MovementSimulationScenario <- setRefClass(
         return(list(index=1, coords=locations[1,,drop=F]))
       }
       else {
-        habitatTypes <- extract(study$studyArea$habitat, locations)
+        habitatTypes <- raster::extract(study$studyArea$habitat, locations)
         w <- habitatWeights$getWeights(habitatTypes)
         w[outsideBoundary] <- 0
         
