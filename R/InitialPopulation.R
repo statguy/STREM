@@ -102,7 +102,7 @@ ClusteredInitialPopulation <- setRefClass(
     
     randomize = function(n) {
       library(sp)
-      index <- sample(1:mesh$n, size=n, replace=T, prob=samples * weights)
+      index <- sample(1:mesh$n, size=n, replace=F, prob=samples * weights)
       xy <- mesh$loc[index,]
       locations <<- SpatialPoints(xy[,1:2,drop=F], proj4string=studyArea$proj4string)
       return(locations)

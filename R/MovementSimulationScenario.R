@@ -334,15 +334,17 @@ MovementSimulationScenarioB <- setRefClass(
   ),
   methods = list(
     initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.7, BCRWCorrelationBiasTradeoff=0.3, homeRangeRadius=10000, ...) {
-      callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, ...)
-      
+      callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, ...)
+      setAgents()
+      return(invisible(.self))
+    },
+    
+    setAgents = function() {
       pAgentsA <- 0.1
       nAgentsA <- round(pAgentsA * nAgents)
       nAgentsB <- nAgents - nAgentsA
       BCRWCorrelationBiasTradeoff <<- c(rep(NA, nAgentsA), rep(BCRWCorrelationBiasTradeoff, nAgentsB))
-      homeRangeRadius <<- c(rep(NA, nAgentsA), rep(homeRangeRadius, nAgentsB))
-      
-      return(invisible(.self))
+      homeRangeRadius <<- c(rep(NA, nAgentsA), rep(homeRangeRadius, nAgentsB))      
     },
     
     newInstance = function(context, response="B", isTest=F) {
@@ -353,7 +355,6 @@ MovementSimulationScenarioB <- setRefClass(
     }
   )
 )
-
 
 # Same as scenario A, but with animals moving in groups
 MovementSimulationScenarioC <- setRefClass(
@@ -416,13 +417,15 @@ MovementSimulationScenarioE <- setRefClass(
       return(invisible(.self))
     },
     
-    newInstance = function(context, response="E", isTest=F) {
+    newInstance = function(context, response="E", isTest=F, range=Inf, sigma=1) {
+      if (length(nSurveyRoutes) == 0) stop("Provide the number of survey routes.")
+      
       callSuper()
       study <<- SimulationStudy$new(response=response)$newInstance(context=context, isTest=isTest)
       
       samplingWeights <- CORINEHabitatWeights$new(list(Urban=0.1, Agriculture=0.1, Forestland=1, Peatland=0.5, Water=0))
-      initialPopulation <<- if (isTest) ClusteredInitialPopulation$new(studyArea=study$studyArea, range=Inf, max.edge=3000, habitatWeights=samplingWeights)
-      else ClusteredInitialPopulation$new(studyArea=study$studyArea, range=Inf, habitatWeights=samplingWeights)
+      initialPopulation <<- if (isTest) ClusteredInitialPopulation$new(studyArea=study$studyArea, range=range, sigma=sigma, max.edge=3000, habitatWeights=samplingWeights)
+      else ClusteredInitialPopulation$new(studyArea=study$studyArea, range=range, sigma=sigma, habitatWeights=samplingWeights)
       
       habitatWeights <<- CORINEHabitatWeights$new(list(Urban=0.1, Agriculture=0.1, Forestland=1, Peatland=0.5, Water=0.05))
       surveyRoutes <<- FinlandRandomForestWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
@@ -435,6 +438,37 @@ MovementSimulationScenarioE <- setRefClass(
     }
   )
 )
+
+# Combines scenarios B-E
+MovementSimulationScenarioF <- setRefClass(
+  Class = "MovementSimulationScenarioF",
+  contains = c("MovementSimulationScenarioE", "MovementSimulationScenarioC", "MovementSimulationScenarioB"),
+  methods = list(
+    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.7, BCRWCorrelationBiasTradeoff=0.3, homeRangeRadius=10000, averageHerdSize=as.integer(4), ...) {
+      callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, averageHerdSize=averageHerdSize, ...)
+      setAgents()
+      return(invisible(.self))
+    },
+    
+    newInstance = function(context, response="F", isTest=F) {
+      return(callSuper(context=context, response=response, isTest=isTest, range=100e3, sigma=4))
+    },
+    
+    randomizeHerdSize = function() {
+      return(rpois(length(agents), averageHerdSize) + 1)
+    }
+    
+    #getSurveyRoutes = function(nSurveyRoutes) {
+    #  return(surveyRoutes)
+    #}
+  )
+)
+
+
+
+
+
+
 
 
 ##############
@@ -554,45 +588,3 @@ MovementSimulationScenarioA.FixedDistances <- setRefClass(
     }
   )
 )
-
-
-
-if (F) {
-
-
-# TODO: scenario C
-
-# Biased correlated random walk in a homogenous landscape, spatial variation in initial locations
-MovementSimulationScenarioD <- setRefClass(
-  Class = "MovementSimulationScenarioD",
-  contains = "MovementSimulationScenarioA",
-  fields = list(
-    
-  ),
-  methods = list(
-    initialize = function(isTest=FALSE, response="D", ...) {
-      callSuper(response=response, isTest=isTest, ...)
-      initialPopulation <<- ClusteredInitialPopulation$new(studyArea=study$studyArea, habitatWeights=CORINEHabitatWeights())
-    }
-  )
-)
-
-# Correlated random walk in a heterogenous landscape, random initial locations
-MovementSimulationScenarioE <- setRefClass(
-  Class = "MovementSimulationScenarioE",
-  contains = "MovementSimulationScenarioA",
-  methods = list(
-    initialize = function(isTest=FALSE, response="E", ...) {
-      callSuper(response=response, isTest=isTest, ...)
-      return(.self)
-    },
-    
-    newInstance = function() {
-      callSuper()
-      habitatWeights <<- CORINEHabitatWeights$new(list(urban=0.1, agriculture=0.1, forestland=1, peatland=0.5, water=0.05))
-      return(.self)
-    }
-  )
-)
-
-}

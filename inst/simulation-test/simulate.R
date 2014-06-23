@@ -17,7 +17,7 @@ simulate = function(scenario, nSurveyRoutes=as.integer(50), nAgents=as.integer(2
     else if (scenario == "C") MovementSimulationScenarioC$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$newInstance(context=context, isTest=T)
     else if (scenario == "D") MovementSimulationScenarioD$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$newInstance(context=context, isTest=T)
     else if (scenario == "E") MovementSimulationScenarioE$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, nSurveyRoutes=nSurveyRoutes)$newInstance(context=context, isTest=T)
-    else if (scenario == "F") stop("unsupported")
+    else if (scenario == "F") MovementSimulationScenarioF$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, nSurveyRoutes=nSurveyRoutes)$newInstance(context=context, isTest=T)
     else stop("unsupported")
   }
   
@@ -38,17 +38,20 @@ simulate = function(scenario, nSurveyRoutes=as.integer(50), nAgents=as.integer(2
       boundaryDF <- study$studyArea$toGGDF()
       
       p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_path() +
-        geom_point(data=mss$initialPopulation$toGGDF(), aes(x, y, group=NA), shape="+", size=8, colour="red", alpha=0.7) + theme_raster()
+        geom_point(data=mss$initialPopulation$toGGDF(), aes(x, y, group=NA), shape="+", size=8, colour="red", alpha=0.7) +
+        coord_equal() + theme_raster()
       plot(p)
       saveFigure(p, filename=paste("SimulatedInitialLocations-", scenario, "-", study$studyArea$region, ".svg", sep=""), bg="transparent")
       
       p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_path() +
-        geom_path(data=tracks$toGGDF(), aes(long, lat, group=group, colour=id), size=1, alpha=0.7) + theme_raster()
+        geom_path(data=tracks$toGGDF(), aes(long, lat, group=group, colour=id), size=1, alpha=0.7) +
+        coord_equal() + theme_raster()
       plot(p)
       saveFigure(p, filename=paste("SimulatedTracks-", scenario, "-", study$studyArea$region, ".svg", sep=""), bg="transparent")
       
       p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_path() +
-        geom_path(data=surveyRoutes$toGGDF(), aes(long, lat, group=group), size=1, colour="blue", alpha=0.7) + theme_raster()
+        geom_path(data=surveyRoutes$toGGDF(), aes(long, lat, group=group), size=1, colour="blue", alpha=0.7) +
+        coord_equal() + theme_raster()
       plot(p)
       saveFigure(p, filename=paste("SimulatedSurveyRoutes-", scenario, "-", study$studyArea$region, ".svg", sep=""), bg="transparent")
     }
@@ -114,6 +117,7 @@ if (task_id > 0) {
   else if (task_id == 3) simulate("C")
   else if (task_id == 4) simulate("D")
   else if (task_id == 5) simulate("E")
+  else if (task_id == 6) simulate("F")
   
   print(colMeans(size))
   print(colSDs(size))

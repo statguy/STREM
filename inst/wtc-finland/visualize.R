@@ -463,7 +463,7 @@ simulate(scenario="B", nIterations=as.integer(1), plot=TRUE)
 simulate(scenario="C", nIterations=as.integer(1), plot=TRUE)
 simulate(scenario="D", nIterations=as.integer(1), plot=TRUE)
 simulate(scenario="E", nIterations=as.integer(1), plot=TRUE)
-
+simulate(scenario="F", nIterations=as.integer(1), plot=TRUE)
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
 study <- SimulationStudy$new()$newInstance(context=context, isTest=T)
