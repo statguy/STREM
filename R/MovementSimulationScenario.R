@@ -34,7 +34,7 @@ MovementSimulationScenario <- setRefClass(
       return(invisible(.self))
     },
     
-    newInstance = function() {
+    setup = function() {
       if (inherits(BCRWCorrelationBiasTradeoff, "uninitializedField")) BCRWCorrelationBiasTradeoff <<- rep(NA, nAgents)
       if (inherits(homeRangeRadius, "uninitializedField")) homeRangeRadius <<- rep(NA, nAgents)
       nSteps.tmp <- 24 * days / stepIntervalHours
@@ -316,9 +316,9 @@ MovementSimulationScenarioA <- setRefClass(
       return(invisible(.self))
     },
     
-    newInstance = function(context, response="A", isTest=F) {
+    setup = function(context, response="A", isTest=F) {
       callSuper()
-      study <<- SimulationStudy$new(response=response)$newInstance(context=context, isTest=isTest)
+      study <<- SimulationStudy$new(response=response)$setup(context=context, isTest=isTest)
       initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
       return(invisible(.self))
     }
@@ -347,9 +347,9 @@ MovementSimulationScenarioB <- setRefClass(
       homeRangeRadius <<- c(rep(NA, nAgentsA), rep(homeRangeRadius, nAgentsB))      
     },
     
-    newInstance = function(context, response="B", isTest=F) {
+    setup = function(context, response="B", isTest=F) {
       callSuper()
-      study <<- SimulationStudy$new(response=response)$newInstance(context=context, isTest=isTest)
+      study <<- SimulationStudy$new(response=response)$setup(context=context, isTest=isTest)
       initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
       return(invisible(.self))
     }
@@ -370,9 +370,9 @@ MovementSimulationScenarioC <- setRefClass(
       return(invisible(.self))
     },
     
-    newInstance = function(context, response="C", isTest=F) {
+    setup = function(context, response="C", isTest=F) {
       callSuper()
-      study <<- SimulationStudy$new(response=response)$newInstance(context=context, isTest=isTest)
+      study <<- SimulationStudy$new(response=response)$setup(context=context, isTest=isTest)
       initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
       return(invisible(.self))
     },
@@ -393,9 +393,9 @@ MovementSimulationScenarioD <- setRefClass(
       return(invisible(.self))
     },
     
-    newInstance = function(context, response="D", isTest=F) {
+    setup = function(context, response="D", isTest=F) {
       callSuper()
-      study <<- SimulationStudy$new(response=response)$newInstance(context=context, isTest=isTest)
+      study <<- SimulationStudy$new(response=response)$setup(context=context, isTest=isTest)
       initialPopulation <<- if (isTest) ClusteredInitialPopulation$new(studyArea=study$studyArea, range=100e3, sigma=4, max.edge=3000)
       else ClusteredInitialPopulation$new(studyArea=study$studyArea)
       return(invisible(.self))
@@ -417,11 +417,11 @@ MovementSimulationScenarioE <- setRefClass(
       return(invisible(.self))
     },
     
-    newInstance = function(context, response="E", isTest=F, range=Inf, sigma=1) {
+    setup = function(context, response="E", isTest=F, range=Inf, sigma=1) {
       if (length(nSurveyRoutes) == 0) stop("Provide the number of survey routes.")
       
       callSuper()
-      study <<- SimulationStudy$new(response=response)$newInstance(context=context, isTest=isTest)
+      study <<- SimulationStudy$new(response=response)$setup(context=context, isTest=isTest)
       
       samplingWeights <- CORINEHabitatWeights$new(list(Urban=0.1, Agriculture=0.1, Forestland=1, Peatland=0.5, Water=0))
       initialPopulation <<- if (isTest) ClusteredInitialPopulation$new(studyArea=study$studyArea, range=range, sigma=sigma, max.edge=3000, habitatWeights=samplingWeights)
@@ -450,7 +450,7 @@ MovementSimulationScenarioF <- setRefClass(
       return(invisible(.self))
     },
     
-    newInstance = function(context, response="F", isTest=F) {
+    setup = function(context, response="F", isTest=F) {
       return(callSuper(context=context, response=response, isTest=isTest, range=100e3, sigma=4))
     },
     
@@ -484,9 +484,9 @@ MovementSimulationScenarioIntensive <- setRefClass(
       return(invisible(.self))
     },
     
-    newInstance = function(context, response="Intensive") {
+    setup = function(context, response="Intensive") {
       callSuper()
-      study <<- SimulationStudy$new(response=response)$newInstance(context=context)
+      study <<- SimulationStudy$new(response=response)$setup(context=context)
       initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
       return(invisible(.self))
     }
@@ -506,10 +506,10 @@ MovementSimulationScenarioCombined <- setRefClass(
       return(invisible(.self))
     },
     
-    newInstance = function(context, response="A") {
+    setup = function(context, response="A") {
       sourceResponse <<- response
       response <- paste("Combined", sourceResponse, sep="")
-      study <<- SimulationStudy$new(response=response)$newInstance(context=context)
+      study <<- SimulationStudy$new(response=response)$setup(context=context)
       return(invisible(.self))
     },
     
@@ -519,7 +519,7 @@ MovementSimulationScenarioCombined <- setRefClass(
       if (length(n) == 0)
         stop("Provide n parameter to constructor.")
       
-      sourceStudy <- SimulationStudy$new(response=sourceResponse)$newInstance(context=study$context)
+      sourceStudy <- SimulationStudy$new(response=sourceResponse)$setup(context=study$context)
       iterations <- sourceStudy$context$getIterationIds(dir=study$context$resultDataDirectory, name="Intersections", response=sourceStudy$response, region=sourceStudy$studyArea$region)
       n.remove <- length(iterations) %% n
       iterations <- iterations[1:(length(iterations) - n.remove)]
@@ -583,7 +583,7 @@ MovementSimulationScenarioA.FixedDistances <- setRefClass(
       rep(stepSpeedScale * stepIntervalHours * distanceScale, n)
     },
     
-    newInstance = function(context, response="A.FixedDistances") {
+    setup = function(context, response="A.FixedDistances") {
       return(invisible(callSuper(context=context, response=response)))
     }
   )

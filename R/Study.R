@@ -33,10 +33,10 @@ SimulationStudy <- setRefClass(
       return(invisible(.self))
     },
     
-    newInstance = function(context, isTest=F) {
+    setup = function(context, isTest=F) {
       context <<- context
-      studyArea <<- if (isTest) TestStudyArea$new(context=context)$newInstance()
-      else FinlandStudyArea$new(context=context)$newInstance()
+      studyArea <<- if (isTest) TestStudyArea$new(context=context)$setup()
+      else FinlandStudyArea$new(context=context)$setup()
       return(invisible(.self))
     },
     
@@ -136,7 +136,7 @@ FinlandWTCStudy <- setRefClass(
   methods = list(
     initialize = function(context, ...) {
       callSuper(context=context, ...)
-      studyArea <<- FinlandStudyArea$new(context=context)$newInstance(tolerance=0.001)
+      studyArea <<- FinlandStudyArea$new(context=context)$setup(tolerance=0.001)
       return(invisible(.self))
     },
     
@@ -340,7 +340,7 @@ RussiaWTCStudy <- setRefClass(
   methods = list(
     initialize = function(context, ...) {
       callSuper(context=context, ...)
-      studyArea <<- RussiaStudyArea$new(context=context)$newInstance()
+      studyArea <<- RussiaStudyArea$new(context=context)$setup()
       return(invisible(.self))
     },
     
@@ -373,7 +373,7 @@ FinlandRussiaWTCStudy <- setRefClass(
   methods = list(
     initialize = function(context, ...) {
       callSuper(context=context, ...)
-      studyArea <<- FinlandRussiaStudyArea$new(context=context)$newInstance()
+      studyArea <<- FinlandRussiaStudyArea$new(context=context)$setup()
       return(invisible(.self))
     },
     

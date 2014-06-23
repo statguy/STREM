@@ -5,15 +5,15 @@
 
 dryRun <- function(iteration, test) {
   context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-  mss <- if (test == "test") MovementSimulationScenarioA$new(nAgents=as.integer(2), nIterations=as.integer(5), years=as.integer(2))$newInstance(context=context)
-  else MovementSimulationScenarioA$new()$newInstance(context=context)
+  mss <- if (test == "test") MovementSimulationScenarioA$new(nAgents=as.integer(2), nIterations=as.integer(5), years=as.integer(2))$setup(context=context)
+  else MovementSimulationScenarioA$new()$setup(context=context)
   message("SUCCESS")
 }
 
 simulateA <- function(iteration, test) {
   context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-  mss <- if (test == "test") MovementSimulationScenarioA$new(nAgents=as.integer(2), nIterations=as.integer(5), years=as.integer(2))$newInstance(context=context)
-  else MovementSimulationScenarioA$new()$newInstance(context=context)
+  mss <- if (test == "test") MovementSimulationScenarioA$new(nAgents=as.integer(2), nIterations=as.integer(5), years=as.integer(2))$setup(context=context)
+  else MovementSimulationScenarioA$new()$setup(context=context)
   mss$simulateSingle(iteration=iteration)
 }
 

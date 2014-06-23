@@ -12,12 +12,12 @@ simulate = function(scenario, nSurveyRoutes=as.integer(50), nAgents=as.integer(2
   
   context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
   mss <- {
-    if (scenario == "A") MovementSimulationScenarioA$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$newInstance(context=context, isTest=T)
-    else if (scenario == "B") MovementSimulationScenarioB$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff)$newInstance(context=context, isTest=T)
-    else if (scenario == "C") MovementSimulationScenarioC$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$newInstance(context=context, isTest=T)
-    else if (scenario == "D") MovementSimulationScenarioD$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$newInstance(context=context, isTest=T)
-    else if (scenario == "E") MovementSimulationScenarioE$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, nSurveyRoutes=nSurveyRoutes)$newInstance(context=context, isTest=T)
-    else if (scenario == "F") MovementSimulationScenarioF$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, nSurveyRoutes=nSurveyRoutes)$newInstance(context=context, isTest=T)
+    if (scenario == "A") MovementSimulationScenarioA$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context, isTest=T)
+    else if (scenario == "B") MovementSimulationScenarioB$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff)$setup(context=context, isTest=T)
+    else if (scenario == "C") MovementSimulationScenarioC$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context, isTest=T)
+    else if (scenario == "D") MovementSimulationScenarioD$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context, isTest=T)
+    else if (scenario == "E") MovementSimulationScenarioE$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, nSurveyRoutes=nSurveyRoutes)$setup(context=context, isTest=T)
+    else if (scenario == "F") MovementSimulationScenarioF$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, nSurveyRoutes=nSurveyRoutes)$setup(context=context, isTest=T)
     else stop("unsupported")
   }
   
@@ -119,6 +119,8 @@ if (task_id > 0) {
   else if (task_id == 5) simulate("E")
   else if (task_id == 6) simulate("F")
   
-  print(colMeans(size))
-  print(colSDs(size))
+  index <- abs(size$truesize - size$estwsize) < 100
+  size2 <- size[index,]
+  print(colMeans(size2))
+  print(colSDs(size2))
 }

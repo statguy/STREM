@@ -407,7 +407,7 @@ saveFigure(p, filename="PopulationSize.svg", bg="transparent")
 ### Straight-line distance error
 ######
 
-study <- SimulationStudy$new(response="Intensive")$newInstance(context=context)
+study <- SimulationStudy$new(response="Intensive")$setup(context=context)
 tracks <- study$loadTracks(iteration=as.integer(1))
 tracks$tracks <- subset(tracks$tracks, id == 1 & year == 2001 & month == 1 & day %in% c(2,3))
 intervals <- MovementSampleIntervals$new(study=study)
@@ -466,7 +466,7 @@ simulate(scenario="E", nIterations=as.integer(1), plot=TRUE)
 simulate(scenario="F", nIterations=as.integer(1), plot=TRUE)
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-study <- SimulationStudy$new()$newInstance(context=context, isTest=T)
+study <- SimulationStudy$new()$setup(context=context, isTest=T)
 png(file.path(context$figuresDirectory, "SimulationStudyArea-E-test.png"))
 plot(study$studyArea$habitat)
 dev.off()

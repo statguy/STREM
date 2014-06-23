@@ -18,7 +18,7 @@ StudyArea <- setRefClass(
       return(invisible(.self))
     },
     
-    newInstance = function(thin=TRUE, tolerance=0.1, prepareHabitatRaster=FALSE, rawRasterFile) {
+    setup = function(thin=TRUE, tolerance=0.1, prepareHabitatRaster=FALSE, rawRasterFile) {
       loadBoundary(thin=thin, tolerance=tolerance)
       if (prepareHabitatRaster) {
         if (missing(rawRasterFile)) stop("rawRasterFile parameter missing.")
@@ -332,8 +332,8 @@ FinlandRussiaStudyArea <- setRefClass(
       library(sp)
       library(rgdal)
       
-      finland <- FinlandStudyArea$new(context=context)$newInstance()
-      russia <- RussiaStudyArea$new(context=context)$newInstance()
+      finland <- FinlandStudyArea$new(context=context)$setup()
+      russia <- RussiaStudyArea$new(context=context)$setup()
       
       x <- spTransform(finland$boundary, russia$proj4string)
       y <- russia$boundary

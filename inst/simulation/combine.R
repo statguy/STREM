@@ -9,7 +9,7 @@ n <- 2
 response <- "A"
   
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-mss <- MovementSimulationScenarioCombined$new(n=as.integer(n))$newInstance(context=context, response=response)
+mss <- MovementSimulationScenarioCombined$new(n=as.integer(n))$setup(context=context, response=response)
 mss$combine()
 
 

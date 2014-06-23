@@ -40,6 +40,6 @@ library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-mss <- if (scenario == "A") MovementSimulationScenarioA$new()$newInstance(context=context) else stop("Unknown scenario ", scenario)
+mss <- if (scenario == "A") MovementSimulationScenarioA$new()$setup(context=context) else stop("Unknown scenario ", scenario)
 study <- mss$study
 countIntersections(study=study, iteration=as.integer(task_id), test=test=="test")

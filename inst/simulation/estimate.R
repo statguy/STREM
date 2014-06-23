@@ -39,7 +39,7 @@ estimate <- function(study, iteration, test) {
     message("Spatial test...")
     meshParams <- list(maxEdge=c(.1e6, .2e6), cutOff=.05e6, coordsScale=1e-6)
     interceptPriorParams <- list(mean=200, sd=199)
-    study <- SimulationStudySubset$new(response="A", years=as.integer(2001:2001))$newInstance(context=context)
+    study <- SimulationStudySubset$new(response="A", years=as.integer(2001:2001))$setup(context=context)
     intersections <- study$loadIntersections(iteration=iteration)
     model <- SimulatedSmoothModel$new(study=study, iteration=iteration)
     model$setup(intersections=intersections, meshParams=meshParams, useCovariates=FALSE)
@@ -69,6 +69,6 @@ library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-mss <- if (scenario == "A") MovementSimulationScenarioA$new()$newInstance(context=context) else stop("Unknown scenario ", scenario)
+mss <- if (scenario == "A") MovementSimulationScenarioA$new()$setup(context=context) else stop("Unknown scenario ", scenario)
 study <- mss$study
 estimate(study=study, iteration=as.integer(task_id), test)
