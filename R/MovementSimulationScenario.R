@@ -284,21 +284,20 @@ MovementSimulationScenario <- setRefClass(
       return(invisible(tracks))
     },
     
-    #simulateMultiple = function(nIterations=as.integer(50), restartIteration=1, iterationVector=1:nIterations, save=FALSE) {
-    #  nIterations <<- nIterations
-    #  stopifnot(restartIteration <= nIterations)
-    #  
-    #  simulatedTracks <- SimulatedTracksCollection$new(study=study)
-    #  for (i in restartIteration:nIterations) {
-    #    message("Iteration ", i, " of ", nIterations, "...")
-    #    tracksDF <- randomizeBCRWTracks(iteration=i)
-    #    date <- as.POSIXct(strptime(paste(2000+tracksDF$year, tracksDF$day, tracksDF$hour, tracksDF$minute, tracksDF$second), format="%Y %j %H %M %S"))
-    #    tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$agent, date=date, iteration=i)
-    #    simulatedTracks$addTracks(tracks)
-    #  }
-    #  
-    #  return(invisible(simulatedTracks))
-    #},
+    simulateMultiple = function(nIterations=as.integer(50), restartIteration=1, iterationVector=1:nIterations, save=FALSE) {
+      #nIterations <<- nIterations
+      stopifnot(restartIteration <= nIterations)
+      
+      simulatedTracks <- SimulatedTracksCollection$new(study=study)
+      for (i in restartIteration:nIterations) {
+        message("Iteration ", i, " of ", nIterations, "...")
+        tracksDF <- randomizeBCRWTracks(iteration=i)
+        tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$id, date=tracksDF$date, dt=tracksDF$dt, dist=tracksDF$dist, burst=tracksDF$burst, year=tracksDF$year, yday=tracksDF$yday, iteration=i, herdSize=tracksDF$herdSize)
+        simulatedTracks$addTracks(tracks)
+      }
+      
+      return(invisible(simulatedTracks))
+    },
     
     hasHabitatWeights = function() {
       return(!inherits(habitatWeights, "uninitializedField"))

@@ -3,13 +3,12 @@ source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 library(sp)
 library(ggplot2)
 library(rasterVis)
-library(ggthemes)
 library(reshape2)
 library(plyr)
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
 study <- FinlandWTCStudy$new(context=context, response="canis.lupus")
-study$studyArea$loadBoundary(thin=TRUE, tolerance=0.001)
+study$studyArea$loadBoundary(thin=F, tolerance=0.001)
 boundaryDF <- study$studyArea$toGGDF()
 responses <- c("canis.lupus", "lynx.lynx", "rangifer.tarandus.fennicus")
 
@@ -69,8 +68,8 @@ getTracks <- function(responses, context) {
 tracks <- getTracks(responses=responses, context=context)
 
 p <- ggplot(tracks, aes(long, lat, group=group, colour=response)) +
-  geom_polygon(data=boundaryDF,  colour="white") + coord_equal() +
-  geom_path() + facet_grid(~response) + theme_raster(20)
+  geom_polygon(data=boundaryDF, colour="black", fill=NA) +
+  geom_path(alpha=0.7, size=1) + facet_grid(~response) + theme_raster(20) + theme(strip.text.x=element_blank()) + coord_equal()
 print(p)
 saveFigure(p, filename="GPS.svg", bg="transparent")
 
@@ -164,7 +163,7 @@ getHabitatWeights <- function(responses, context) {
 weights <- getHabitatWeights(responses=responses, context=context)
 p <- ggplot(weights, aes(habitat, weights, fill=habitat)) +
   geom_bar(stat="identity") + facet_grid(~response) + scale_fill_manual(values=c("#beaed4","#ffff99","#7fc97f","#fdc086","#386cb0")) +
-  xlab("") + ylab("Weight") + theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1))
+  xlab("") + ylab("Weight") + theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1)) + theme(strip.text.x=element_blank())
 print(p)
 saveFigure(p, filename="HabitatWeights.svg", bg="transparent")
 
@@ -223,7 +222,7 @@ for (response in responses) {
     geom_line(data=distances, aes(intervalH, distanceKm), color="red", size=1) +
     geom_smooth(data=distances, aes(ymin=distanceKm25, ymax=distanceKm975), stat="identity") +
     ylim(c(0, max(intervals$intervals$distanceKm))) +
-    theme_presentation() + ggtitle(study$getPrettyResponse(response))
+    theme_presentation() #+ ggtitle(study$getPrettyResponse(response))
   
   plot(p)
   saveFigure(p, filename=paste("DistanceCorrection-", response, ".svg", sep=""), bg="transparent")
@@ -409,15 +408,17 @@ saveFigure(p, filename="PopulationSize.svg", bg="transparent")
 
 study <- SimulationStudy$new(response="Intensive")$setup(context=context)
 tracks <- study$loadTracks(iteration=as.integer(1))
-tracks$tracks <- subset(tracks$tracks, id == 1 & year == 2001 & month == 1 & day %in% c(2,3))
+tracks$tracks <- subset(tracks$tracks, id == 1 & date < as.POSIXct("2001-01-03 00:00:00"))
+#tracks$tracks <- cbind(tracks$tracks, breakDownDate(tracks$tracks$date))
 intervals <- MovementSampleIntervals$new(study=study)
 thinnedTracks <- intervals$getThinnedTracksSampleIntervals(tracks=tracks)
 
 plotTracks <- data.frame()
 for (i in seq(1, 11, by=5)) {
   x <- thinnedTracks$tracksList[[i]]$tracks
-  x$thin <- i 
-  x <- subset(x, date >= as.POSIXct("2001-01-03 00:00:00") & date <= as.POSIXct("2001-01-03 03:40:00"))
+  x$thin <- i
+  #x <- subset(x, date >= as.POSIXct("2001-01-03 00:00:00") & date <= as.POSIXct("2001-01-03 03:40:00"))
+  x <- subset(x, date >= as.POSIXct("2001-01-01 00:00:00") & date <= as.POSIXct("2001-01-01 03:40:00"))
   plotTracks <- rbind(plotTracks, x)
 }
 plotTracks$thin <- factor(plotTracks$thin)
@@ -426,7 +427,7 @@ plotTracks$dt <- factor(plotTracks$dt / 60)
 segment <- aes(x=x, y=y, xend=c(tail(x, n=-1), NA), yend=c(tail(y, n=-1), NA), group=dt, colour=dt)
 ending <- arrow(length=unit(0.7, "cm"))
 p <- ggplot(plotTracks, mapping=segment) +
-  theme_raster(20, legend.position=c(0.5,0.85), legend.background=element_rect(color="grey")) + 
+  theme_raster(20, legend.position=c(0.3,0.85), legend.background=element_rect(color="grey")) + 
   #guides(colour=guide_legend(title=expression(paste(Delta, "t (min)")))) +
   guides(colour=guide_legend(title="Sampling interval (min)")) +
   scale_colour_manual(values=c("#4054de","#8094de","#b0c4de")) +
@@ -446,34 +447,6 @@ tracks <- study$loadTracks()
 p <- usage$plotSampleSteps(tracks=tracks, index=0:3+800-69)
 print(p)
 saveFigure(p, filename="HabitatUsageSampling.svg", bg="transparent")
-
-
-######
-### Simulations (test study area)
-######
-
-if (F) {
-  library(doMC)
-  registerDoMC(cores=detectCores())
-}
-task_id <- 0; source(file.path(path.package("WTC"), "simulation-test", "simulate.R"))
-
-simulate(scenario="A", nIterations=as.integer(1), plot=TRUE)
-simulate(scenario="B", nIterations=as.integer(1), plot=TRUE)
-simulate(scenario="C", nIterations=as.integer(1), plot=TRUE)
-simulate(scenario="D", nIterations=as.integer(1), plot=TRUE)
-simulate(scenario="E", nIterations=as.integer(1), plot=TRUE)
-simulate(scenario="F", nIterations=as.integer(1), plot=TRUE)
-
-context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-study <- SimulationStudy$new()$setup(context=context, isTest=T)
-png(file.path(context$figuresDirectory, "SimulationStudyArea-E-test.png"))
-plot(study$studyArea$habitat)
-dev.off()
-
-p <- ggplot(study$studyArea$toGGDF(), aes(long, lat, group=group)) + geom_path(size=1) + theme_raster()
-plot(p)
-saveFigure(p, filename="SimulationStudyArea-A-test.svg", bg="transparent")
 
 
 ######

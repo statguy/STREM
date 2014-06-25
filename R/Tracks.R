@@ -61,7 +61,8 @@ Tracks <- setRefClass(
       return(tracks)
     },
     
-    getSpatialLines = function(variables=.(id,year)) {
+    #getSpatialLines = function(variables=.(id,year)) {
+    getSpatialLines = function(variables=.(id,year,burst)) {
       library(sp)
       
       message("Converting tracks to SP object...")
@@ -246,7 +247,8 @@ Tracks <- setRefClass(
       }, by=by, .parallel=TRUE)
       
       if (nrow(tracksDFThinned) == 0) return(NULL)
-      tracksDFThinned <- tracksDFThinned[,c("x","y","id","date","year","month","day","yday","burst","dt","dist")]
+      
+      tracksDFThinned <- tracksDFThinned[,c("x","y","id","burst","date","dt","dist","herdSize","year","month","day","yday","dx","dy")]
       tracksDFThinned <- addDtDist(tracksDFThinned)
       
       newDt <- mean(tracksDFThinned$dt, na.rm=T)
@@ -275,8 +277,10 @@ SimulatedTracks <- setRefClass(
       callSuper(preprocessData=preprocessData, ...)
     },
     
-    setTracks = function(xy, id, date, dt, dist, burst, year, yday, herdSize) {  
-      tracks <<- data.frame(xy, id=id, burst=burst, date=date, year=year, yday=yday, dt=dt, dist=dist, herdSize=herdSize)
+    setTracks = function(xy, id, date, dt, dist, burst, year, yday, herdSize) {
+      #tracks <<- data.frame(xy, id=id, burst=burst, date=date, year=year, yday=yday, dt=dt, dist=dist, herdSize=herdSize)
+      tracks <<- data.frame(xy, id=id, burst=burst, date=date, dt=dt, dist=dist, herdSize=herdSize)
+      tracks <<- cbind(tracks, breakDownDate(tracks$date))
       tracks <<- addDtDist(tracks)
       return(invisible(.self))
     },
@@ -511,7 +515,8 @@ FinlandWTCTracks <- setRefClass(
       return(invisible(.self))
     },
     
-    getSpatialLines = function(variables=.(id,year)) {
+    #getSpatialLines = function(variables=.(id,year)) {
+    getSpatialLines = function(variables=.(id,year,burst)) {
       library(plyr)
       loadMetadata()
       tracksSP <- callSuper(variables=variables)
