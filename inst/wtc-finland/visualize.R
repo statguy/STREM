@@ -163,9 +163,10 @@ getHabitatWeights <- function(responses, context) {
 weights <- getHabitatWeights(responses=responses, context=context)
 p <- ggplot(weights, aes(habitat, weights, fill=habitat)) +
   geom_bar(stat="identity") + facet_grid(~response) + scale_fill_manual(values=c("#beaed4","#ffff99","#7fc97f","#fdc086","#386cb0")) +
-  xlab("") + ylab("Weight") + theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1)) + theme(strip.text.x=element_blank())
+  xlab("") + ylab("Weight") + theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1)) + theme(strip.text.x=element_blank(), panel.margin=unit(3, "lines"))
 print(p)
-saveFigure(p, filename="HabitatWeights.svg", bg="transparent")
+saveFigure(p, filename="HabitatWeights.svg", bg="transparent", height=4)
+
 
 ######
 ### Habitat weights rasters
@@ -178,13 +179,15 @@ for (response in responses) {
   #habitatWeights <- CORINEHabitatWeights$new(study=study)$setHabitatSelectionWeights(habitatPreferences)
   #rawHabitat <- raster(file.path(context$scratchDirectory, "clc2006_fi25m.tif"))
   #habitatWeights$getWeightsRaster(habitat=rawHabitat, save=TRUE)
-  
+    
   weightsRaster <- study$loadHabitatWeightsRaster()
-  weightsRaster <- SpatioTemporalRaster$new(study=study, layerList=list(weightsRaster), ext="svg")
-  p <- weightsRaster$plotLayer(layerName=1, plotTitle=study$getPrettyResponse(response), legendTitle="Weight")
-  p <- p + theme_raster(16, legend.position=c(0.1,0.6), legend.background=element_rect(color="grey")) #, text=element_text(size=20))
+  weightsRaster <- SpatioTemporalRaster$new(study=study, layerList=list(weightsRaster), ext="png")
+  breaks <- round(seq(minValue(weightsRaster$rasterStack[[1]]), maxValue(weightsRaster$rasterStack[[1]]), length.out = 7), digits = 2)
+  p <- weightsRaster$plotLayer(layerName=1, plotTitle=study$getPrettyResponse(response), legendTitle="Weight") +
+    ggtitle(NULL) + scale_fill_gradient(low = "white", high = "black", na.value="transparent", breaks=breaks, limits=range(breaks))
+  #p <- p + theme_raster(16, legend.position=c(0.1,0.6), legend.background=element_rect(color="grey")) #, text=element_text(size=20))
   print(p)
-  saveFigure(p, filename=paste("HabitatWeights-", response, ".svg", sep=""), bg="transparent")
+  saveFigure(p, filename=paste("HabitatWeights-", response, ".png", sep=""), bg="transparent")
 }
 
 
@@ -208,6 +211,7 @@ p <- ggplot(distances, aes(logDistance)) + geom_histogram(aes(y = ..density../su
 print(p)
 saveFigure(p, filename="DistanceDistributions.svg", bg="transparent")
 
+
 ######
 ### Power law fit for simulated data
 ######
@@ -229,6 +233,7 @@ for (response in responses) {
   # Fixed effects: populationDensity + rrday + snow + tday
   intervals$estimatedValuesSummary()  
 }
+
 
 ######
 ### Distance covariates
@@ -267,6 +272,7 @@ p <- weatherRaster$plotLayer("temp", boundary=boundaryDF, digits=0, plotTitle="J
   theme_raster(20, legend.position="right")
 plot(p)
 saveFigure(p, filename="WeatherTemperature.svg", bg="transparent")
+
 
 ######
 ### Predicted distance histograms and rasters
@@ -354,7 +360,7 @@ for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)  
   popdens <- populationDensity[[response]]$mean
   popdens$ext="svg"
-  popdens$animate(name="PopulationDensity", delay=50, ggfun=function(p) p + theme_raster(20))
+  popdens$animate(name="PopulationDensity", delay=50, ggfun=function(i, params) theme_raster(20))
 }
 
 weightedPopulationDensity <- getPopulationDensity(responses=responses, timeModels=c("ar1", "ar1", "rw2"), spatialModels=c(T, T, F), context=context, withHabitatWeights=TRUE)
@@ -362,8 +368,9 @@ for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   wpopdens <- weightedPopulationDensity[[response]]$mean
   wpopdens$ext="svg"
-  wpopdens$animate(name="WeightedPopulationDensity", delay=50, ggfun=function(p) p + theme_raster(20))
+  wpopdens$animate(name="WeightedPopulationDensity", delay=50, ggfun=function(i, params) theme_raster(20))
 }
+
 
 ######
 ### Population size
@@ -391,13 +398,19 @@ for (response in responses) {
   populationSize <- rbind(populationSize, y)
 }
 
+l <- levels(populationSize$Year)
+s <- seq(1, length(l), by=2)
+breaks <- l[s] 
+labels <- l[s]
+
 x <- melt(populationSize, id.vars=c("Year","response"), variable.name="Variable")
 p <- ggplot(x, aes(Year, value, group=Variable, colour=Variable, fill=Variable)) + facet_wrap(~response, scales="free_y") +
   geom_bar(subset=.(Variable=="Validation"), stat="identity") + geom_line(subset=.(Variable!="Validation"), size=2)  +
   scale_colour_manual(values=c("steelblue","violetred1","darkgreen")) +
   scale_fill_manual(values=c(NA,NA,"darkgreen")) +
+  scale_x_discrete(breaks=breaks, labels=labels) +
   xlab("Year") + ylab("Population size") +
-  theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1)) + theme(legend.position="bottom")
+  theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1)) + theme(legend.position="bottom", strip.text.x=element_blank())
 print(p)
 saveFigure(p, filename="PopulationSize.svg", bg="transparent")
 

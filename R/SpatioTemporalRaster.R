@@ -54,7 +54,7 @@ SpatioTemporalRaster <- setRefClass(
       layer <- crop(rasterStack[[layerName]], extent(study$studyArea$boundary))
       p <- gplot(layer) + geom_raster(aes(fill=value)) + coord_equal() +
         #scale_fill_gradientn(colours=terrain.colors(99), na.value=NA)
-        scale_fill_gradient(low="white", high="steelblue", na.value=NA, breaks=breaks)
+        scale_fill_gradient(low="white", high="steelblue", na.value=NA, breaks=breaks, limits=range(breaks))
       p <- if (!missing(legendTitle)) p + theme_raster(legend.position="right") + guides(fill=guide_legend(title=legendTitle))
       else p + theme_raster()
       
