@@ -200,10 +200,11 @@ SimulatedIntersections <- setRefClass(
       tracksObj <- tracks$getTracks()
       tracksDF <- if (inherits(tracksObj, "ltraj")) ld(tracksObj) else tracksObj
       
-      burstYear <- ddply(tracksDF, .(id, year), function(x) {
+      burstYear <- ddply(tracksDF, .(burst, id, year), function(x) {
         date <- as.POSIXlt(x$date)
         if (length(unique(x$herdSize)) != 1) stop("Herd size must be constant within a track.")
-        y <- data.frame(burst=x$burst[1],
+        y <- data.frame(burst=paste(x[1,c("burst","id","year")], collapse=" "),
+                        #burst=x$burst[1],
                         year=date$year[1] + 1900,
                         duration=round(as.numeric(difftime(max(x$date), min(x$date), units="days"))), # Here it is assumed that the observation period is continuous
                         herdSize=x$herdSize[1]) # Herd size does not change within track

@@ -184,7 +184,7 @@ for (response in responses) {
   weightsRaster <- SpatioTemporalRaster$new(study=study, layerList=list(weightsRaster), ext="png")
   breaks <- round(seq(minValue(weightsRaster$rasterStack[[1]]), maxValue(weightsRaster$rasterStack[[1]]), length.out = 7), digits = 2)
   p <- weightsRaster$plotLayer(layerName=1, plotTitle=study$getPrettyResponse(response), legendTitle="Weight") +
-    ggtitle(NULL) + scale_fill_gradient(low = "white", high = "black", na.value="transparent", breaks=breaks, limits=range(breaks))
+    ggtitle(NULL) + scale_fill_gradient(low = "white", high = "darkgreen", na.value="transparent", breaks=breaks, limits=range(breaks))
   #p <- p + theme_raster(16, legend.position=c(0.1,0.6), legend.background=element_rect(color="grey")) #, text=element_text(size=20))
   print(p)
   saveFigure(p, filename=paste("HabitatWeights-", response, ".png", sep=""), bg="transparent")
