@@ -1,9 +1,14 @@
 ```{r global_options, include=FALSE}
-opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, tidy=FALSE, fig.width=10, fig.height=15, cache=TRUE, cache.path="~/tmp/cache/")
+library(knitr)
+single_width <- 2.75591 * 2
+double_width <- single_width*2 + 0.5 * 2
+single_height <- single_width
+double_height <- double_width
+#opts_knit$set(base.dir="~/.pandoc")
+opts_chunk$set(echo=FALSE, warning=FALSE, message=FALSE, tidy=FALSE, fig.width=single_width, fig.height=single_height, cache=TRUE, cache.path="~/tmp/cache/")
+base_size <- 16
 ```
 
-NOTE: Figures and tables may be out of sync with the manuscript!
-----------------------------------------------------------------
 
 ```{r initialize}
 library(parallel)
@@ -19,23 +24,24 @@ library(plyr)
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
 study <- FinlandWTCStudy$new(context=context, response="canis.lupus")
-study$studyArea$loadBoundary(thin=T, tolerance=0.001)
+study$studyArea$loadBoundary(thin=F, tolerance=0.001)
 boundaryDF <- ggplot2::fortify(study$studyArea$boundary)
 responses <- c("canis.lupus", "lynx.lynx", "rangifer.tarandus.fennicus")
 ```
 
-Survey routes (Figure 1)
-------------------------
+Figure 1: Survey routes
+-----------------------
 
-```{r survey-routes}
+```{r survey-routes, fig.height=double_height}
 surveyRoutes <- study$loadSurveyRoutes(findLengths=FALSE)
 surveyRoutesSP <- SpatialLinesDataFrame(surveyRoutes$surveyRoutes, data=data.frame(x=1:length(surveyRoutes$surveyRoutes)), match.ID=FALSE)
 surveyRoutesDF <- ggplot2::fortify(surveyRoutesSP)
-p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_polygon(colour="darkgray", fill=NA) +
-  geom_polygon(data=surveyRoutesDF, aes(long, lat, group=group), colour="black", fill=NA) +
+p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_polygon(colour="black", fill=NA) +
+  geom_polygon(data=surveyRoutesDF, aes(long, lat, group=group), colour="blue", fill=NA) +
   coord_equal() + theme_raster()
 print(p)
 #saveFigure(p, filename="SurveyRoutes.svg", bg="transparent")
+
 ```
 
 Number of counted survey routes
@@ -59,10 +65,10 @@ intersections <- FinlandWTCIntersections$new(study=study, maxDuration=1)
 intersections$saveIntersections()
 ```
 
-Crossing rates (D > 1 removed) (Figure 2)
------------------------------------------
+Figure 2: Crossing rates (D > 1 removed)
+----------------------------------------
 
-```{r crossing-rates, fig.height=5}
+```{r crossing-rates, fig.width=double_width}
 getIntersectionsRate <- function(responses, context) {
   library(plyr)
   x <- ldply(responses, function(response, context) {
@@ -77,8 +83,8 @@ getIntersectionsRate <- function(responses, context) {
 }
 
 intersectionsRate <- getIntersectionsRate(responses, context)
-p <- ggplot(intersectionsRate, aes(year, intersections)) + geom_line(size=1) + facet_grid(~response) +
-  xlab("Year") + ylab("Crossings rate") + theme_presentation(20)
+p <- ggplot(intersectionsRate, aes(year, intersections)) + geom_line(size=1) + facet_grid(~response, scales="free_y") +
+  xlab("Year") + ylab("Crossings rate") + theme_presentation(base_size)
 print(p)
 #saveFigure(p, filename="IntersectionsRate.svg", bg="transparent")
 ```
@@ -110,10 +116,10 @@ getTracks <- function(responses, context) {
 getTracks(responses=responses, context=context)
 ```
 
-GPS movements (Figure 3)
-------------------------
+Figure 3: GPS movements, juvenile is no more than 1 years old individual
+------------------------------------------------------------------------
 
-```{r gps-movements, fig.height=10, fig.width=20}
+```{r gps-movements, fig.width=double_width}
 getTracks <- function(responses, context) {
   library(plyr)
   library(ggplot2)
@@ -124,8 +130,11 @@ getTracks <- function(responses, context) {
     tracksSP <- tracks$getSpatialLines(variables=.(id,year,burst))
     
     x <- tracksSP@data
-    if (!"sex" %in% colnames(x)) x$sex <- NA
-    x$juvenile <- if ("born" %in% colnames(x)) factor(ifelse(x$year - x$born <= 1, "juvenile", "adult")) else factor(NA)
+    if (!"sex" %in% colnames(x)) x$sex <- "unknown"
+    x$juvenile <- if ("born" %in% colnames(x)) factor(ifelse(x$year - x$born <= 1, "juvenile", "adult")) else factor("unknown")
+    x$juvenile <- factor(x$juvenile, levels=c(levels(x$juvenile), "unknown"))
+    x$juvenile[is.na(x$juvenile)] <- "unknown"
+    
     x$id <- sapply(tracksSP@lines, function(x) x@ID)
     x$sexjuv <- factor(paste(x$sex, x$juvenile, sep=", "))
     tracksDF <- ggplot2::fortify(tracksSP)
@@ -142,17 +151,18 @@ tracks <- getTracks(responses=responses, context=context)
 
 p <- ggplot(tracks, aes(long, lat, group=group)) +
   geom_polygon(data=boundaryDF, aes(long, lat, group=group), colour="darkgray", fill=NA) +
-  geom_path(aes(colour=sexjuv, linetype=sexjuv), alpha=.5) +
-  scale_color_manual("Sex, age", values=c("darkred","red","red","darkblue","blue","blue","black")) + scale_linetype_manual("Sex, age", values=c("solid","dashed","solid","solid","dashed","solid","solid")) +
-  facet_grid(~response) + theme_raster(18, legend.position="bottom", aspect.ratio=1) + coord_cartesian(ylim=range(tracks$lat)+c(-1,1)*50000)
+  geom_path(aes(colour=sexjuv, linetype=sexjuv), alpha=.7) +
+  scale_color_manual("Sex, age", values=c("darkred","red","red","darkblue","blue","blue","black")) + scale_linetype_manual("Sex, age", values=c("solid","dotted","solid","solid","dotted","solid","solid")) +
+  facet_grid(~response) + theme_raster(base_size, aspect.ratio=1, legend.position=c(0.5,-0.1), legend.direction="horizontal", legend.position="bottom") +
+  guides(colour=guide_legend(nrow=2)) + coord_cartesian(ylim=range(tracks$lat)+c(-1,1)*50000)
 print(p)
 #saveFigure(p, filename="GPS.svg", bg="transparent")
 ```
 
-Straight-line-distance-error (Figure 4)
----------------------------------------
+Figure 4: Straight-line-distance-error
+--------------------------------------
 
-```{r straight-line-distance-error, fig.height=5}
+```{r straight-line-distance-error-init}
 ss <- SimulationStudy$new(response="Intensive")$setup(context=context)
 tracks <- ss$loadTracks(iteration=as.integer(1))
 tracks$tracks <- subset(tracks$tracks, id == 1 & year == 2001 & month == 1 & day %in% c(2,3))
@@ -168,16 +178,18 @@ for (i in seq(1, 11, by=5)) {
 }
 plotTracks$thin <- factor(plotTracks$thin)
 plotTracks$dt <- factor(plotTracks$dt / 60)
+```
 
+```{r straight-line-distance-error}
 segment <- aes(x=x, y=y, xend=c(tail(x, n=-1), NA), yend=c(tail(y, n=-1), NA), group=dt, colour=dt)
 ending <- arrow(length=unit(0.7, "cm"))
 p <- ggplot(plotTracks, mapping=segment) +
-  theme_raster(20, legend.position=c(0.5,0.85), legend.background=element_rect(color="grey")) + 
+  theme_raster(base_size, legend.position=c(0.5,0.85), legend.background=element_rect(color="grey")) + 
   #guides(colour=guide_legend(title=expression(paste(Delta, "t (min)")))) +
   guides(colour=guide_legend(title="Sampling interval (min)")) +
-  scale_colour_manual(values=c("gray70","gray40","gray10")) +
+  scale_colour_manual(values=c("steelblue1","steelblue3","steelblue4")) +
   #ggtitle("Straight-line distance error") +
-  geom_path(size=2, arrow=ending) + geom_point(size=4)
+  geom_path(size=1, arrow=ending) + geom_point(size=2)
 #geom_segment(size=2, arrow=ending) # doesn't work with grouping
 print(p)
 #saveFigure(p, filename="StraightLineDistanceError.svg", bg="transparent")
@@ -198,10 +210,10 @@ intervals <- llply(responses, function(response, context) {
 intervals
 ```
 
-Power law fits for distance - sampling interval (Figure 5)
-----------------------------------------------------------
+Figure 5: Power law fits for distance - sampling interval
+---------------------------------------------------------
 
-```{r distance-fits, fig.height=5}
+```{r distance-fits, fig.width=double_width}
 distances <- ldply(responses, function(response, context) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   intervals <- study$loadSampleIntervals()
@@ -220,16 +232,16 @@ intervals <- ldply(responses, function(response, context) {
 
 p <- ggplot(distances, aes(intervalH, distanceKm)) + geom_point(alpha=.3) +
   ylab("Distance / day (km)") + xlab("Sampling interval (h)") +
-  geom_line(data=intervals, aes(intervalH, distanceKm), color="black", size=1) +
+  geom_line(data=intervals, aes(intervalH, distanceKm), size=1) +
   geom_smooth(data=intervals, aes(ymin=distanceKm25, ymax=distanceKm975), stat="identity") +
   ylim(c(0, max(distances$distanceKm))) +
-  facet_grid(~response) + theme_presentation()
+  facet_grid(~response) + theme_presentation(base_size)
 print(p)
 #saveFigure(p, filename=paste("DistanceCorrection-", response, ".svg", sep=""), bg="transparent")
 ```
 
-Observed distances - estimated distances (Table 1)
---------------------------------------------------
+Table 1: Observed distances - estimated distances
+-------------------------------------------------
 
 ```{r distance-estimates-init, results="hide"}
 observedDistances <- ldply(responses, function(response, context) {
@@ -262,14 +274,12 @@ Distances from literature
 * Lynx:
 * FFR: 
 
-Power law fit estimates for distance - sampling interval (Table 1)
-------------------------------------------------------------------
-
-Fixed effects:
-* human population density
-* precipitation
-* snow cover
-* temperature
+Table 2: Power law fit estimates for distance - sampling interval
+-----------------------------------------------------------------
+* fixed_effect = human population density
+* fixed_effect1 = precipitation
+* fixed_effect2 = snow cover
+* fixed_effect3 = temperature
 
 ```{r distance-fit-estimates}
 # Fixed effects: populationDensity + rrday + snow + tday
@@ -283,8 +293,8 @@ intervals <- l_ply(responses, function(response, context) {
 ```
 
 
-Crude distance estimates (Table 1)
-----------------------------------
+Table 3: Crude distance estimates
+---------------------------------
 
 ```{r distance-crude-estimates}
 responses <- c("canis.lupus","lynx.lynx","rangifer.tarandus.fennicus")
@@ -324,10 +334,10 @@ for (response in responses) {
 }
 ```
 
-Habitat weights (Figure 6)
---------------------------
+Figure 6: Habitat weights
+-------------------------
 
-```{r habitat-weights, fig.height=5, results="hide"}
+```{r habitat-weights, results="hide", fig.width=double_width}
 getHabitatWeights <- function(responses, context) {
   library(plyr)
   x <- ldply(responses, function(response, context) {
@@ -344,8 +354,8 @@ getHabitatWeights <- function(responses, context) {
 
 weights <- getHabitatWeights(responses=responses, context=context)
 p <- ggplot(weights, aes(habitat, weights, fill=habitat)) +
-  geom_bar(stat="identity") + facet_grid(~response) + scale_fill_manual(values=c("gray40","gray40","gray40","gray40","gray40")) +
-  xlab("") + ylab("Weight") + theme_presentation(20, axis.text.x=element_text(angle=90, hjust=1))
+  geom_bar(stat="identity") + facet_grid(~response) + scale_fill_manual(values=c("#beaed4","#ffff99","#7fc97f","#fdc086","#386cb0")) +
+  xlab("") + ylab("Weight") + theme_presentation(base_size, axis.text.x=element_text(angle=90, hjust=1))
 print(p)
 #saveFigure(p, filename="HabitatWeights.svg", bg="transparent")
 ```
@@ -353,7 +363,7 @@ print(p)
 Population density estimates
 ----------------------------
 
-```{r population-size-init, fig.keep="none", eval=TRUE}
+```{r population-size-init, fig.keep="none", eval=T}
 plotObservations <- function(i, params) {
   subdata <- params$data[params$data$year == min(params$data$year) + i - 1,]
   subdata$Observed <- subdata$intersections>0
@@ -396,10 +406,9 @@ spatialModels <- c(T,T,F)
 weightedPopulationDensity <- getPopulationDensity(responses=responses, spatialModels=spatialModels, timeModels=timeModels, context=context, withHabitatWeights=TRUE, saveDensityPlots=TRUE)
 ```
 
-Total population size estimates (Figure 7)
-------------------------------------------
-
-```{r population-size, fig.height=5, eval=TRUE}
+Table 4: Adjusted total population size factors
+-----------------------------------------------
+```{r population-size-factor, eval=F}
 populationSize <- data.frame()
 for (i in 1:length(responses)) {
   response <- responses[i]
@@ -410,26 +419,43 @@ for (i in 1:length(responses)) {
   y$response <- study$getPrettyResponse(response)
   cat("Response = ", response, ", coef to match the validation data:\n")
   print(coef(x$match()))
-  if (response == "canis.lupus") y$"Transformed estimated" <- y$Estimated * .7
-  else if (response == "lynx.lynx") y$"Transformed estimated" <- y$Estimated / 2 *.5
-  else if (response == "rangifer.tarandus.fennicus") y$"Transformed estimated" <- y$Estimated / 2 * 1.1
   
-  if (response == "lynx.lynx") {
+  if (response == "canis.lupus") y$"Adjusted estimated" <- y$Estimated * .75
+  else if (response == "lynx.lynx") {
+    y$"Adjusted estimated" <- y$Estimated * .3
     y$Estimated <- y$Estimated / 2
   }
-  if (response == "rangifer.tarandus.fennicus") {
-    y$Estimated <- y$Estimated / 2
-    y$Validation <- with(y, approx(Year, Validation, n=nrow(y)))$y
+  else if (response == "rangifer.tarandus.fennicus") {
+    y$"Adjusted estimated" <- y$Estimated / 2
+    #y$Validation <- with(y, approx(Year, Validation, n=nrow(y)))$y
   }
   
   populationSize <- rbind(populationSize, y)
 }
+```
+
+Figure 7: Total population size estimates
+-----------------------------------------
+```{r population-size, fig.width=double_width, eval=F}
+l <- levels(populationSize$Year)
+s <- seq(1, length(l), by=2)
+breaks <- l[s] 
+labels <- l[s]
 
 x <- melt(populationSize, id.vars=c("Year","response"), variable.name="Variable")
-p <- ggplot(x, aes(Year, value, group=Variable, colour=Variable)) + geom_line(size=1) + facet_wrap(~response, scales="free_y") +
-  scale_colour_manual(values=c("steelblue","violetred1","steelblue1")) +
+p <- ggplot(x, aes(Year, value, group=Variable, colour=Variable, fill=Variable)) + facet_wrap(~response, scales="free_y") +
+  geom_bar(subset=.(Variable=="Validation"), stat="identity") + geom_line(subset=.(Variable!="Validation"), size=2)  +
+  scale_colour_manual(values=c("steelblue","violetred1","palegreen3")) +
+  scale_fill_manual(values=c(NA,NA,"palegreen3")) +
+  scale_x_discrete(breaks=breaks, labels=labels) +
   xlab("Year") + ylab("Population size") +
-  theme_presentation(20, axis.text.x=element_text(angle=90, hjust=1)) + theme(legend.position="bottom")
+  theme_presentation(base_size, axis.text.x=element_text(angle=90, hjust=1)) + theme(legend.position="bottom", strip.text.x=element_blank())
+
+#x <- melt(populationSize, id.vars=c("Year","response"), variable.name="Variable")
+#p <- ggplot(x, aes(Year, value, group=Variable, colour=Variable)) + geom_line(size=1) + facet_wrap(~response, scales="free_y") +
+#  scale_colour_manual(values=c("steelblue","violetred1","steelblue1")) +
+#  xlab("Year") + ylab("Population size") +
+#  theme_presentation(base_size, axis.text.x=element_text(angle=90, hjust=1)) + theme(legend.position="bottom")
 print(p)
 #saveFigure(p, filename="PopulationSize.svg", bg="transparent")
 ```
