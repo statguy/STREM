@@ -41,7 +41,7 @@ MovementSimulationScenario <- setRefClass(
       message("Number of steps = ", nSteps.tmp, ", steps per day = ", 24 / stepIntervalHours)
       if (nSteps.tmp %% 1 != 0) stop("Number of steps must be integer.")
       nSteps <<- as.integer(nSteps.tmp)
-      if (length(birthDeathParams) == 0) birthDeathParams <<- list(mean=1, sd=1.1)
+      if (length(birthDeathParams) == 0) birthDeathParams <<- list(mean=0, sd=0.1) # 95% = 0.82 - 1.22 variation coefficient each year
       return(invisible(.self))
     },
     
@@ -171,7 +171,7 @@ MovementSimulationScenario <- setRefClass(
         stop("Set birthDeathParams parameter.")
       
       bdRate <- if (birthDeathParams$sd == 0) birthDeathParams$mean
-      else rlnorm(n=1, meanlog=log(birthDeathParams$mean), sdlog=log(birthDeathParams$sd))
+      else rlnorm(n=1, meanlog=birthDeathParams$mean, sdlog=birthDeathParams$sd)
       nTransform <- rpois(length(agents), bdRate)
       
       nBorn <- sum(nTransform[nTransform > 1] - 1)
