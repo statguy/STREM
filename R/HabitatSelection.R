@@ -66,6 +66,9 @@ HabitatSelection <- setRefClass(
       intervals <- tracks$getSampleIntervals()
       maxIntervalH <- as.numeric(names(which.max(table(intervals$intervals$intervalH))))
       maxIntervals <- subset(intervals$intervals, intervalH == maxIntervalH)
+
+      tracks$removeNonMovements()
+      
       tracksDF <- if (inherits(tracks$tracks, "ltraj")) ld(tracks$tracks) else tracks$tracks
       tracksDF <- subset(tracksDF, burst %in% maxIntervals$burst & id %in% maxIntervals$individualId)
       
