@@ -114,7 +114,7 @@ if (task_id > 0) {
   
   size <- if (task_id == 1) simulate("A")
   else if (task_id == 2) simulate("B")
-  else if (task_id == 3) simulate("C")
+  else if (task_id == 3) simulate("C", nYears=as.integer(4), nDays=as.integer(365))
   else if (task_id == 4) simulate("D")
   else if (task_id == 5) simulate("E")
   else if (task_id == 6) simulate("F")

@@ -189,7 +189,6 @@ MovementSimulationScenario <- setRefClass(
       if (nBorn > 0) agents <<- c(agents, newAgentId:(newAgentId + nBorn - 1))
       newAgentId <<- as.integer(newAgentId + nBorn)
       
-      # TODO: determine herd size as a group level event
       # note: if herd size changes, change also track id
       herdSize <- randomizeHerdSize()
       

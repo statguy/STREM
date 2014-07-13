@@ -260,21 +260,6 @@ Tracks <- setRefClass(
       habitatPreferences <- HabitatSelection$new(study=study)
       habitatPreferences$getHabitatPreferences(tracks=.self, habitatWeightsTemplate=habitatWeightsTemplate, nSamples=nSamples, save=save)
       return(habitatPreferences)
-    },
-    
-    removeNonMovements = function(maxDist=30) {
-      library(plyr)
-      tracksDF <- if (is.data.frame(tracks)) tracks else ld(tracks)
-      x <- ddply(tracksDF, .(id, burst), function(x, maxDist) {
-        return(x[x$dist >= maxDist,])
-      }, maxDist=maxDist)
-
-      p <- round((1 - nrow(x) / nrow(tracksDF)) * 100)
-      message(p, "% of non-movement tracks removed from all tracks.")
-      
-      tracks <<- if (inherits(tracks, "ltraj")) dl(x)
-      else x[,setdiff(colnames(x), c("dx","dy","dt","dist"))]
-      return(invisible(.self))
     }
   )
 )
