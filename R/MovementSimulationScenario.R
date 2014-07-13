@@ -415,7 +415,7 @@ MovementSimulationScenarioE <- setRefClass(
     },
     
     setup = function(context, response="E", isTest=F, range=Inf, sigma=1) {
-      if (length(nSurveyRoutes) == 0) stop("Provide the number of survey routes.")
+      if (isTest) if (length(nSurveyRoutes) == 0) stop("Provide the number of survey routes.")
       
       callSuper()
       study <<- SimulationStudy$new(response=response)$setup(context=context, isTest=isTest)
@@ -425,7 +425,8 @@ MovementSimulationScenarioE <- setRefClass(
       else ClusteredInitialPopulation$new(studyArea=study$studyArea, range=range, sigma=sigma, habitatWeights=samplingWeights)
       
       habitatWeights <<- CORINEHabitatWeights$new(list(Urban=0.1, Agriculture=0.1, Forestland=1, Peatland=0.5, Water=0.05))
-      surveyRoutes <<- FinlandRandomForestWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
+      if (isTest)
+        surveyRoutes <<- FinlandRandomForestWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
       
       return(invisible(.self))
     },
