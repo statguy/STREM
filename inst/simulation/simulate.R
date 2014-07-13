@@ -3,8 +3,9 @@
 # Run full:
 # ./parallel_r.py -t 1:50 -n 50 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/simulate.R notest A
 
+# library(devtools); install_github("statguy/Winter-Track-Counts")
 
-simulate = function(scenario, iteration, nSurveyRoutes=as.integer(50), nAgents=as.integer(20), nYears=as.integer(20),
+simulate = function(scenario, iteration, nSurveyRoutes=as.integer(50), nAgents=as.integer(200), nYears=as.integer(20),
                     nDays=as.integer(365), nIterations=as.integer(100),
                     meshParams=list(coordsScale=1e-6, maxEdge=c(.01e6, .02e6), cutOff=.007e6),
                     modelParams=list(family="nbinomial", offsetScale=1000^2, meshParams=meshParams, timeModel="ar1"),
@@ -18,10 +19,10 @@ simulate = function(scenario, iteration, nSurveyRoutes=as.integer(50), nAgents=a
   mss <- {
     if (scenario == "A") MovementSimulationScenarioA$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context)
     else if (scenario == "B") MovementSimulationScenarioB$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff)$setup(context=context)
-    else if (scenario == "C") MovementSimulationScenarioC$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context)
+    else if (scenario == "C") MovementSimulationScenarioC$new(nAgents=as.integer(nAgents/5), years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context)
     else if (scenario == "D") MovementSimulationScenarioD$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context)
     else if (scenario == "E") MovementSimulationScenarioE$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, nSurveyRoutes=nSurveyRoutes)$setup(context=context)
-    else if (scenario == "F") MovementSimulationScenarioF$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, nSurveyRoutes=nSurveyRoutes)$setup(context=context)
+    else if (scenario == "F") MovementSimulationScenarioF$new(nAgents=as.integer(nAgents/5), years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, nSurveyRoutes=nSurveyRoutes)$setup(context=context)
     else stop("unsupported")
   }
   
