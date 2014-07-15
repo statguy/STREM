@@ -46,4 +46,5 @@ registerDoMC(cores=detectCores())
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
+#for (task_id in 1:100)
 simulate(scenario=scenario, iteration=as.integer(task_id))

@@ -22,7 +22,9 @@ MovementSimulationScenario <- setRefClass(
     newAgentId = "integer",
     nProposal = "integer",
     maxTry = "integer",
-    debug = "logical"
+    debug = "logical",
+    
+    surveyRoutes = "ANY"
   ),
   methods = list(
     initialize = function(...) {
@@ -34,7 +36,7 @@ MovementSimulationScenario <- setRefClass(
       return(invisible(.self))
     },
     
-    setup = function() {
+    setup = function(response, context, nSurveyRoutes, isTest=FALSE) {
       if (inherits(BCRWCorrelationBiasTradeoff, "uninitializedField")) BCRWCorrelationBiasTradeoff <<- rep(NA, nAgents)
       if (inherits(homeRangeRadius, "uninitializedField")) homeRangeRadius <<- rep(NA, nAgents)
       nSteps.tmp <- 24 * days / stepIntervalHours
@@ -42,11 +44,17 @@ MovementSimulationScenario <- setRefClass(
       if (nSteps.tmp %% 1 != 0) stop("Number of steps must be integer.")
       nSteps <<- as.integer(nSteps.tmp)
       if (length(birthDeathParams) == 0) birthDeathParams <<- list(mean=0, sd=0.1) # 95% = 0.82 - 1.22 variation coefficient each year
+      
+      study <<- SimulationStudy$new(response=response)$setup(context=context, surveyRoutes=surveyRoutes, isTest=isTest)
+      surveyRoutes <<- if (isTest) FinlandRandomWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
+      else FinlandWTCSurveyRoutes$new(study=study)$loadSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
+      
       return(invisible(.self))
     },
     
-    getSurveyRoutes = function(nSurveyRoutes) {
-      return(FinlandRandomWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes))
+    getSurveyRoutes = function() {
+      #return(FinlandRandomWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes))
+      return(surveyRoutes)
     },
     
     randomizeDistance = function(n) {
@@ -313,12 +321,11 @@ MovementSimulationScenarioA <- setRefClass(
       return(invisible(.self))
     },
     
-    setup = function(context, response="A", isTest=F) {
-      callSuper()
-      study <<- SimulationStudy$new(response=response)$setup(context=context, isTest=isTest)
-      initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
+    setup = function(context, response="A", nSurveyRoutes=500, isTest=F) {
+      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
+      initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)      
       return(invisible(.self))
-    }
+    }    
   )
 )
 
@@ -344,9 +351,8 @@ MovementSimulationScenarioB <- setRefClass(
       homeRangeRadius <<- c(rep(NA, nAgentsA), rep(homeRangeRadius, nAgentsB))      
     },
     
-    setup = function(context, response="B", isTest=F) {
-      callSuper()
-      study <<- SimulationStudy$new(response=response)$setup(context=context, isTest=isTest)
+    setup = function(context, response="B", nSurveyRoutes=500, isTest=F) {
+      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
       initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
       return(invisible(.self))
     }
@@ -367,9 +373,8 @@ MovementSimulationScenarioC <- setRefClass(
       return(invisible(.self))
     },
     
-    setup = function(context, response="C", isTest=F) {
-      callSuper()
-      study <<- SimulationStudy$new(response=response)$setup(context=context, isTest=isTest)
+    setup = function(context, response="C", nSurveyRoutes=500, isTest=F) {
+      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
       initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
       return(invisible(.self))
     },
@@ -390,9 +395,8 @@ MovementSimulationScenarioD <- setRefClass(
       return(invisible(.self))
     },
     
-    setup = function(context, response="D", isTest=F) {
-      callSuper()
-      study <<- SimulationStudy$new(response=response)$setup(context=context, isTest=isTest)
+    setup = function(context, response="D", nSurveyRoutes=500, isTest=F) {
+      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
       initialPopulation <<- if (isTest) ClusteredInitialPopulation$new(studyArea=study$studyArea, range=100e3, sigma=4, max.edge=3000)
       else ClusteredInitialPopulation$new(studyArea=study$studyArea)
       return(invisible(.self))
@@ -404,35 +408,26 @@ MovementSimulationScenarioD <- setRefClass(
 MovementSimulationScenarioE <- setRefClass(
   Class = "MovementSimulationScenarioE",
   contains = "MovementSimulationScenario",
-  fields = list(
-    surveyRoutes = "ANY",
-    nSurveyRoutes = "integer"
-  ),
   methods = list(
     initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.7, ...) {
       callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, ...)
       return(invisible(.self))
     },
     
-    setup = function(context, response="E", isTest=F, range=Inf, sigma=1) {
+    setup = function(context, response="E", nSurveyRoutes=500, isTest=F, range=Inf, sigma=1) {
       if (isTest) if (length(nSurveyRoutes) == 0) stop("Provide the number of survey routes.")
       
-      callSuper()
-      study <<- SimulationStudy$new(response=response)$setup(context=context, isTest=isTest)
+      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
       
       samplingWeights <- CORINEHabitatWeights$new(list(Urban=0.1, Agriculture=0.1, Forestland=1, Peatland=0.5, Water=0))
       initialPopulation <<- if (isTest) ClusteredInitialPopulation$new(studyArea=study$studyArea, range=range, sigma=sigma, max.edge=3000, habitatWeights=samplingWeights)
       else ClusteredInitialPopulation$new(studyArea=study$studyArea, range=range, sigma=sigma, habitatWeights=samplingWeights)
       
       habitatWeights <<- CORINEHabitatWeights$new(list(Urban=0.1, Agriculture=0.1, Forestland=1, Peatland=0.5, Water=0.05))
-      if (isTest)
-        surveyRoutes <<- FinlandRandomForestWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
+      #if (isTest)
+      #  surveyRoutes <<- FinlandRandomForestWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
       
       return(invisible(.self))
-    },
-    
-    getSurveyRoutes = function(nSurveyRoutes) {
-      return(surveyRoutes)
     }
   )
 )
@@ -448,17 +443,13 @@ MovementSimulationScenarioF <- setRefClass(
       return(invisible(.self))
     },
     
-    setup = function(context, response="F", isTest=F) {
-      return(callSuper(context=context, response=response, isTest=isTest, range=100e3, sigma=4))
+    setup = function(context, response="F", nSurveyRoutes=500, isTest=F) {
+      return(callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest, range=100e3, sigma=4))
     },
     
     randomizeHerdSize = function() {
       return(rpois(length(agents), averageHerdSize) + 1)
     }
-    
-    #getSurveyRoutes = function(nSurveyRoutes) {
-    #  return(surveyRoutes)
-    #}
   )
 )
 

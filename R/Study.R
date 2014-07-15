@@ -27,21 +27,25 @@ Study <- setRefClass(
 SimulationStudy <- setRefClass(
   Class = "SimulationStudy",
   contains = "Study",
+  fields = list(
+    surveyRoutes = "ANY"
+  ),
   methods = list(
     initialize = function(...) {
       callSuper(...)
       return(invisible(.self))
     },
     
-    setup = function(context, isTest=F) {
+    setup = function(context, surveyRoutes, isTest=F) {
       context <<- context
+      surveyRoutes <<- surveyRoutes
       studyArea <<- if (isTest) TestStudyArea$new(context=context)$setup()
       else FinlandStudyArea$new(context=context)$setup()
       return(invisible(.self))
     },
     
     preprocess = function() {
-      loadSurveyRoutes(save=TRUE)
+      #loadSurveyRoutes(save=TRUE)
       return(invisible(.self))
     },
     
@@ -67,18 +71,22 @@ SimulationStudy <- setRefClass(
       return(populationSize)
     },
     
-    loadSurveyRoutes = function(n=800, random=TRUE, save=FALSE, findLengths=TRUE) {
-      surveyRoutes <- if (random) {
-        surveyRoutes <- FinlandRandomWTCSurveyRoutes$new(study=.self)
-        if (save) surveyRoutes$randomizeSurveyRoutes(nSurveyRoutes=n, save=TRUE)
-        return(surveyRoutes$loadSurveyRoutes(findLengths=findLengths))
-      }
-      else {
-        return(FinlandWTCSurveyRoutes$new(study=.self)$loadSurveyRoutes(findLengths=findLengths))
-      }
+    #loadSurveyRoutes = function(n=800, random=TRUE, save=FALSE, findLengths=TRUE) {
+    #  surveyRoutes <- if (random) {
+    #    surveyRoutes <- FinlandRandomWTCSurveyRoutes$new(study=.self)
+    #    if (save) surveyRoutes$randomizeSurveyRoutes(nSurveyRoutes=n, save=TRUE)
+    #    return(surveyRoutes$loadSurveyRoutes(findLengths=findLengths))
+    #  }
+    #  else {
+    #    return(FinlandWTCSurveyRoutes$new(study=.self)$loadSurveyRoutes(findLengths=findLengths))
+    #  }
+    #},
+    
+    loadSurveyRoutes = function() {
+      return(surveyRoutes)
     },
     
-    countIntersections = function(iteration, save=TRUE) {
+    countIntersections = function(surveyRoutes, iteration, save=TRUE) {
       tracks <- study$loadTracks(iteration=iteration)
       intersections <- tracks$countIntersections(save=save)
       return(invisible(intersections))

@@ -6,7 +6,7 @@
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 
 
-countIntersections <- function(study, iteration, test) {
+countIntersections <- function(mss, iteration, test) {
   if (test) {
     tracks <- study$loadTracks(iteration=iteration)
     surveyRoutes <- study$loadSurveyRoutes()
@@ -19,7 +19,7 @@ countIntersections <- function(study, iteration, test) {
     message("SUCCESS")
   }
   else {
-    study$countIntersections()
+    study$countIntersections(surveyRoutes=mss$getSurveyRoutes(), iteration=iteration)
     #tracks$countIntersections()
   }
 }
@@ -40,6 +40,16 @@ library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-mss <- if (scenario == "A") MovementSimulationScenarioA$new()$setup(context=context) else stop("Unknown scenario ", scenario)
-study <- mss$study
-countIntersections(study=study, iteration=as.integer(task_id), test=test=="test")
+mss <- {
+  if (scenario == "A") MovementSimulationScenarioA$new()$setup(context=context)
+  else if (scenario == "B") MovementSimulationScenarioB$new()$setup(context=context)
+  else if (scenario == "C") MovementSimulationScenarioC$new()$setup(context=context)
+  else if (scenario == "D") MovementSimulationScenarioD$new()$setup(context=context)
+  else if (scenario == "E") MovementSimulationScenarioE$new()$setup(context=context)
+  else if (scenario == "F") MovementSimulationScenarioF$new()$setup(context=context)
+  else stop("unsupported")
+}
+
+#context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+#mss <- if (scenario == "A") MovementSimulationScenarioA$new()$setup(context=context) else stop("Unknown scenario ", scenario)
+countIntersections(mss=mss, iteration=as.integer(task_id), test=test=="test")
