@@ -19,6 +19,7 @@ countIntersections <- function(mss, iteration, test) {
     message("SUCCESS")
   }
   else {
+    study <- mss$study
     study$countIntersections(surveyRoutes=mss$getSurveyRoutes(), iteration=iteration)
     #tracks$countIntersections()
   }
