@@ -38,7 +38,7 @@ SimulationStudy <- setRefClass(
     
     setup = function(context, surveyRoutes, isTest=F) {
       context <<- context
-      surveyRoutes <<- surveyRoutes
+      surveyRoutes <<- surveyRoutes # WARNING: this can give us recursion for study object references! TODO: better design
       studyArea <<- if (isTest) TestStudyArea$new(context=context)$setup()
       else FinlandStudyArea$new(context=context)$setup()
       return(invisible(.self))
@@ -87,6 +87,7 @@ SimulationStudy <- setRefClass(
     },
     
     countIntersections = function(surveyRoutes, iteration, save=TRUE) {
+      surveyRoutes <<- surveyRoutes
       tracks <- .self$loadTracks(iteration=iteration)
       intersections <- tracks$countIntersections(save=save)
       return(invisible(intersections))

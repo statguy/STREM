@@ -368,6 +368,7 @@ MovementSimulationScenarioC <- setRefClass(
   ),
   methods = list(
     initialize = function(nAgents=as.integer(200/5), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.7, averageHerdSize=as.integer(4), ...) {
+      if (nAgents < 1) stop("Invalid number of agents.")
       callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, ...)
       averageHerdSize <<- averageHerdSize
       return(invisible(.self))
@@ -437,7 +438,8 @@ MovementSimulationScenarioF <- setRefClass(
   Class = "MovementSimulationScenarioF",
   contains = c("MovementSimulationScenarioE", "MovementSimulationScenarioC", "MovementSimulationScenarioB"),
   methods = list(
-    initialize = function(nAgents=as.integer(200), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.7, BCRWCorrelationBiasTradeoff=0.3, homeRangeRadius=10000, averageHerdSize=as.integer(4), ...) {
+    initialize = function(nAgents=as.integer(200/5), years=as.integer(20), days=as.integer(365), stepIntervalHours=4, CRWCorrelation=0.7, BCRWCorrelationBiasTradeoff=0.3, homeRangeRadius=10000, averageHerdSize=as.integer(4), ...) {
+      if (nAgents < 1) stop("Invalid number of agents.")
       callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, homeRangeRadius=homeRangeRadius, averageHerdSize=averageHerdSize, ...)
       setAgents()
       return(invisible(.self))

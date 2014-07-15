@@ -5,12 +5,6 @@
 
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 
-
-countIntersections <- function(mss, iteration, test) {
-  study <- mss$study
-  study$countIntersections(surveyRoutes=mss$getSurveyRoutes(), iteration=iteration)
-}
-
 args <- commandArgs(trailingOnly=TRUE)
 if (length(args) != 3) stop("Invalid arguments.")
 test <- args[1]
@@ -25,6 +19,14 @@ registerDoMC(cores=detectCores())
 
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+
+
+countIntersections <- function(mss, iteration, test) {
+  study <- mss$study
+  study$countIntersections(surveyRoutes=mss$getSurveyRoutes(), iteration=iteration)
+}
+
+scenario<-"A"; task_id<-1; test<-F
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
 mss <- {

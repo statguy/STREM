@@ -321,8 +321,15 @@ SimulatedTracks <- setRefClass(
         #return(subset(x, yday == randomDay))
       }, days=days)
       
-      observationTracks <- copy()
+      observationTracks <- copy(shallow=TRUE) # Avoid possible recursion
       observationTracks$tracks <- observationTracksDF
+      
+      #observationTracks <- SimulatedTracks()
+      #observationTracks$study = study
+      #observationTracks$tracks <- observationTracksDF
+      #observationTracks$iteration <- iteration
+      #observationTracks$truePopulationSize <- truePopulationSize
+      
       return(observationTracks)
     },
     
