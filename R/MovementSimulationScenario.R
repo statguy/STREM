@@ -47,7 +47,7 @@ MovementSimulationScenario <- setRefClass(
       
       study <<- SimulationStudy$new(response=response)$setup(context=context, surveyRoutes=surveyRoutes, isTest=isTest)
       surveyRoutes <<- if (isTest) FinlandRandomWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
-      else FinlandWTCSurveyRoutes$new(study=study)$loadSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
+      else FinlandWTCSurveyRoutes$new(study=study)$loadSurveyRoutes(context=context, nSurveyRoutes=nSurveyRoutes)
       
       return(invisible(.self))
     },

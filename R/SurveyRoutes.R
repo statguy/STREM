@@ -178,7 +178,7 @@ FinlandWTCSurveyRoutes <- setRefClass(
       return(invisible(.self))
     },
     
-    loadSurveyRoutes = function(fileName=getSurveyRoutesFileName(), findLengths=TRUE, nSurveyRoutes) {
+    loadSurveyRoutes = function(context, fileName=getSurveyRoutesFileName(), findLengths=TRUE, nSurveyRoutes) {
       study0 <- FinlandWTCStudy$new(context=context, response="canis.lupus")
       intersections <- FinlandWTCIntersections$new(study=study0)$loadIntersections()
       centroids <<- intersections$getSurveyLocations()
