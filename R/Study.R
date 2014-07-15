@@ -87,7 +87,7 @@ SimulationStudy <- setRefClass(
     },
     
     countIntersections = function(surveyRoutes, iteration, save=TRUE) {
-      tracks <- study$loadTracks(iteration=iteration)
+      tracks <- .self$loadTracks(iteration=iteration)
       intersections <- tracks$countIntersections(save=save)
       return(invisible(intersections))
     },

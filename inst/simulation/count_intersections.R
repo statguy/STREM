@@ -7,22 +7,8 @@
 
 
 countIntersections <- function(mss, iteration, test) {
-  if (test) {
-    tracks <- study$loadTracks(iteration=iteration)
-    surveyRoutes <- study$loadSurveyRoutes()
-    intersections <- SimulatedIntersections$new(study=study, iteration=iteration)
-    surveyRoutes$surveyRoutes <- surveyRoutes$surveyRoutes[1:3]
-    surveyRoutes$centroids <- surveyRoutes$centroids[1:3]
-    surveyRoutes$lengths <- surveyRoutes$lengths[1:3]
-    observationTracks <- tracks$randomizeObservationDayTracks()
-    intersections$findIntersections(observationTracks, surveyRoutes, dimension=1)
-    message("SUCCESS")
-  }
-  else {
-    study <- mss$study
-    study$countIntersections(surveyRoutes=mss$getSurveyRoutes(), iteration=iteration)
-    #tracks$countIntersections()
-  }
+  study <- mss$study
+  study$countIntersections(surveyRoutes=mss$getSurveyRoutes(), iteration=iteration)
 }
 
 args <- commandArgs(trailingOnly=TRUE)
@@ -51,6 +37,4 @@ mss <- {
   else stop("unsupported")
 }
 
-#context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-#mss <- if (scenario == "A") MovementSimulationScenarioA$new()$setup(context=context) else stop("Unknown scenario ", scenario)
 countIntersections(mss=mss, iteration=as.integer(task_id), test=test=="test")
