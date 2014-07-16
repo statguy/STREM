@@ -143,7 +143,7 @@ MovementSimulationScenario <- setRefClass(
           }
         }
         
-        if (j == maxTry) {
+        if (j == maxTry) { # This happens "too often", but why? TODO: fix
           fileName <- file.path(getwd(), "boundary_reflection_failed_points.RData")
           save(coords, proposedVectors, acceptedVectors, step, proposedVectorsFailed[-1,], file=fileName) # TODO: unidentified bug here, fix
           stop("Boundary reflection failed. File saved to ", fileName)

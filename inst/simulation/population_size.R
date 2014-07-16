@@ -41,6 +41,16 @@ registerDoMC(cores=detectCores())
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
+
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-mss <- if (scenario == "A") MovementSimulationScenarioA$new()$setup(context=context) else stop("Unknown scenario ", scenario)
+mss <- {
+  if (scenario == "A") MovementSimulationScenarioA$new()$setup(context=context)
+  else if (scenario == "B") MovementSimulationScenarioB$new()$setup(context=context)
+  else if (scenario == "C") MovementSimulationScenarioC$new()$setup(context=context)
+  else if (scenario == "D") MovementSimulationScenarioD$new()$setup(context=context)
+  else if (scenario == "E") MovementSimulationScenarioE$new()$setup(context=context)
+  else if (scenario == "F") MovementSimulationScenarioF$new()$setup(context=context)
+  else stop("unsupported")
+}
+
 population_size(mss=mss, iteration=as.integer(task_id), test=test=="test")

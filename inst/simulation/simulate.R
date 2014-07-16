@@ -21,12 +21,12 @@ simulate = function(scenario, iteration, nSurveyRoutes=as.integer(50), nAgents=a
     else if (scenario == "B") MovementSimulationScenarioB$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff)$setup(context=context)
     else if (scenario == "C") MovementSimulationScenarioC$new(nAgents=as.integer(nAgents/5), years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context)
     else if (scenario == "D") MovementSimulationScenarioD$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context)
-    else if (scenario == "E") MovementSimulationScenarioE$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, nSurveyRoutes=nSurveyRoutes)$setup(context=context)
-    else if (scenario == "F") MovementSimulationScenarioF$new(nAgents=as.integer(nAgents/5), years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff, nSurveyRoutes=nSurveyRoutes)$setup(context=context)
+    else if (scenario == "E") MovementSimulationScenarioE$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context)
+    else if (scenario == "F") MovementSimulationScenarioF$new(nAgents=as.integer(nAgents/5), years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff)$setup(context=context)
     else stop("unsupported")
   }
   
-  study <- mss$study
+  study <- mss$study  
   #message("Study area = ", study$studyArea$boundary@polygons[[1]]@area / 1000^2, " km^2")
   tracks <- mss$simulate(iteration=iteration, save=T)
 }

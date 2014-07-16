@@ -26,7 +26,7 @@ countIntersections <- function(mss, iteration, test) {
   study$countIntersections(surveyRoutes=mss$getSurveyRoutes(), iteration=iteration)
 }
 
-scenario<-"A"; task_id<-1; test<-F
+#scenario<-"A"; task_id<-1; test<-F
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
 mss <- {
