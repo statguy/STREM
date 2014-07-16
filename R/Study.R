@@ -93,7 +93,7 @@ SimulationStudy <- setRefClass(
       return(invisible(intersections))
     },
     
-    estimate = function(model, params, meshParams, save=TRUE) {
+    estimate = function(model, params, save=TRUE) {
       if (missing(model)) stop("Missing model argument.")
       if (missing(params)) stop("Missing params argument.")
       
