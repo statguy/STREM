@@ -225,7 +225,6 @@ SmoothModelSpatioTemporal <- setRefClass(
   ),
   methods = list(
     saveEstimates = function(fileName=getEstimatesFileName()) {
-      stop("Unimplemented method saveEstimates.")
       message("Saving result to ", fileName, "...")
       save(locations, data, model, coordsScale, years, mesh, spde, index, A, fullStack, result, offsetScale, family, interceptPrior, rhoPrior, spdeParams, file=fileName)
     },
