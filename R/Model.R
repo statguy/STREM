@@ -671,7 +671,7 @@ SimulatedSmoothModelSpatioTemporal <- setRefClass(
         populationDensity$mean$weight(habitatWeightsRaster)
       }
       
-      populationSize <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration))
+      populationSize <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration, modelName=modelName))
       if (missing(tracks)) populationSize$loadValidationData()
       else populationSize$loadValidationData(tracks=tracks)
       
