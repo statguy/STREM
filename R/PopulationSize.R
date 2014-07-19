@@ -95,11 +95,12 @@ SimulationPopulationSize <- setRefClass(
   Class = "SimulationPopulationSize",
   contains = "PopulationSize",
   fields = list(
-    iteration = "integer"
+    iteration = "integer",
+    modelName = "character"
   ),
   methods = list(
     getPopulationSizeFileName = function() {
-      return(context$getLongFileName(dir=context$resultDataDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region, tag=iteration))
+      return(context$getLongFileName(dir=context$resultDataDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region, tag=paste(iteration, modelName, sep="-")))
     },
     
     loadValidationData = function(tracks, fileName) {

@@ -225,7 +225,6 @@ SmoothModelSpatioTemporal <- setRefClass(
   ),
   methods = list(
     saveEstimates = function(fileName=getEstimatesFileName()) {
-      stop("Unimplemented method saveEstimates.")
       message("Saving result to ", fileName, "...")
       save(locations, data, model, coordsScale, years, mesh, spde, index, A, fullStack, result, offsetScale, family, interceptPrior, rhoPrior, spdeParams, file=fileName)
     },
@@ -672,7 +671,7 @@ SimulatedSmoothModelSpatioTemporal <- setRefClass(
         populationDensity$mean$weight(habitatWeightsRaster)
       }
       
-      populationSize <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration))
+      populationSize <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration, modelName=modelName))
       if (missing(tracks)) populationSize$loadValidationData()
       else populationSize$loadValidationData(tracks=tracks)
       

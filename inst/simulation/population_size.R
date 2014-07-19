@@ -23,7 +23,9 @@ population_size <- function(mss, iteration, test) {
   }
   else {
     study <- mss$study
-    study$getPopulationSize(iteration=iteration)
+    estimates <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
+    estimates$setModelName(family="nbinomial", randomEffect=paste("matern", "ar1", sep = "-"))
+    study$getPopulationSize(estimates=estimates)
   }
 }
 

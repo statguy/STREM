@@ -185,8 +185,14 @@ FinlandWTCSurveyRoutes <- setRefClass(
       # Angles are unknown, randomize. TODO: Find the most likely angles given the landscape.
       angles <- runif(length(centroids), 0, 2 * pi)
       surveyRoutes <<- getTriangles(centroids, angles, 4000)
-      if (findLengths) getLengths()
-      
+      if (findLengths) {
+        getLengths()
+        index <- lengths > 0
+        surveyRoutes <<- surveyRoutes[index]
+        centroids <<- centroids[index]
+        lengths <<- lengths[index]
+      }
+        
       if (!missing(nSurveyRoutes)) {
         index <- sample(1:length(surveyRoutes), nSurveyRoutes)
         surveyRoutes <<- surveyRoutes[index]
