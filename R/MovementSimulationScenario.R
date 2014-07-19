@@ -238,12 +238,7 @@ MovementSimulationScenario <- setRefClass(
       for (year in 1:years) {
         if (nAgentsCurrent > 0) {
           track <- ldply(1:nAgentsCurrent,
-            function(agentIndex, initialLocations, initialAngles, nAgentsCurrent, isFirst, iteration) {
-              ## TODO: UNTESTED CODE
-              #if ((inherits(habitatWeights, "uninitializedField") | is.null(habitatWeights) != 0) & loadHabitatRasterInMemory) {
-              #  study$studyArea$readRasterIntoMemory()                
-              #}
-              
+            function(agentIndex, initialLocations, initialAngles, nAgentsCurrent, isFirst, iteration) {              
               message("Iteration = ", iteration, ", agent (", agents[agentIndex], ") = ", agentIndex, " / ", nAgentsCurrent, ", year = ", year,  " / ", years, ", days = ", days, ", herd size = ", herdSize[agentIndex], "...")
               track <- randomizeBCRWTrack(initialLocation=initialLocations[agentIndex,,drop=F],
                                          initialAngle=initialAngles[agentIndex],
@@ -415,7 +410,7 @@ MovementSimulationScenarioE <- setRefClass(
       return(invisible(.self))
     },
     
-    setup = function(context, response="E", nSurveyRoutes=500, isTest=F, range=Inf, sigma=1) {
+    setup = function(context, response="E", nSurveyRoutes=500, isTest=F, range=Inf, sigma=1, readHabitatIntoMemory=F) {
       if (isTest) if (length(nSurveyRoutes) == 0) stop("Provide the number of survey routes.")
       
       callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
@@ -428,6 +423,8 @@ MovementSimulationScenarioE <- setRefClass(
       #if (isTest)
       #  surveyRoutes <<- FinlandRandomForestWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
       
+      if (readHabitatIntoMemory) study$studyArea$readRasterIntoMemory()
+        
       return(invisible(.self))
     }
   )
@@ -445,8 +442,8 @@ MovementSimulationScenarioF <- setRefClass(
       return(invisible(.self))
     },
     
-    setup = function(context, response="F", nSurveyRoutes=500, isTest=F) {
-      return(callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest, range=100e3, sigma=4))
+    setup = function(context, response="F", nSurveyRoutes=500, isTest=F, readHabitatIntoMemory=F) {
+      return(callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest, range=100e3, sigma=4, readHabitatIntoMemory=readHabitatIntoMemory))
     },
     
     randomizeHerdSize = function() {

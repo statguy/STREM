@@ -205,6 +205,7 @@ StudyArea <- setRefClass(
     },
     
     readRasterIntoMemory = function() {
+      library(raster)
       if (!inMemory(habitat)) {
         message("Reading habitat raster into memory...")
         habitat <<- readAll(habitat)
