@@ -415,6 +415,8 @@ MovementSimulationScenarioE <- setRefClass(
       
       callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
       
+      if (readHabitatIntoMemory) study$studyArea$readRasterIntoMemory()
+      
       samplingWeights <- CORINEHabitatWeights$new(list(Urban=0.1, Agriculture=0.1, Forestland=1, Peatland=0.5, Water=0))
       initialPopulation <<- if (isTest) ClusteredInitialPopulation$new(studyArea=study$studyArea, range=range, sigma=sigma, max.edge=3000, habitatWeights=samplingWeights)
       else ClusteredInitialPopulation$new(studyArea=study$studyArea, range=range, sigma=sigma, habitatWeights=samplingWeights)
@@ -422,9 +424,7 @@ MovementSimulationScenarioE <- setRefClass(
       habitatWeights <<- CORINEHabitatWeights$new(list(Urban=0.1, Agriculture=0.1, Forestland=1, Peatland=0.5, Water=0.05))
       #if (isTest)
       #  surveyRoutes <<- FinlandRandomForestWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
-      
-      if (readHabitatIntoMemory) study$studyArea$readRasterIntoMemory()
-        
+              
       return(invisible(.self))
     }
   )
