@@ -55,7 +55,7 @@ SimulationStudy <- setRefClass(
     },
     
     loadIntersections = function(iteration) {
-      intersections <- SimulatedIntersections$new(study=.self, iteration=iteration)$loadIntersections()
+      intersections <- SimulatedIntersections(study=.self, iteration=iteration)$loadIntersections()
       tracks <- loadTracks(iteration=iteration)
       intersections$intersections$distance <- tracks$getMeanDistance()
       return(intersections)
@@ -66,8 +66,8 @@ SimulationStudy <- setRefClass(
       return(estimates)
     },
     
-    loadPopulationSize = function(iteration) {
-      populationSize <- SimulationPopulationSize$new(study=.self, iteration=iteration)$loadPopulationSize()$loadValidationData()
+    loadPopulationSize = function(iteration, modelName) {
+      populationSize <- SimulationPopulationSize(study=.self, iteration=iteration, modelName=modelName)$loadPopulationSize()$loadValidationData()
       return(populationSize)
     },
     
