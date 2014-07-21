@@ -323,13 +323,7 @@ SimulatedTracks <- setRefClass(
       
       observationTracks <- copy(shallow=TRUE) # Avoid possible recursion
       observationTracks$tracks <- observationTracksDF
-      
-      #observationTracks <- SimulatedTracks()
-      #observationTracks$study = study
-      #observationTracks$tracks <- observationTracksDF
-      #observationTracks$iteration <- iteration
-      #observationTracks$truePopulationSize <- truePopulationSize
-      
+
       return(observationTracks)
     },
     
@@ -340,18 +334,21 @@ SimulatedTracks <- setRefClass(
         return(subset(x, yday %in% ydays))
       }, ydays=ydays)
       
-      observationTracks <- copy()
+      observationTracks <- copy(shallow=TRUE)
       observationTracks$tracks <- observationTracksDF
       return(observationTracks)
     },
     
-    countIntersections = function(save=TRUE) {
+    countIntersections = function(surveyRoutes, save=TRUE) {
       observationTracks <- randomizeObservationDayTracks()
-      surveyRoutes <- study$loadSurveyRoutes()
+      #surveyRoutes <- study$loadSurveyRoutes()
       intersections <- SimulatedIntersections$new(study=study, iteration=iteration)
       intersections$findIntersections(observationTracks, surveyRoutes, dimension=1)
-      if (save) intersections$saveIntersections()
-      return(invisible(intersections))
+      if (save) {
+        intersections$saveIntersections()
+        #save(observationTracks, surveyRoutes, file=)
+      }
+      return(invisible(list(intersections=intersections, tracks=observationTracks, surveyRoutes=surveyRoutes)))
     },
     
     thin = function(by, thinId) {

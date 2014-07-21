@@ -78,7 +78,7 @@ SpatioTemporalRaster <- setRefClass(
       library(plyr)
       
       rasterStack <<- ST::multiRasterInterpolate(xyzt, variables=timeVariable, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)
-      if (!missing(boundary)) {
+      if (!missing(boundary) & !is.null(boundary)) {
         rasterStack <<- stack(llply(1:nlayers(rasterStack),
                               function(i, rasterStack, boundary) {
                                 message("Cropping ", i, "/", nlayers(rasterStack), "...")

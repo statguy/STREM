@@ -195,6 +195,7 @@ FinlandWTCSurveyRoutes <- setRefClass(
         
       if (!missing(nSurveyRoutes)) {
         index <- sample(1:length(surveyRoutes), nSurveyRoutes)
+        #index <- 1:nSurveyRoutes
         surveyRoutes <<- surveyRoutes[index]
         centroids <<- centroids[index]
         lengths <<- lengths[index]

@@ -5,7 +5,7 @@
 
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 
-simulate = function(scenario, iteration, nSurveyRoutes=as.integer(50), nAgents=as.integer(200), nYears=as.integer(20),
+simulate = function(scenario, iteration, nAgents=as.integer(200), nYears=as.integer(20),
                     nDays=as.integer(365),
                     meshParams=list(coordsScale=1e-6, maxEdge=c(.01e6, .02e6), cutOff=.007e6),
                     modelParams=list(family="nbinomial", offsetScale=1000^2, meshParams=meshParams, timeModel="ar1"),
