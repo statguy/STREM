@@ -10,7 +10,8 @@ StudyArea <- setRefClass(
     boundary = "SpatialPolygons",
     habitat = "RasterLayer",
     coordinateScale = "integer",
-    plotScale = "numeric"
+    plotScale = "numeric",
+    nBoundarySamples = "integer"
   ),
   methods = list(
     initialize = function(context=NA, region=NA, proj4string=NA, ...) {
@@ -177,6 +178,14 @@ StudyArea <- setRefClass(
       return(invisible(.self))
     },
     
+    sampleBoundary = function() {
+      if (length(nBoundarySamples) == 0)
+        stop("nBoundarySamples not defined by subclass.")
+      coords <- coordinates(boundary@polygons[[1]]@Polygons[[1]])
+      boundarySL <- SpatialLines(list(Lines(Line(coords), ID=1)), proj4string=proj4string)
+      return(spsample(x=boundarySL, n=nBoundarySamples, type="regular"))
+    },
+    
     getHabitatFrequenciesFileName = function() {
       return(context$getFileName(context$processedDataDirectory, name="HabitatFrequencies", region=studyArea$region))
     },
@@ -253,7 +262,7 @@ FinlandStudyArea <- setRefClass(
   methods = list(
     initialize = function(...) {
       library(sp)
-      callSuper(region="Finland", proj4string=CRS("+init=epsg:2393"), ...)
+      callSuper(region="Finland", proj4string=CRS("+init=epsg:2393"), nBoundarySamples=as.integer(40), ...)
       return(invisible(.self))
     },
     

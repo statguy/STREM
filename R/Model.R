@@ -61,7 +61,7 @@ Model <- setRefClass(
     getObservedOffset = function(distance=data$distance) {
       return(2/pi * data$length * data$duration * distance / offsetScale)
     },
-    
+        
     setup = function(intersections, params) {
       library(INLA)
       library(plyr)
@@ -75,6 +75,8 @@ Model <- setRefClass(
       coordsScale <<- if (!hasMember(params, "coordsScale")) 1 else params$coordScale
       offsetScale <<- if (!hasMember(params, "offsetScale")) 1000^2 else params$offsetScale
       family <<- if (!hasMember(params, "family")) "nbinomial" else params$family
+      
+      
       
       setModelName(family=family, randomEffect=params$timeModel)
       data <<- intersections$getData()
@@ -115,7 +117,7 @@ SmoothModelTemporal <- setRefClass(
                       E=getObservedOffset(),
                       verbose=verbose,
                       control.predictor=list(compute=TRUE),
-                      control.compute=list(cpo=FALSE, dic=TRUE))
+                      control.compute=list(cpo=FALSE, dic=TRUE, config=TRUE))
       
       if (is.null(result$ok) | result$ok == FALSE) {
         warning("INLA failed to run.")
@@ -363,7 +365,7 @@ SmoothModelSpatioTemporal <- setRefClass(
                       verbose=verbose,
                       control.fixed=control.fixed,
                       control.predictor=list(A=inla.stack.A(fullStack), link=stackData$link, compute=TRUE),
-                      control.compute=list(cpo=FALSE, dic=TRUE))
+                      control.compute=list(cpo=FALSE, dic=TRUE, config=TRUE))
       
       if (is.null(result$ok) | result$ok == FALSE) {
         warning("INLA failed to run.")
