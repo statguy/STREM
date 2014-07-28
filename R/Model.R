@@ -96,7 +96,7 @@ Model <- setRefClass(
       xy <- getUnscaledObservationCoordinates()
       if (missing(index)) index <- 1:nrow(xy)
       x <- llply(posteriorSamples,
-                 function(x, index) data.frame(x=xy[,1], y=xy[,2], z=exp(x$latent[index]), t=data$year),
+                 function(x, index) data.frame(x=xy[,1], y=xy[,2], z=exp(x$latent[index]) / offsetScale, t=data$year),
                  index=indexObserved, .parallel=T)
       return(x)
     },
