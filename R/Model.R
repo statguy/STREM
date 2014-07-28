@@ -58,10 +58,10 @@ Model <- setRefClass(
       return(locations / coordsScale)
     },
     
-    getObservedOffset = function(distance=data$distance) {
+    getObservedOffset = function(distance=data$distance) {      
       return(2/pi * data$length * data$duration * distance / offsetScale)
     },
-        
+    
     setup = function(intersections, params) {
       library(INLA)
       library(plyr)
@@ -76,8 +76,6 @@ Model <- setRefClass(
       offsetScale <<- if (!hasMember(params, "offsetScale")) 1000^2 else params$offsetScale
       family <<- if (!hasMember(params, "family")) "nbinomial" else params$family
       
-      
-      
       setModelName(family=family, randomEffect=params$timeModel)
       data <<- intersections$getData()
       data$response <<- data$intersections
@@ -91,6 +89,59 @@ Model <- setRefClass(
     
     estimate = function(save=FALSE, fileName=getEstimatesFileName()) {
       stop("Unimplemented method.")
+    },
+    
+    samplePosterior = function(n, index) {
+      posteriorSamples <- inla.posterior.sample(n=n, result=result)
+      xy <- getUnscaledObservationCoordinates()
+      if (missing(index)) index <- 1:nrow(xy)
+      x <- llply(posteriorSamples,
+                 function(x, index) data.frame(x=xy[,1], y=xy[,2], z=exp(x$latent[index]), t=data$year),
+                 index=indexObserved, .parallel=T)
+      return(x)
+    },
+    
+    getPopulationDensity.internal = function(xyzt, templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary) {
+      cellArea <- prod(res(templateRaster)) # m^2
+      densityRaster <- SpatioTemporalRaster(study=study)$interpolate(xyzt, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=sort(unique(xyzt[,4])), weights=cellArea)
+      return(densityRaster)
+    },
+    
+    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
+      if (is.null(data$fittedMean) == 0)
+        stop("Did you forgot to run collectEstimates() first?")
+      
+      library(raster)
+      
+      xyztMean <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedMean / offsetScale, t=data$year)
+      xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale, t=data$year)
+      meanPopulationDensityRaster <- getPopulationDensity.internal(xyztMean, templateRaster=templateRaster, maskPolygon=maskPolygon)
+      sdPopulationDensityRaster <- if (getSD) getPopulationDensity.internal(xyztSD, templateRaster=templateRaster, maskPolygon=maskPolygon)
+      else SpatioTemporalRaster$new(study=study)
+      
+      return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
+    },
+    
+    getPopulationSize = function(populationDensity, tracks, habitatWeights) {
+      if (length(node) == 0)
+        stop("Run collectEstimates() first.")
+      if (missing(populationDensity)) populationDensity <- getPopulationDensity(getSD=FALSE)
+      if (!missing(habitatWeights)) populationDensity$mean$weight(habitatWeightsRaster)
+      
+      #if (withHabitatWeights) {
+      #  habitatWeights <- CORINEHabitatWeights$new(study=study)
+      #  if (missing(tracks)) tracks <- study$loadTracks(iteration=iteration)
+      #  habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=FALSE) # TODO: save
+      #  habitatWeights$setHabitatSelectionWeights(habitatSelection)
+      #  habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=FALSE)
+      #  populationDensity$mean$weight(habitatWeightsRaster)
+      #}
+      
+      populationSize <- populationDensity$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration, modelName=modelName))
+      if (missing(tracks)) populationSize$loadValidationData()
+      else populationSize$loadValidationData(tracks=tracks)
+      
+      return(invisible(populationSize))
     }
   )
 )
@@ -187,25 +238,24 @@ SmoothModelTemporal <- setRefClass(
         x <- rbind(x, rho=result$summary.hyperpar["PACF4 for year",])
       
       return(x)
-    },
-
-    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
-      if (is.null(data$fittedMean))
-        stop("Did you forgot to run collectEstimates() first?")
-      
-      library(raster)
-      
-      xyztMean <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedMean / offsetScale, t=data$year)
-      xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale, t=data$year)
-      cellArea <- prod(res(templateRaster)) # m^2
-      
-      meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=years, weights=cellArea)
-      sdPopulationDensityRaster <- if (getSD) SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=years, weights=cellArea)
-      else SpatioTemporalRaster$new(study=study)
-      
-      return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
     }
     
+    #getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
+    #  if (is.null(data$fittedMean))
+    #    stop("Did you forgot to run collectEstimates() first?")
+    #  
+    #  library(raster)
+    #  
+    #  xyztMean <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedMean / offsetScale, t=data$year)
+    #  xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale, t=data$year)
+    #  cellArea <- prod(res(templateRaster)) # m^2
+    #  
+    #  meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=years, weights=cellArea)
+    #  sdPopulationDensityRaster <- if (getSD) SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=years, weights=cellArea)
+    #  else SpatioTemporalRaster$new(study=study)
+    #  
+    #  return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
+    #}
   )
 )
 
@@ -217,7 +267,9 @@ SmoothModelSpatioTemporal <- setRefClass(
     spde = "inla.spde2",
     index = "list",
     A = "Matrix",
+    augA = "Matrix",
     obsStack = "inla.data.stack",
+    augStack = "inla.data.stack",
     predStack = "inla.data.stack",
     fullStack = "inla.data.stack",
     interceptPrior = "list",
@@ -335,21 +387,33 @@ SmoothModelSpatioTemporal <- setRefClass(
                                A=list(A),
                                effects=list(c(index, list(intercept=1))),
                                tag="observed")
-      
+            
+      boundarySamples <- study$studyArea$sampleBoundary()
+      coords <- repeatMatrix(coordinates(boundarySamples), length(years)) * coordsScale
+      yearsData <- rep(years, each=length(boundarySamples))      
+      groupYears <- as.integer(yearsData - min(yearsData) + 1)
+      augA <<- inla.spde.make.A(mesh, loc=coords, group=groupYears, n.group=nYears)
+      augStack <<- inla.stack(data=list(response=NA,
+                                         E=1,
+                                         link=1),
+                               A=list(augA),
+                               effects=list(c(index, list(intercept=1))),
+                               tag="augmented")
+
       predStack <<- inla.stack(data=list(response=NA,
                                          E=1,
                                          link=1),
                                A=list(1),
                                effects=list(c(index, list(intercept=1))),
                                tag="predicted")
-            
+      
       return(invisible(.self))
     },
     
     estimate = function(save=FALSE, fileName=getEstimatesFileName(), verbose=TRUE) {
       library(INLA)
       
-      fullStack <<- inla.stack(obsStack, predStack)
+      fullStack <<- inla.stack(obsStack, augStack, predStack)
       stackData <- inla.stack.data(fullStack, spde=spde)
       
       control.fixed <- if (length(interceptPrior) > 0)
@@ -468,6 +532,11 @@ SmoothModelSpatioTemporal <- setRefClass(
       return(x)
     },
     
+    samplePosterior = function(n, index) {
+      indexObserved <- inla.stack.index(fullStack, "observed")$data
+      return(callSuper(n=n, index=indexObserved))
+    },
+    
     project = function(projectValues, projectionRaster=study$getTemplateRaster(), maskPolygon, weights=1) {
       library(INLA)
       library(raster)
@@ -484,7 +553,8 @@ SmoothModelSpatioTemporal <- setRefClass(
       
       return(invisible(projectionRaster))
     },
-        
+    
+    # Unreliable?!?!
     getPopulationDensityAtMesh = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
       if (length(node) == 0)
         stop("Did you forgot to run collectEstimates() first?")
@@ -507,23 +577,6 @@ SmoothModelSpatioTemporal <- setRefClass(
           sdPopulationDensityRaster$addLayer(sdRaster, year)
         }
       }
-      
-      return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
-    },
-    
-    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
-      if (length(node) == 0)
-        stop("Did you forgot to run collectEstimates() first?")
-      
-      library(raster)
-      
-      xyztMean <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedMean / offsetScale, t=data$year)
-      xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale, t=data$year)
-      cellArea <- prod(res(templateRaster)) # m^2
-      
-      meanPopulationDensityRaster <- SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=sort(unique(xyztMean$t)), weights=cellArea)
-      sdPopulationDensityRaster <- if (getSD) SpatioTemporalRaster$new(study=study)$interpolate(xyztMean, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=sort(unique(xyztMean$t)), weights=cellArea)
-      else SpatioTemporalRaster$new(study=study)
       
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
     },
@@ -646,6 +699,21 @@ SmoothModelSpatioTemporal <- setRefClass(
   )
 )
 
+SimulatedSmoothModelTemporal <- setRefClass(
+  Class = "SimulatedSmoothModelTemporal",
+  contains = c("SmoothModelTemporal"),
+  fields = list(
+    iteration = "integer"
+  ),
+  methods = list(
+    getEstimatesFileName = function() {
+      if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
+        stop("Provide study, modelName and iteration parameters.")
+      return(study$context$getLongFileName(study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
+    }
+  )
+)
+
 SimulatedSmoothModelSpatioTemporal <- setRefClass(
   Class = "SimulatedSmoothModelSpatioTemporal",
   contains = c("SmoothModelSpatioTemporal"),
@@ -657,28 +725,28 @@ SimulatedSmoothModelSpatioTemporal <- setRefClass(
       if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
         stop("Provide study, modelName and iteration parameters.")
       return(study$context$getLongFileName(study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
-    },
-    
-    getPopulationSize = function(tracks, withHabitatWeights=FALSE) {
-      if (length(node) == 0)
-        stop("Run collectEstimates() first.")
-      populationDensity <- getPopulationDensity(getSD=FALSE)
-      
-      if (withHabitatWeights) {
-        habitatWeights <- CORINEHabitatWeights$new(study=study)
-        if (missing(tracks)) tracks <- study$loadTracks(iteration=iteration)
-        habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=FALSE) # TODO: save
-        habitatWeights$setHabitatSelectionWeights(habitatSelection)
-        habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=FALSE)
-        populationDensity$mean$weight(habitatWeightsRaster)
-      }
-      
-      populationSize <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration, modelName=modelName))
-      if (missing(tracks)) populationSize$loadValidationData()
-      else populationSize$loadValidationData(tracks=tracks)
-      
-      return(invisible(populationSize))
     }
+    
+    #getPopulationSize = function(tracks, withHabitatWeights=FALSE) {
+    #  if (length(node) == 0)
+    #    stop("Run collectEstimates() first.")
+    #  populationDensity <- getPopulationDensity(getSD=FALSE)
+    #  
+    #  if (withHabitatWeights) {
+    #    habitatWeights <- CORINEHabitatWeights$new(study=study)
+    #    if (missing(tracks)) tracks <- study$loadTracks(iteration=iteration)
+    #    habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=FALSE) # TODO: save
+    #    habitatWeights$setHabitatSelectionWeights(habitatSelection)
+    #    habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=FALSE)
+    #    populationDensity$mean$weight(habitatWeightsRaster)
+    #  }
+    #  
+    #  populationSize <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration, modelName=modelName))
+    #  if (missing(tracks)) populationSize$loadValidationData()
+    #  else populationSize$loadValidationData(tracks=tracks)
+    # 
+    #  return(invisible(populationSize))
+    #}
   )
 )
 

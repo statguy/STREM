@@ -251,29 +251,6 @@ SimulatedIntersections <- setRefClass(
     saveIntersections = function(fileName=getIntersectionsFileName()) {
       message("Saving intersections to ", fileName)
       save(intersections, intersectionsMatrix, iteration, file=fileName)
-    },
-    
-    augment = function() {
-      intersections$surveyRoute <<- as.integer(as.character(intersections$surveyRoute)) # Quick fix
-      
-      if (any(as.integer(as.character(intersections$surveyRoute)) > 100000))
-        stop("Intersection data has been augmented already.")
-      
-      boundarySamples <- study$studyArea$sampleBoundary()
-      years <- unique(intersections$year)
-      coords <- repeatMatrix(coordinates(boundarySamples), length(years))      
-      data <- expand.grid(surveyRoute=1:length(boundarySamples)+100000,
-                          year=years,
-                          response=study$response,
-                          intersections=NA,
-                          duration=1,
-                          length=1,
-                          distance=1)
-      x <- SpatialPointsDataFrame(coords, data=data, proj4string=intersections@proj4string, match.ID=FALSE)
-      
-      intersections <<- rbind(intersections, x)
-      
-      return(invisible(.self))
     }
   )
 )
