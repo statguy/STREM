@@ -10,18 +10,21 @@ parseArguments()
 
 if (isTest) {
   nSamples <- 2
+  populationSizeOverEstimate <- 200
 } else {
   nSamples <- 50
+  populationSizeOverEstimate <- 2000
 }
 
 modelName <- paste("SmoothModel", "nbinomial", "matern", "ar1", sep = "-")
 mss <- getMSS(scenario=scenario, isTest=isTest)
 study <- mss$study
 
-validation <- Validation(study=study)
+validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 
 if (isTest) {
   populationSize <- validation$validateTemporalPopulationSize(modelName=modelName)
+  populationSize
   print(validation$populationSizeSummary(populationSize))
   print(summary(lm(Estimated~Observed, populationSize)))
 } else {

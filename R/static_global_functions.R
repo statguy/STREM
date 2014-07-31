@@ -208,7 +208,7 @@ getMSS <- function(scenario, isTest=FALSE, ...) {
 
 parseArguments <- function() {
   args <- commandArgs(trailingOnly=TRUE)
-  if (is.null(args)) {
+  if (is.null(args) | length(args) == 0) {
     isTest <<- TRUE
     scenario <<- "A"
     task_id <<- as.integer(1)

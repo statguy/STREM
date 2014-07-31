@@ -50,6 +50,6 @@ source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
 #for (task_id in 1:100)
 {
-  if (isTest) simulate(scenario=scenario, iteration=as.integer(task_id), nAgents=as.integer(50), nYears=as.integer(1), nDays=as.integer(59), isTest=TRUE)
+  if (isTest) simulate(scenario=scenario, iteration=as.integer(task_id), nAgents=as.integer(20), nYears=as.integer(1), nDays=as.integer(59), isTest=TRUE)
   else simulate(scenario=scenario, iteration=as.integer(task_id))
 }
