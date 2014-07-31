@@ -14,7 +14,6 @@ MovementSimulationScenario <- setRefClass(
     BCRWCorrelationBiasTradeoff = "ANY",
     homeRangeRadius = "ANY",
     distanceScale = "numeric",
-    loadHabitatRasterInMemory = "logical",
     
     birthDeathParams = "list",
     nSteps = "integer",
@@ -27,12 +26,11 @@ MovementSimulationScenario <- setRefClass(
     surveyRoutes = "ANY"
   ),
   methods = list(
-    initialize = function(...) {
-      distanceScale <<- 1e3
-      loadHabitatRasterInMemory <<- FALSE
-      maxTry <<- as.integer(100)
-      debug <<- FALSE
+    initialize = function(..., distanceScale=1e3, maxTry=as.integer(100), debug=FALSE) {
       callSuper(...)
+      distanceScale <<- distanceScale
+      maxTry <<- maxTry
+      debug <<- debug
       return(invisible(.self))
     },
     
@@ -450,131 +448,6 @@ MovementSimulationScenarioF <- setRefClass(
     
     randomizeHerdSize = function() {
       return(rpois(length(agents), averageHerdSize) + 1)
-    }
-  )
-)
-
-
-
-
-
-
-
-
-##############
-
-
-# 6 minutes step length for distance correction
-MovementSimulationScenarioIntensive <- setRefClass(
-  Class = "MovementSimulationScenarioIntensive",
-  contains = "MovementSimulationScenario",
-  methods = list(
-    initialize = function(nAgents=as.integer(50), years=as.integer(1), days=as.integer(60), stepIntervalHours=0.1, ...) {
-      callSuper(years=years, nAgents=nAgents, days=days, stepIntervalHours=stepIntervalHours, stepSpeedScale=0.5, CRWCorrelation=0.8, ...)
-      return(invisible(.self))
-    },
-    
-    setup = function(context, response="Intensive") {
-      callSuper()
-      study <<- SimulationStudy$new(response=response)$setup(context=context)
-      initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
-      return(invisible(.self))
-    }
-  )
-)
-
-MovementSimulationScenarioCombined <- setRefClass(
-  "MovementSimulationScenarioCombined",
-  fields = list(
-    n = "integer",
-    study = "Study",
-    sourceResponse = "character"
-  ),
-  methods = list(
-    initialize = function(...) {
-      callSuper(...)
-      return(invisible(.self))
-    },
-    
-    setup = function(context, response="A") {
-      sourceResponse <<- response
-      response <- paste("Combined", sourceResponse, sep="")
-      study <<- SimulationStudy$new(response=response)$setup(context=context)
-      return(invisible(.self))
-    },
-    
-    combine = function(combineAllTracks=FALSE) {
-      library(data.table)
-      
-      if (length(n) == 0)
-        stop("Provide n parameter to constructor.")
-      
-      sourceStudy <- SimulationStudy$new(response=sourceResponse)$setup(context=study$context)
-      iterations <- sourceStudy$context$getIterationIds(dir=study$context$resultDataDirectory, name="Intersections", response=sourceStudy$response, region=sourceStudy$studyArea$region)
-      n.remove <- length(iterations) %% n
-      iterations <- iterations[1:(length(iterations) - n.remove)]
-      id <- 1
-      
-      for (i.start in seq(1, length(iterations), by=n)) {
-        i.full <- seq(i.start, i.start + n - 1)
-        print(i.full)
-        
-        intersections.combined <- SimulatedIntersections$new(study=study, iteration=as.integer(id))
-        for (i in i.full) {
-          intersections.i <- SimulatedIntersections$new(study=sourceStudy, iteration=as.integer(i))$loadIntersections()
-          if (nrow(intersections.combined$intersections) == 0) intersections.combined$intersections <- intersections.i$intersections
-          else intersections.combined$intersections$intersections <- intersections.combined$intersections$intersections + intersections.i$intersections$intersections
-          
-          if (any(intersections.combined$intersections$getCoordinates() != intersections.i$intersections$getCoordinates()))
-            warning("Coordinates mismatch!")
-        }
-        intersections.combined$saveIntersections()
-        
-        tracks.combined <- SimulatedTracks$new(study=study, iteration=as.integer(id))
-      
-        max.id <- 0
-        for (i in i.full) {
-          tracks.i <- SimulatedTracks$new(study=sourceStudy, iteration=as.integer(i))$loadTracks()
-          tracks <- data.table(tracks.i$tracks)
-          message("iteration = ", i, ", tracks = ", nrow(tracks), ", id shift = ", max.id)
-          tracks[,id:=id + max.id,]
-          if (inherits(tracks.combined$tracks, "uninitializedField")) {
-            tracks.combined$tracks <- tracks
-            tracks.combined$truePopulationSize <- tracks.i$truePopulationSize
-          }
-          else {
-            if (combineAllTracks) tracks.combined$tracks <- rbind(tracks.combined$tracks, tracks)
-            else message("This track has been opted not to be combined.")
-            tracks.combined$truePopulationSize$Observed <- tracks.combined$truePopulationSize$Observed + tracks.i$truePopulationSize$Observed
-          }
-          max.id <- max.id + max(tracks$id)
-        }
-        message("n tracks = ", nrow(tracks.combined$tracks), ", max id = ", max(tracks.combined$tracks$id))
-        tracks.combined$saveTracks()
-        
-        id <- id + 1
-      }
-    }
-  )
-)
-
-
-
-
-
-###
-
-# Correlated random walk in a homogeneous landscape, random initial locations, fixed distances
-MovementSimulationScenarioA.FixedDistances <- setRefClass(
-  Class = "MovementSimulationScenarioA.FixedDistances",
-  contains = "MovementSimulationScenarioA",
-  methods = list(
-    randomizeDistance = function(n) {
-      rep(stepSpeedScale * stepIntervalHours * distanceScale, n)
-    },
-    
-    setup = function(context, response="A.FixedDistances") {
-      return(invisible(callSuper(context=context, response=response)))
     }
   )
 )
