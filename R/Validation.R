@@ -43,7 +43,7 @@ Validation <- setRefClass(
       populationSize$scenario <- scenario
       populationSize$modelName <- modelName
       
-      return(size)
+      return(populationSize)
     },
     
     populationSizeSummary = function(populationSize) {
