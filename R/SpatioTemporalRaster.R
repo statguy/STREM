@@ -85,9 +85,6 @@ SpatioTemporalRaster <- setRefClass(
                                 mask(rasterStack[[i]], boundary)
                               },
                               rasterStack=rasterStack, boundary=boundary, .parallel=T))
-        #for (i in 1:nlayers(rasterStack)) {          
-        #  rasterStack[[i]] <<- mask(rasterStack[[i]], boundary)
-        #}
       }
       weight(weights)
       if (!missing(layerNames)) names(rasterStack) <<- layerNames

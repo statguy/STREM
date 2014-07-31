@@ -97,7 +97,7 @@ Model <- setRefClass(
       if (missing(index)) index <- 1:nrow(xy)
       x <- llply(posteriorSamples,
                  function(x, index) data.frame(x=xy[,1], y=xy[,2], z=exp(x$latent[index]) / offsetScale, t=data$year),
-                 index=indexObserved, .parallel=T)
+                 index=index, .parallel=T)
       return(x)
     },
     
@@ -108,7 +108,7 @@ Model <- setRefClass(
     },
     
     getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
-      if (is.null(data$fittedMean) == 0)
+      if (is.null(data$fittedMean))
         stop("Did you forgot to run collectEstimates() first?")
       
       library(raster)
@@ -123,8 +123,9 @@ Model <- setRefClass(
     },
     
     getPopulationSize = function(populationDensity, tracks, habitatWeights) {
-      if (length(node) == 0)
-        stop("Run collectEstimates() first.")
+      if (is.null(data$fittedMean))
+        stop("Did you forgot to run collectEstimates() first?")
+      
       if (missing(populationDensity)) populationDensity <- getPopulationDensity(getSD=FALSE)
       if (!missing(habitatWeights)) populationDensity$mean$weight(habitatWeightsRaster)
       
@@ -701,11 +702,17 @@ SmoothModelSpatioTemporal <- setRefClass(
 
 SimulatedSmoothModelTemporal <- setRefClass(
   Class = "SimulatedSmoothModelTemporal",
-  contains = c("SmoothModelTemporal"),
+  contains = "SmoothModelTemporal",
   fields = list(
     iteration = "integer"
   ),
   methods = list(
+    getEstimatesFileIterations = function() {
+      if (inherits(study, "undefinedField") | length(modelName) == 0)
+        stop("Provide study and modelName parameters.")
+      return(iterations <- study$context$getIterationIds(dir=study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag="(\\d+)"))
+    },
+    
     getEstimatesFileName = function() {
       if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
         stop("Provide study, modelName and iteration parameters.")
@@ -716,11 +723,17 @@ SimulatedSmoothModelTemporal <- setRefClass(
 
 SimulatedSmoothModelSpatioTemporal <- setRefClass(
   Class = "SimulatedSmoothModelSpatioTemporal",
-  contains = c("SmoothModelSpatioTemporal"),
+  contains = "SmoothModelSpatioTemporal",
   fields = list(
     iteration = "integer"
   ),
   methods = list(
+    getEstimatesFileIterations = function() {
+      if (inherits(study, "undefinedField") | length(modelName) == 0)
+        stop("Provide study and modelName parameters.")
+      return(iterations <- study$context$getIterationIds(dir=study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag="(\\d+)"))
+    },
+    
     getEstimatesFileName = function() {
       if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
         stop("Provide study, modelName and iteration parameters.")

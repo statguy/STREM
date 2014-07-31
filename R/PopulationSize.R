@@ -99,7 +99,15 @@ SimulationPopulationSize <- setRefClass(
     modelName = "character"
   ),
   methods = list(
+    getPopulationSizeFileIterations = function() {
+      if (inherits(study, "undefinedField") | length(modelName) == 0)
+        stop("Provide study and modelName parameters.")
+      return(study$context$getIterationIds(dir=study$context$resultDataDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region, tag=paste("(\\d+)", modelName, sep="-")))
+    },
+    
     getPopulationSizeFileName = function() {
+      if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
+        stop("Provide study, modelName and iteration parameters.")
       return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region, tag=paste(iteration, modelName, sep="-")))
     },
     
