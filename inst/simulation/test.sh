@@ -19,4 +19,5 @@ python "$exec_path"/parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -
 python "$exec_path"/parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/count_intersections.R test "$scenario"
 python "$exec_path"/parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/estimate.R test "$scenario"
 python "$exec_path"/parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R test "$scenario"
+reset
 R --vanilla --args test "$scenario" 1 < ~/git/Winter-Track-Counts/inst/simulation/validate.R
