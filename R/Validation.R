@@ -25,29 +25,41 @@ Validation <- setRefClass(
     },
     
     validateTemporalPopulationSize = function(modelName) {
-      #iterations <- study$context$getIterationIds(dir=study$context$resultDataDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region, tag=paste("(\\d+)", modelName, sep="-"))
       iterations <- getPopulationSizeFileIterations(modelName)
-      size <- data.frame()
-      for (iteration in iterations) {
+
+      populationSize <- ldply(iterations, function(iteration) {
         message("Processing iteration ", iteration, " of ", length(iterations), " iterations...")
         
         populationSize <- study$loadPopulationSize(iteration=iteration, modelName=modelName)
-        populationSize$sizeData$Iteration <- iteration
         if (any(populationSize$sizeData$Estimated > populationSizeOverEstimate)) {
           message("Estimation failed for iteration ", iteration, ".")
           next
         }
         x <- populationSize$sizeData
         x$iteration <- iteration
-        size <- rbind(size, x)
-      }
+        return(x)
+      }, .parallel=T)
       
-      size$scenario <- scenario
-      size$modelName <- modelName
+      populationSize$scenario <- scenario
+      populationSize$modelName <- modelName
       
       return(size)
     },
-        
+    
+    populationSizeSummary = function(populationSize) {
+      library(plyr)
+      ddply(populationSize, .(scenario, Year), function(x, probs) {
+        y <- data.frame(Estimated=mean(x$Estimated), Observed=mean(x$Observed))
+        q <- quantile(x$Estimated, probs=probs)
+        y$Estimated.q1 <- q[1]
+        y$Estimated.q2 <- q[2]
+        q <- quantile(x$Observed, probs=probs)
+        y$Observed.q1 <- q[1]
+        y$Observed.q2 <- q[2]
+        return(y)
+      }, probs=c(.0025, .975))
+    },
+    
     validateSpatialPopulationSize = function(modelName) {
       library(raster)
       
@@ -141,15 +153,19 @@ Validation <- setRefClass(
       populationSize$iteration <- iteration
       
       if (save) {
-        save(populationSize, file=getCredibilityIntervalsValidationFileName(modelName=modelName, iteration=iteration))
+        fileName <- getCredibilityIntervalsValidationFileName(modelName=modelName, iteration=iteration)
+        message("Saving file to ", fileName, "...")
+        save(populationSize, file=fileName)
       }
       
       return(populationSize)  
     },
     
     loadCredibilityIntervalsValidation = function(modelName, iteration) {
-      load(getCredibilityIntervalsValidationFileName(modelName=modelName, iteration=iteration))
+      fileName <- getCredibilityIntervalsValidationFileName(modelName=modelName, iteration=iteration)
+      message("Loading file from ", fileName, "...")
+      load(fileName)
       return(populationSize)
-    }
+    }    
   )
 )
