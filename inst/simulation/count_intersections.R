@@ -1,5 +1,5 @@
 # Run test:
-# ./parallel_r.py -t 1:3 -n 3 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/count_intersections.R test A
+# ./parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/count_intersections.R test A
 # Run full:
 # ./parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/count_intersections.R notest A
 
@@ -38,6 +38,7 @@ countIntersections <- function(scenario, iteration, nSurveyRoutes=as.integer(500
 }
 
 #scenario<-"A"; task_id<-1; test<-F
-
-if (test) countIntersections(scenario=scenario, iteration=as.integer(task_id), nSurveyRoutes=as.integer(50), isTest=T)
-else countIntersections(scenario=scenario, iteration=as.integer(task_id), isTest=F)
+{
+  if (test) countIntersections(scenario=scenario, iteration=as.integer(task_id), nSurveyRoutes=as.integer(50), isTest=T)
+  else countIntersections(scenario=scenario, iteration=as.integer(task_id), isTest=F)
+}

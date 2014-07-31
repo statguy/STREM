@@ -1,7 +1,7 @@
 # Run test:
-# ./parallel_r.py -t 1:2 -n 2 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/simulate.R test A
+# ./parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/simulate.R test A
 # Run full:
-# ./parallel_r.py -t 1:50 -n 50 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/simulate.R notest A
+# ./parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/simulate.R notest A
 
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 
@@ -49,5 +49,7 @@ library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
 #for (task_id in 1:100)
-if (isTest) simulate(scenario=scenario, iteration=as.integer(task_id), nAgents=as.integer(50), nYears=as.integer(1), nDays=as.integer(59), isTest=TRUE)
-else simulate(scenario=scenario, iteration=as.integer(task_id))
+{
+  if (isTest) simulate(scenario=scenario, iteration=as.integer(task_id), nAgents=as.integer(50), nYears=as.integer(1), nDays=as.integer(59), isTest=TRUE)
+  else simulate(scenario=scenario, iteration=as.integer(task_id))
+}
