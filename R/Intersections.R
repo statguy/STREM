@@ -29,6 +29,7 @@ Intersections <- setRefClass(
     },
     
     loadIntersections = function(fileName=getIntersectionsFileName()) {
+      message("Loading intersections from ", fileName, "...")
       load(fileName, envir=as.environment(.self))
       return(invisible(.self))
     },

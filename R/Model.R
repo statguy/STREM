@@ -126,8 +126,8 @@ Model <- setRefClass(
       if (is.null(data$fittedMean))
         stop("Did you forgot to run collectEstimates() first?")
       
-      if (missing(populationDensity)) populationDensity <- getPopulationDensity(getSD=FALSE)
-      if (!missing(habitatWeights)) populationDensity$mean$weight(habitatWeightsRaster)
+      if (missing(populationDensity)) populationDensity <- getPopulationDensity(getSD=FALSE)$mean
+      if (!missing(habitatWeights)) populationDensity$weight(habitatWeightsRaster)
       
       #if (withHabitatWeights) {
       #  habitatWeights <- CORINEHabitatWeights$new(study=study)
@@ -388,19 +388,21 @@ SmoothModelSpatioTemporal <- setRefClass(
                                A=list(A),
                                effects=list(c(index, list(intercept=1))),
                                tag="observed")
-            
+      
       boundarySamples <- study$studyArea$sampleBoundary()
-      coords <- repeatMatrix(coordinates(boundarySamples), length(years)) * coordsScale
-      yearsData <- rep(years, each=length(boundarySamples))      
-      groupYears <- as.integer(yearsData - min(yearsData) + 1)
-      augA <<- inla.spde.make.A(mesh, loc=coords, group=groupYears, n.group=nYears)
-      augStack <<- inla.stack(data=list(response=NA,
-                                         E=1,
-                                         link=1),
-                               A=list(augA),
-                               effects=list(c(index, list(intercept=1))),
-                               tag="augmented")
-
+      if (!is.null(boundarySamples)) {
+        coords <- repeatMatrix(coordinates(boundarySamples), length(years)) * coordsScale
+        yearsData <- rep(years, each=length(boundarySamples))      
+        groupYears <- as.integer(yearsData - min(yearsData) + 1)
+        augA <<- inla.spde.make.A(mesh, loc=coords, group=groupYears, n.group=nYears)
+        augStack <<- inla.stack(data=list(response=NA,
+                                           E=1,
+                                           link=1),
+                                 A=list(augA),
+                                 effects=list(c(index, list(intercept=1))),
+                                 tag="augmented")
+      }
+      
       predStack <<- inla.stack(data=list(response=NA,
                                          E=1,
                                          link=1),
@@ -414,7 +416,8 @@ SmoothModelSpatioTemporal <- setRefClass(
     estimate = function(save=FALSE, fileName=getEstimatesFileName(), verbose=TRUE) {
       library(INLA)
       
-      fullStack <<- inla.stack(obsStack, augStack, predStack)
+      fullStack <<- if (is.null(augStack)) inla.stack(obsStack, predStack)
+      else inla.stack(obsStack, augStack, predStack)
       stackData <- inla.stack.data(fullStack, spde=spde)
       
       control.fixed <- if (length(interceptPrior) > 0)

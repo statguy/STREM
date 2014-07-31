@@ -36,7 +36,9 @@ MovementSimulationScenario <- setRefClass(
       return(invisible(.self))
     },
     
-    setup = function(response, context, nSurveyRoutes, isTest=FALSE) {
+    setup = function(response, context, nSurveyRoutes, withHabitatWeights, isTest=FALSE) {
+      message("Setting up movement simulation scenario, test = ", isTest, ", habitat = ", withHabitatWeights, "...")
+      
       if (inherits(BCRWCorrelationBiasTradeoff, "uninitializedField")) BCRWCorrelationBiasTradeoff <<- rep(NA, nAgents)
       if (inherits(homeRangeRadius, "uninitializedField")) homeRangeRadius <<- rep(NA, nAgents)
       nSteps.tmp <- 24 * days / stepIntervalHours
@@ -45,7 +47,7 @@ MovementSimulationScenario <- setRefClass(
       nSteps <<- as.integer(nSteps.tmp)
       if (length(birthDeathParams) == 0) birthDeathParams <<- list(mean=0, sd=0.1) # 95% = 0.82 - 1.22 variation coefficient each year
       
-      study <<- SimulationStudy$new(response=response)$setup(context=context, surveyRoutes=surveyRoutes, isTest=isTest)
+      study <<- SimulationStudy$new(response=response)$setup(context=context, surveyRoutes=surveyRoutes, withHabitatWeights=withHabitatWeights, isTest=isTest)
       surveyRoutes <<- if (isTest) FinlandRandomWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
       else FinlandWTCSurveyRoutes$new(study=study)$loadSurveyRoutes(context=context, nSurveyRoutes=nSurveyRoutes)
       
@@ -317,7 +319,7 @@ MovementSimulationScenarioA <- setRefClass(
     },
     
     setup = function(context, response="A", nSurveyRoutes=500, isTest=F) {
-      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
+      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, withHabitatWeights=FALSE, isTest=isTest)
       initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)      
       return(invisible(.self))
     }    
@@ -347,7 +349,7 @@ MovementSimulationScenarioB <- setRefClass(
     },
     
     setup = function(context, response="B", nSurveyRoutes=500, isTest=F) {
-      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
+      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, withHabitatWeights=FALSE, isTest=isTest)
       initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
       return(invisible(.self))
     }
@@ -370,7 +372,7 @@ MovementSimulationScenarioC <- setRefClass(
     },
     
     setup = function(context, response="C", nSurveyRoutes=500, isTest=F) {
-      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
+      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, withHabitatWeights=FALSE, isTest=isTest)
       initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
       return(invisible(.self))
     },
@@ -392,7 +394,7 @@ MovementSimulationScenarioD <- setRefClass(
     },
     
     setup = function(context, response="D", nSurveyRoutes=500, isTest=F) {
-      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
+      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, withHabitatWeights=FALSE, isTest=isTest)
       initialPopulation <<- if (isTest) ClusteredInitialPopulation$new(studyArea=study$studyArea, range=100e3, sigma=4, max.edge=3000)
       else ClusteredInitialPopulation$new(studyArea=study$studyArea)
       return(invisible(.self))
@@ -413,7 +415,7 @@ MovementSimulationScenarioE <- setRefClass(
     setup = function(context, response="E", nSurveyRoutes=500, isTest=F, range=Inf, sigma=1, readHabitatIntoMemory=F) {
       if (isTest) if (length(nSurveyRoutes) == 0) stop("Provide the number of survey routes.")
       
-      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
+      callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, withHabitatWeights=TRUE, isTest=isTest)
       
       if (readHabitatIntoMemory) study$studyArea$readRasterIntoMemory()
       
@@ -443,7 +445,7 @@ MovementSimulationScenarioF <- setRefClass(
     },
     
     setup = function(context, response="F", nSurveyRoutes=500, isTest=F, readHabitatIntoMemory=F) {
-      return(callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest, range=100e3, sigma=4, readHabitatIntoMemory=readHabitatIntoMemory))
+      return(callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, withHabitatWeights=TRUE, isTest=isTest, range=100e3, sigma=4, readHabitatIntoMemory=readHabitatIntoMemory))
     },
     
     randomizeHerdSize = function() {

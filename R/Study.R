@@ -28,7 +28,8 @@ SimulationStudy <- setRefClass(
   Class = "SimulationStudy",
   contains = "Study",
   fields = list(
-    surveyRoutes = "ANY"
+    surveyRoutes = "ANY",
+    withHabitatWeights = "logical"
   ),
   methods = list(
     initialize = function(...) {
@@ -36,8 +37,9 @@ SimulationStudy <- setRefClass(
       return(invisible(.self))
     },
     
-    setup = function(context, surveyRoutes, isTest=F) {
+    setup = function(context, surveyRoutes, withHabitatWeights, isTest=F) {
       context <<- context
+      withHabitatWeights <<- withHabitatWeights
       surveyRoutes <<- surveyRoutes # WARNING: this can give us recursion for study object references! TODO: better design
       studyArea <<- if (isTest) TestStudyArea$new(context=context)$setup()
       else FinlandStudyArea$new(context=context)$setup()
@@ -104,33 +106,29 @@ SimulationStudy <- setRefClass(
       return(invisible(model))
     },
     
-    getPopulationSize = function(estimates, withHabitatWeights=FALSE, save=TRUE) {      
+    getPopulationSize = function(estimates, habitatWeights, save=TRUE) {      
       estimates <- loadEstimates(estimates)
       estimates$collectEstimates()
-      populationSize <- estimates$getPopulationSize(withHabitatWeights=withHabitatWeights)
+      populationSize <- if (withHabitatWeights == FALSE) estimates$getPopulationSize()
+      else {
+        if (missing(habitatWeights))
+          stop("Required argument 'habitatWeights' missing.")
+        estimates$getPopulationSize(habitatWeights=habitatWeights)
+      }
       if (save) populationSize$savePopulationSize()
       return(invisible(populationSize))
-    }
-  )
-)
-
-SimulationStudySubset <- setRefClass(
-  Class = "SimulationStudySubset",
-  contains = "SimulationStudy",
-  fields = list(
-    years = "integer"
-  ),
-  methods = list(
-    loadTracks = function(iteration, addColumns=TRUE) {
-      tracks <- callSuper(iteration=iteration, addColumns=addColumns)
-      tracks$tracks <- subset(tracks$tracks, year %in% years)
-      return(tracks)
     },
     
-    loadIntersections = function(iteration) {
-      intersections <- callSuper(iteration=iteration)
-      intersections$intersections <- subset(intersections$intersections, year %in% years)
-      return(intersections)
+    getHabitatWeights = function(tracks, iteration) {
+      if (withHabitatWeights == FALSE) return(NULL)
+      
+      habitatWeights <- CORINEHabitatWeights$new(study=study)
+      if (missing(tracks)) tracks <- study$loadTracks(iteration=iteration)
+      habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=FALSE) # TODO: save
+      habitatWeights$setHabitatSelectionWeights(habitatSelection)
+      habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=FALSE)
+      
+      return(habitatWeightsRaster)
     }
   )
 )
@@ -327,11 +325,11 @@ FinlandWTCStudy <- setRefClass(
     #  return(populationDensity)
     #},
     
-    getPopulationSize = function(model, withHabitatWeights=TRUE, saveDensityPlots=FALSE) {
-      populationDensity <- getPopulationDensity(model=model, withHabitatWeights=withHabitatWeights, saveDensityPlots=saveDensityPlots)
-      populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study))
-      return(populationSize)
-    },
+    #getPopulationSize = function(model, withHabitatWeights=TRUE, saveDensityPlots=FALSE) {
+    #  populationDensity <- getPopulationDensity(model=model, withHabitatWeights=withHabitatWeights, saveDensityPlots=saveDensityPlots)
+    #  populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study))
+    #  return(populationSize)
+    #},
     
     show = function() {
       cat("Response: ", response, "\n")

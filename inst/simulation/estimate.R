@@ -6,8 +6,21 @@
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 
 
-estimate <- function(study, iteration, test) {  
-  if (test=="test") {
+estimateSpatioTemporal <- function(iteration, isTest=FALSE, quick=FALSE) {
+  context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+  mss <- {
+    if (scenario == "A") MovementSimulationScenarioA$new()$setup(context=context, isTest=isTest)
+    else if (scenario == "B") MovementSimulationScenarioB$new()$setup(context=context, isTest=isTest)
+    else if (scenario == "C") MovementSimulationScenarioC$new()$setup(context=context, isTest=isTest)
+    else if (scenario == "D") MovementSimulationScenarioD$new()$setup(context=context, isTest=isTest)
+    else if (scenario == "E") MovementSimulationScenarioE$new()$setup(context=context, isTest=isTest)
+    else if (scenario == "F") MovementSimulationScenarioF$new()$setup(context=context, isTest=isTest)
+    else stop("unsupported")
+  }
+  study <- mss$study
+  
+  if (quick) {
+    stop("TODO")
     intersections <- study$loadIntersections(iteration=iteration)
     model <- SimulatedSmoothModelSpatioTemporal$new(study=study, iteration=iteration)
     meshParams <- list(maxEdge=c(.1e6, .2e6), cutOff=.05e6, coordsScale=1e-6)
@@ -24,15 +37,14 @@ estimate <- function(study, iteration, test) {
   }
   else {
     model <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
-    meshParams <- list(maxEdge=c(.1e6, .2e6), cutOff=.05e6, coordsScale=1e-6)
-    modelParams <- list(family="nbinomial", offsetScale=1000^2, meshParams=meshParams, timeModel="ar1")
+    modelParams <- list(family="nbinomial", offsetScale=1000^2, meshParams=study$studyArea$getMesh(), timeModel="ar1")
     study$estimate(model=model, params=modelParams)
   }
 }
 
 args <- commandArgs(trailingOnly=TRUE)
 if (length(args) != 3) stop("Invalid arguments.")
-test <- args[1]
+test <- args[1] == "test"
 scenario <- args[2]
 task_id <- args[length(args)]
 message("Arguments provided:")
@@ -44,16 +56,6 @@ registerDoMC(cores=detectCores())
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
-context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-mss <- {
-  if (scenario == "A") MovementSimulationScenarioA$new()$setup(context=context)
-  else if (scenario == "B") MovementSimulationScenarioB$new()$setup(context=context)
-  else if (scenario == "C") MovementSimulationScenarioC$new()$setup(context=context)
-  else if (scenario == "D") MovementSimulationScenarioD$new()$setup(context=context)
-  else if (scenario == "E") MovementSimulationScenarioE$new()$setup(context=context)
-  else if (scenario == "F") MovementSimulationScenarioF$new()$setup(context=context)
-  else stop("unsupported")
-}
 
 study <- mss$study
-estimate(study=study, iteration=as.integer(task_id), test)
+estimateSpatioTemporal(iteration=as.integer(task_id), isTest=test)

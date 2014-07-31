@@ -179,8 +179,10 @@ StudyArea <- setRefClass(
     },
     
     sampleBoundary = function() {
-      if (length(nBoundarySamples) == 0)
-        stop("nBoundarySamples not defined by subclass.")
+      if (length(nBoundarySamples) == 0) {
+        warning("nBoundarySamples not defined by subclass.")
+        return(NULL)
+      }
       coords <- coordinates(boundary@polygons[[1]]@Polygons[[1]])
       boundarySL <- SpatialLines(list(Lines(Line(coords), ID=1)), proj4string=proj4string)
       return(spsample(x=boundarySL, n=nBoundarySamples, type="regular"))
@@ -220,7 +222,15 @@ StudyArea <- setRefClass(
         habitat <<- readAll(habitat)
       }
       return(invisible(.self))
-    }    
+    },
+    
+    getMesh = function() {
+      stop("Unimplemented method.")      
+    },
+    
+    getQuickMesh = function() {
+      stop("Unimplemented method.")
+    }
   )
 )
 
@@ -230,7 +240,7 @@ TestStudyArea <- setRefClass(
   methods = list(
     initialize = function(...) {
       library(sp)
-      callSuper(region="test", proj4string=CRS("+init=epsg:2393"), ...)
+      callSuper(region="test", proj4string=CRS("+init=epsg:2393"), nBoundarySamples=as.integer(0), ...)
       return(.self)
     },
     
@@ -252,6 +262,14 @@ TestStudyArea <- setRefClass(
     
     getHabitatRasterFile = function() {
       return(context$getFileName(context$scratchDirectory, name="HabitatRaster", region="Finland", ext=".tif"))
+    },
+
+    getQuickMesh = function() {
+      getMesh()
+    },
+    
+    getMesh = function() {
+      list(maxEdge=c(.01e6, .2e6), cutOff=.01e6, coordsScale=1e-6)
     }
   )
 )
@@ -269,6 +287,13 @@ FinlandStudyArea <- setRefClass(
     loadBoundary = function(thin=TRUE, tolerance=0.1) {
       loadBoundaryGADM(country="FIN", thin=thin, tolerance=tolerance)
       return(invisible(.self))
+    },
+    
+    #getQuickMesh = function() { 
+    #},
+    
+    getMesh = function() {
+      list(maxEdge=c(.1e6, .2e6), cutOff=.05e6, coordsScale=1e-6)
     }
   )
 )
