@@ -6,15 +6,7 @@ Study <- setRefClass(
     studyArea = "StudyArea"
   ),
   methods = list(
-    getTemplateRaster = function() {#height=600, ext=extent(studyArea$habitat)) {
-      #library(sp)
-      #library(raster)
-      
-      #dimXY <- dim(studyArea$habitat)[1:2]
-      #aspectRatio <- dimXY[2] / dimXY[1]
-      #width <- height * aspectRatio
-      #templateRaster <- raster(ext, nrows=height, ncols=width, crs=studyArea$proj4string)
-      
+    getTemplateRaster = function() {
       height <- dim(studyArea$habitat)[1] / 100 # Determine scaling automatically
       width <- dim(studyArea$habitat)[2] / 100
       templateRaster <- raster(extent(studyArea$habitat), nrows=height, ncols=width, crs=studyArea$proj4string)
@@ -43,11 +35,6 @@ SimulationStudy <- setRefClass(
       surveyRoutes <<- surveyRoutes # WARNING: this can give us recursion for study object references! TODO: better design
       studyArea <<- if (isTest) TestStudyArea$new(context=context)$setup()
       else FinlandStudyArea$new(context=context)$setup()
-      return(invisible(.self))
-    },
-    
-    preprocess = function() {
-      #loadSurveyRoutes(save=TRUE)
       return(invisible(.self))
     },
     
@@ -88,10 +75,9 @@ SimulationStudy <- setRefClass(
       return(surveyRoutes)
     },
     
-    countIntersections = function(surveyRoutes, iteration, save=TRUE) {
-      #surveyRoutes <<- surveyRoutes
+    countIntersections = function(surveyRoutes, iteration, days=1, save=TRUE) {
       tracks <- .self$loadTracks(iteration=iteration)
-      intersections <- tracks$countIntersections(surveyRoutes=surveyRoutes, save=save)
+      intersections <- tracks$countIntersections(surveyRoutes=surveyRoutes, days=days, save=save)
       return(invisible(intersections))
     },
     

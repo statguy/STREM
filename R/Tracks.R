@@ -217,20 +217,7 @@ Tracks <- setRefClass(
     getMeanDistance = function() {
       return(mean(getDistances(), na.rm=TRUE))
     },
-    
-    # Thinning strategies:
-    # 
-    # xxxxxxxxxxx
-    # x x x x x x
-    # x   x   x
-    # x       x
-    #
-    # xxxxxxxxxx
-    # x x x x x
-    # x  x  x  x
-    # x   x   x
-    # x    x   
-    
+       
     .internal.thin = function(by) {
       library(plyr)
       
@@ -310,7 +297,7 @@ SimulatedTracks <- setRefClass(
     
     randomizeObservationDayTracks = function(days=1) {
       library(plyr)
-      message("Randomizing observation day and filtering tracks...")
+      message("Randomizing observation days = ", days, " and filtering tracks...")
 
       observationTracksDF <- ddply(tracks, .(year), function(x, days) {
         randomDays <- x$yday
@@ -339,8 +326,8 @@ SimulatedTracks <- setRefClass(
       return(observationTracks)
     },
     
-    countIntersections = function(surveyRoutes, save=TRUE) {
-      observationTracks <- randomizeObservationDayTracks()
+    countIntersections = function(surveyRoutes, days=1, save=TRUE) {
+      observationTracks <- randomizeObservationDayTracks(days=days)
       #surveyRoutes <- study$loadSurveyRoutes()
       intersections <- SimulatedIntersections$new(study=study, iteration=iteration)
       intersections$findIntersections(observationTracks, surveyRoutes, dimension=1)

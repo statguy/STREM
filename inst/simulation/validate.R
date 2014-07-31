@@ -9,7 +9,7 @@ source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 parseArguments()
 
 if (isTest) {
-  nSamples <- 2
+  nSamples <- 50
   populationSizeOverEstimate <- 200
 } else {
   nSamples <- 50
@@ -27,6 +27,18 @@ if (isTest) {
   populationSize
   print(validation$populationSizeSummary(populationSize))
   print(summary(lm(Estimated~Observed, populationSize)))
+
+  populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=iteration, nSamples=nSamples, save=T)
+  populationSizeCI
+  
+  ddply(populationSizeCI, .(scenario, Year), function(x, probs) {
+    y <- data.frame(Estimated=mean(x$Estimated), Observed=mean(x$Observed))
+    q <- quantile(x$Estimated, probs=probs)
+    y$Estimated.q1 <- q[1]
+    y$Estimated.q2 <- q[2]
+    return(y)
+  }, probs=c(.0025, .975))
+
 } else {
   populationSize <- validation$validateTemporalPopulationSize(modelName=modelName)
   validation$populationSizeSummary(populationSize)
