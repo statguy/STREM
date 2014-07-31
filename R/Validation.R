@@ -29,7 +29,8 @@ Validation <- setRefClass(
       iterations <- getPopulationSizeFileIterations(modelName)
       size <- data.frame()
       for (iteration in iterations) {
-        message("Processing iteration ", iteration, " of ", length(iterations), " iterations.")
+        message("Processing iteration ", iteration, " of ", length(iterations), " iterations...")
+        
         populationSize <- study$loadPopulationSize(iteration=iteration, modelName=modelName)
         populationSize$sizeData$Iteration <- iteration
         if (any(populationSize$sizeData$Estimated > populationSizeOverEstimate)) {
@@ -63,7 +64,7 @@ Validation <- setRefClass(
       spatialCorrelation <- data.frame()
       
       for (iteration in iterations) {
-        message("Iteration ", iteration, " of ", length(iterations), " iterations.")
+        message("Iteration ", iteration, " of ", length(iterations), " iterations...")
         
         estimates <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
         estimates$modelName <- modelName
@@ -78,6 +79,9 @@ Validation <- setRefClass(
         
         for (i in unique(tracks$tracks$year) - min(tracks$tracks$year) + 1) {
           year0 <- i + min(tracks$tracks$year) - 1
+          
+          message("Iteratation ", iteration, " of ", length(iterations), " iterations, year ", year0, "...")
+          
           true <- rasterize(subset(cc, year == year0, select=c("x","y")), template, field=1, fun='count', background=0)
           true <- mask(true, coverArea)
           
