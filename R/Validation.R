@@ -16,7 +16,7 @@ Validation <- setRefClass(
     },
     
     getEstimatesFileIterations = function(modelName) {
-      model <- SimulatedSmoothModel(study=study, modelName=modelName)
+      model <- SimulatedSmoothModelSpatioTemporal(study=study, modelName=modelName)
       return(model$getEstimatesFileIterations())
     },
     
