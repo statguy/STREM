@@ -49,7 +49,7 @@ Validation <- setRefClass(
     populationSizeSummary = function(populationSize) {
       library(plyr)
       ddply(populationSize, .(scenario, Year), function(x, probs) {
-        y <- data.frame(Estimated=mean(x$Estimated), Observed=mean(x$Observed))
+        y <- data.frame(n=nrow(x), Estimated=mean(x$Estimated), Observed=mean(x$Observed))
         q <- quantile(x$Estimated, probs=probs)
         y$Estimated.q1 <- q[1]
         y$Estimated.q2 <- q[2]

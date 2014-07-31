@@ -191,3 +191,34 @@ concat <- function(..., sep="") {
   args <- args[!sapply(args, is.null)]
   paste(args, collapse=sep)
 }
+
+getMSS <- function(scenario, isTest=FALSE, ...) {
+  context <- Context(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+  mss <- {
+    if (scenario == "A") MovementSimulationScenarioA()$setup(context=context, isTest=isTest, ...)
+    else if (scenario == "B") MovementSimulationScenarioB()$setup(context=context, isTest=isTest, ...)
+    else if (scenario == "C") MovementSimulationScenarioC()$setup(context=context, isTest=isTest, ...)
+    else if (scenario == "D") MovementSimulationScenarioD()$setup(context=context, isTest=isTest, ...)
+    else if (scenario == "E") MovementSimulationScenarioE()$setup(context=context, isTest=isTest, ...)
+    else if (scenario == "F") MovementSimulationScenarioF()$setup(context=context, isTest=isTest, ...)
+    else stop("unsupported")
+  }
+  return(mss)  
+}
+
+parseArguments <- function() {
+  args <- commandArgs(trailingOnly=TRUE)
+  if (is.null(args)) {
+    isTest <<- TRUE
+    scenario <<- "A"
+    task_id <<- as.integer(1)
+  }
+  else {
+    if (length(args) != 3) stop("Invalid arguments.")
+    message("Arguments provided:")
+    print(args)
+    isTest <<- args[1] == "test"
+    scenario <<- args[2]
+    task_id <<- as.integer(args[length(args)])
+  }
+}
