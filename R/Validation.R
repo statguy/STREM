@@ -33,7 +33,7 @@ Validation <- setRefClass(
         populationSize <- study$loadPopulationSize(iteration=iteration, modelName=modelName)
         if (any(populationSize$sizeData$Estimated > populationSizeOverEstimate)) {
           message("Estimation failed for iteration ", iteration, ".")
-          next
+          return(NULL)
         }
         x <- populationSize$sizeData
         x$iteration <- iteration
