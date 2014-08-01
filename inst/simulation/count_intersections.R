@@ -6,7 +6,7 @@
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 
 countIntersections <- function(scenario, iteration, nSurveyRoutes=as.integer(500), countDays=as.integer(1), isTest=F) {
-  mss <- getMSS(nSurveyRoutes=nSurveyRoutes, isTest=isTest)
+  mss <- getMSS(scenario=scenario, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
   study <- mss$study
   study$countIntersections(surveyRoutes=mss$getSurveyRoutes(), iteration=iteration, days=countDays)
 }

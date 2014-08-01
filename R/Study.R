@@ -95,12 +95,7 @@ SimulationStudy <- setRefClass(
     getPopulationSize = function(estimates, habitatWeights, save=TRUE) {      
       estimates <- loadEstimates(estimates)
       estimates$collectEstimates()
-      populationSize <- if (withHabitatWeights == FALSE) estimates$getPopulationSize()
-      else {
-        if (missing(habitatWeights))
-          stop("Required argument 'habitatWeights' missing.")
-        estimates$getPopulationSize(habitatWeights=habitatWeights)
-      }
+      populationSize <- estimates$getPopulationSize(habitatWeights=habitatWeights)
       if (save) populationSize$savePopulationSize()
       return(invisible(populationSize))
     },
