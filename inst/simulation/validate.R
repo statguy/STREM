@@ -31,13 +31,6 @@ if (isTest) {
   populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=iteration, nSamples=nSamples, save=T)
   populationSizeCI
   
-  ddply(populationSizeCI, .(scenario, Year), function(x, probs) {
-    y <- data.frame(Estimated=mean(x$Estimated), Observed=mean(x$Observed))
-    q <- quantile(x$Estimated, probs=probs)
-    y$Estimated.q1 <- q[1]
-    y$Estimated.q2 <- q[2]
-    return(y)
-  }, probs=c(.0025, .975))
   
 } else {
   populationSize <- validation$validateTemporalPopulationSize(modelName=modelName)

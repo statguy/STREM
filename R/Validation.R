@@ -48,7 +48,7 @@ Validation <- setRefClass(
       return(populationSize)
     },
     
-    populationSizeSummary = function(populationSize) {
+    summarizePopulationSize = function(populationSize) {
       library(plyr)
       ddply(populationSize, .(scenario, Year), function(x, probs) {
         y <- data.frame(n=nrow(x), Estimated=mean(x$Estimated), Observed=mean(x$Observed))
@@ -122,7 +122,7 @@ Validation <- setRefClass(
     },
     
     getCredibilityIntervalsValidationFileName = function(modelName, iteration) {
-      return(study$context$getLongFileName(study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
+      return(study$context$getLongFileName(study$context$scratchDirectory, name="CIValidation", response=study$response, region=study$studyArea$region, tag=paste(modelName, iteration, sep="-")))
     },
     
     validateCredibilityIntervals = function(modelName, iteration, nSamples=100, save=F) {      
@@ -163,11 +163,21 @@ Validation <- setRefClass(
       return(populationSize)  
     },
     
+    summarizePopulationSizeCI = function(populationSizeCI, probs=c(.0025, .975)) {
+      ddply(populationSizeCI, .(scenario, Year), function(x, probs) {
+        y <- data.frame(Estimated=mean(x$Estimated), Observed=mean(x$Observed))
+        q <- quantile(x$Estimated, probs=probs)
+        y$Estimated.q1 <- q[1]
+        y$Estimated.q2 <- q[2]
+        return(y)
+      }, probs=probs)
+    },
+    
     loadCredibilityIntervalsValidation = function(modelName, iteration) {
       fileName <- getCredibilityIntervalsValidationFileName(modelName=modelName, iteration=iteration)
       message("Loading file from ", fileName, "...")
       load(fileName)
       return(populationSize)
-    }    
+    }
   )
 )
