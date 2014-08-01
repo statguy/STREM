@@ -57,8 +57,8 @@ if (isTest) {
     summary(lm(Correlation~True, spatialCorrelation))
   }
   
-  populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=iteration, nSamples=nSamples, save=T)
-  validation$loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
+  populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=as.integer(task_id), nSamples=nSamples, save=T)
+  #validation$loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
 }
 
 
