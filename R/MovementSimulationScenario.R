@@ -46,9 +46,11 @@ MovementSimulationScenario <- setRefClass(
       if (length(birthDeathParams) == 0) birthDeathParams <<- list(mean=0, sd=0.1) # 95% = 0.82 - 1.22 variation coefficient each year
       
       study <<- SimulationStudy$new(response=response)$setup(context=context, surveyRoutes=surveyRoutes, withHabitatWeights=withHabitatWeights, isTest=isTest)
-      surveyRoutes <<- if (isTest) FinlandRandomWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
-      else FinlandWTCSurveyRoutes$new(study=study)$loadSurveyRoutes(context=context, nSurveyRoutes=nSurveyRoutes)
-      
+      if (!missing(nSurveyRoutes)) {
+        surveyRoutes <<- if (isTest) FinlandRandomWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
+        else FinlandWTCSurveyRoutes$new(study=study)$loadSurveyRoutes(context=context, nSurveyRoutes=nSurveyRoutes)
+      }
+        
       return(invisible(.self))
     },
     

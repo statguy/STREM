@@ -301,11 +301,11 @@ SimulatedTracks <- setRefClass(
 
       observationTracksDF <- ddply(tracks, .(year), function(x, days) {
         randomDays <- x$yday
-        randomDays <- randomDays[randomDays <= max(x$yday) - days + 1]
+        if (max(randomDays) + 1 - days < 0)
+          stop("Too many days to randomize, max days available = ", max(randomDays) + 1)
+        randomDays <- randomDays[randomDays <= max(randomDays) + 1 - days]
         randomDay <- sample(randomDays, 1)
         return(subset(x, yday %in% randomDay:(randomDay + days - 1)))
-        #randomDay <- sample(x$yday, 1)
-        #return(subset(x, yday == randomDay))
       }, days=days)
       
       observationTracks <- copy(shallow=TRUE) # Avoid possible recursion
