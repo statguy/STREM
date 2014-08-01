@@ -24,4 +24,4 @@ python "$exec_path"/parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -
 reset
 python "$exec_path"/parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R notest "$scenario"
 reset
-R --vanilla --args test "$scenario" 1 < ~/git/Winter-Track-Counts/inst/simulation/validate.R
+R --vanilla --args notest "$scenario" 1 < ~/git/Winter-Track-Counts/inst/simulation/validate.R

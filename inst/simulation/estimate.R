@@ -6,17 +6,8 @@
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 
 
-estimateSpatioTemporal <- function(iteration, isTest=FALSE, quick=FALSE) {
-  context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-  mss <- {
-    if (scenario == "A") MovementSimulationScenarioA$new()$setup(context=context, isTest=isTest)
-    else if (scenario == "B") MovementSimulationScenarioB$new()$setup(context=context, isTest=isTest)
-    else if (scenario == "C") MovementSimulationScenarioC$new()$setup(context=context, isTest=isTest)
-    else if (scenario == "D") MovementSimulationScenarioD$new()$setup(context=context, isTest=isTest)
-    else if (scenario == "E") MovementSimulationScenarioE$new()$setup(context=context, isTest=isTest)
-    else if (scenario == "F") MovementSimulationScenarioF$new()$setup(context=context, isTest=isTest)
-    else stop("unsupported")
-  }
+estimateSpatioTemporal <- function(scenario, iteration, isTest=FALSE, quick=FALSE) {
+  mss <- getMSS(scenario=scenario, isTest=isTest)
   study <- mss$study
   
   if (quick) {
@@ -42,19 +33,12 @@ estimateSpatioTemporal <- function(iteration, isTest=FALSE, quick=FALSE) {
   }
 }
 
-args <- commandArgs(trailingOnly=TRUE)
-if (length(args) != 3) stop("Invalid arguments.")
-test <- args[1] == "test"
-scenario <- args[2]
-task_id <- args[length(args)]
-message("Arguments provided:")
-print(args)
-
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores())
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
+parseArguments()
 
-estimateSpatioTemporal(iteration=as.integer(task_id), isTest=test)
+estimateSpatioTemporal(scenario=scenario, iteration=as.integer(task_id), isTest=isTest)
