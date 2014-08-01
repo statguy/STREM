@@ -38,7 +38,7 @@ if (isTest) {
     y$Estimated.q2 <- q[2]
     return(y)
   }, probs=c(.0025, .975))
-
+  
 } else {
   populationSize <- validation$validateTemporalPopulationSize(modelName=modelName)
   validation$populationSizeSummary(populationSize)
