@@ -127,7 +127,7 @@ Model <- setRefClass(
         stop("Did you forgot to run collectEstimates() first?")
       
       if (missing(populationDensity)) populationDensity <- getPopulationDensity(getSD=FALSE)$mean
-      if (!missing(habitatWeights) & !is.null(habitatWeights)) populationDensity$weight(habitatWeights)
+      if (!missing(habitatWeights)) if (!is.null(habitatWeights)) populationDensity$weight(habitatWeights)
       
       #if (withHabitatWeights) {
       #  habitatWeights <- CORINEHabitatWeights$new(study=study)

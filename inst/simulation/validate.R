@@ -27,6 +27,7 @@ if (isTest) {
   print(validation$populationSizeSummary(populationSize))
   print(summary(lm(Estimated~Observed, populationSize)))
   
+  #iteration <- as.integer(1)
   populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=iteration, nSamples=nSamples, save=T)
   populationSizeCI
   
