@@ -24,7 +24,7 @@ validation <- Validation(study=study, populationSizeOverEstimate=populationSizeO
 if (isTest) {
   populationSize <- validation$validateTemporalPopulationSize(modelName=modelName)
   populationSize
-  print(validation$populationSizeSummary(populationSize))
+  print(validation$summarizePopulationSize(populationSize))
   print(summary(lm(Estimated~Observed, populationSize)))
   
   library(plyr)
@@ -50,7 +50,7 @@ if (isTest) {
 } else {
   if (F) {
     populationSize <- validation$validateTemporalPopulationSize(modelName=modelName)
-    validation$populationSizeSummary(populationSize)
+    validation$summarizePopulationSize(populationSize)
     summary(lm(Estimated~Observed, populationSize))  
     
     spatialCorrelation <- validation$validateSpatialPopulationSize(modelName=modelName)
@@ -58,7 +58,18 @@ if (isTest) {
   }
   
   populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=as.integer(task_id), nSamples=nSamples, save=T)
-  #validation$loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
+  if (F) {
+    #populationSizeCI <- validation$loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
+    #print(validation$summarizePopulationSizeCI(populationSizeCI))
+    #print(validation$summarizePopulationSizeCI(populationSizeCI, probs=c(.25,.75)))
+    
+    iterations <- validation$getCredibilityIntervalsValidationIterations(modelName=modelName)
+    populationSizeCI <- ldply(iterations, function(iteration) {
+      validation$loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
+    })
+    print(validation$summarizePopulationSizeCI(populationSizeCI))
+    print(validation$summarizePopulationSizeCI(populationSizeCI, probs=c(.25,.75)))
+  }
 }
 
 

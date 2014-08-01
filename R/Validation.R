@@ -173,6 +173,10 @@ Validation <- setRefClass(
       }, probs=probs)
     },
     
+    getCredibilityIntervalsValidationIterations = function(modelName) {
+      return(study$context$getIterationIds(dir=study$context$scratchDirectory, name="CIValidation", response=study$response, region=study$studyArea$region, tag=paste(modelName, "(\\d+)", sep="-")))
+    },
+    
     loadCredibilityIntervalsValidation = function(modelName, iteration) {
       fileName <- getCredibilityIntervalsValidationFileName(modelName=modelName, iteration=iteration)
       message("Loading file from ", fileName, "...")

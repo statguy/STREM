@@ -14,7 +14,7 @@ fi
 
 exec_path=$1
 scenario=$2
-count_days=59
+count_days=1
 
 python "$exec_path"/parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/simulate.R notest "$scenario"
 reset
