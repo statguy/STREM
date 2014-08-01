@@ -19,7 +19,6 @@ if (isTest) {
 modelName <- paste("SmoothModel", "nbinomial", "matern", "ar1", sep = "-")
 mss <- getMSS(scenario=scenario, isTest=isTest)
 study <- mss$study
-
 validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 
 if (isTest) {
@@ -27,7 +26,7 @@ if (isTest) {
   populationSize
   print(validation$populationSizeSummary(populationSize))
   print(summary(lm(Estimated~Observed, populationSize)))
-
+  
   populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=iteration, nSamples=nSamples, save=T)
   populationSizeCI
   

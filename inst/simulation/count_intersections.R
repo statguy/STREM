@@ -20,6 +20,6 @@ source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 parseArguments()
 
 {
-  if (test) countIntersections(scenario=scenario, iteration=as.integer(task_id), nSurveyRoutes=as.integer(50), countDays=as.integer(59), isTest=T)
+  if (isTest) countIntersections(scenario=scenario, iteration=as.integer(task_id), nSurveyRoutes=as.integer(50), countDays=as.integer(59), isTest=T)
   else countIntersections(scenario=scenario, iteration=as.integer(task_id), isTest=F)
 }

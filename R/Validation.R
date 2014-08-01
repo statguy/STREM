@@ -25,6 +25,8 @@ Validation <- setRefClass(
     },
     
     validateTemporalPopulationSize = function(modelName) {
+      library(plyr)
+      
       iterations <- getPopulationSizeFileIterations(modelName)
 
       populationSize <- ldply(iterations, function(iteration) {
