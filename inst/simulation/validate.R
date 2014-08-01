@@ -27,30 +27,41 @@ if (isTest) {
   print(validation$populationSizeSummary(populationSize))
   print(summary(lm(Estimated~Observed, populationSize)))
   
+  library(plyr)
   #iteration <- as.integer(1)
-  populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=iteration, nSamples=nSamples, save=T)
-  populationSizeCI
+  iterations <- validation$getEstimatesFileIterations(modelName=modelName)
+  populationSizeCI <- ldply(iterations, function(iteration) {
+    validation$validateCredibilityIntervals(modelName=modelName, iteration=iteration, nSamples=nSamples, save=F)
+  }, .parallel=T)
+  print(validation$summarizePopulationSizeCI(populationSizeCI))
+  print(validation$summarizePopulationSizeCI(populationSizeCI, probs=c(.25,.75)))
   
   
-} else {
-  populationSize <- validation$validateTemporalPopulationSize(modelName=modelName)
-  validation$populationSizeSummary(populationSize)
-  summary(lm(Estimated~Observed, populationSize))  
-  
-  spatialCorrelation <- validation$validateSpatialPopulationSize(modelName=modelName)
-  summary(lm(Correlation~True, spatialCorrelation))
-  
-  populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=iteration, nSamples=nSamples, save=T)
-  validation$loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
-  
-  ddply(populationSizeCI, .(scenario, Year), function(x, probs) {
+  x <- ddply(populationSizeCI, .(scenario, Year, iteration), function(x, probs) {
     y <- data.frame(Estimated=mean(x$Estimated), Observed=mean(x$Observed))
     q <- quantile(x$Estimated, probs=probs)
     y$Estimated.q1 <- q[1]
     y$Estimated.q2 <- q[2]
     return(y)
-  }, probs=c(.0025, .975))  
+  }, probs=probs)
+  xy <- merge(populationSize[,c("iteration","Estimated")], x, by="iteration")
+  summary(lm(Estimated.y~Estimated.x, xy)) # OK !
+  
+} else {
+  if (F) {
+    populationSize <- validation$validateTemporalPopulationSize(modelName=modelName)
+    validation$populationSizeSummary(populationSize)
+    summary(lm(Estimated~Observed, populationSize))  
+    
+    spatialCorrelation <- validation$validateSpatialPopulationSize(modelName=modelName)
+    summary(lm(Correlation~True, spatialCorrelation))
+  }
+  
+  populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=iteration, nSamples=nSamples, save=T)
+  validation$loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
 }
+
+
 
 if (F) {
   summary(lm(Estimated~Observed, populationSize))

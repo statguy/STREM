@@ -18,8 +18,9 @@ library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
 parseArguments()
+countDays <- if (!is.null(extraArgs)) as.integer(extraArgs[4]) else as.integer(1)
 
 {
-  if (isTest) countIntersections(scenario=scenario, iteration=as.integer(task_id), nSurveyRoutes=as.integer(50), countDays=as.integer(59), isTest=T)
-  else countIntersections(scenario=scenario, iteration=as.integer(task_id), isTest=F)
+  if (isTest) countIntersections(scenario=scenario, iteration=as.integer(task_id), nSurveyRoutes=as.integer(50), countDays=countDays, isTest=T)
+  else countIntersections(scenario=scenario, iteration=as.integer(task_id), countDays=countDays, isTest=F)
 }

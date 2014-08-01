@@ -212,13 +212,15 @@ parseArguments <- function() {
     isTest <<- TRUE
     scenario <<- "A"
     task_id <<- as.integer(1)
+    extraArgs <<- NULL
   }
   else {
-    if (length(args) != 3) stop("Invalid arguments.")
+    if (length(args) < 4) stop("Invalid arguments.")
     message("Arguments provided:")
     print(args)
     isTest <<- args[1] == "test"
     scenario <<- args[2]
+    extraArgs <<- if (length(args) >= 3) args[3:(length(args)-1)] else NULL
     task_id <<- as.integer(args[length(args)])
   }
 }
