@@ -42,7 +42,7 @@ Validation <- setRefClass(
         return(x)
       }, .parallel=T)
       
-      populationSize$scenario <- scenario
+      populationSize$Scenario <- scenario
       populationSize$modelName <- modelName
       
       return(populationSize)
@@ -50,7 +50,8 @@ Validation <- setRefClass(
     
     summarizePopulationSize = function(populationSize) {
       library(plyr)
-      ddply(populationSize, .(scenario, Year), function(x, probs) {
+      
+      ddply(populationSize, .(Scenario, Year), function(x, probs) {
         y <- data.frame(n=nrow(x), Estimated=mean(x$Estimated), Observed=mean(x$Observed))
         q <- quantile(x$Estimated, probs=probs)
         y$Estimated.q1 <- q[1]
@@ -115,7 +116,7 @@ Validation <- setRefClass(
         spatialCorrelation <- rbind(spatialCorrelation, x)
       }
       
-      spatialCorrelation$scenario <- scenario
+      spatialCorrelation$Scenario <- scenario
       spatialCorrelation$modelName <- modelName
       
       return(spatialCorrelation)      
@@ -163,8 +164,10 @@ Validation <- setRefClass(
       return(populationSize)  
     },
     
-    summarizePopulationSizeCI = function(populationSizeCI, probs=c(.0025, .975)) {
-      ddply(populationSizeCI, .(scenario, Year), function(x, probs) {
+    summarizePopulationSizeCI = function(populationSizeCI, variables=.(scenario, Year), probs=c(.025, .975)) {
+      library(plyr)
+      
+      ddply(populationSizeCI, variables, function(x, probs) {
         y <- data.frame(Estimated=mean(x$Estimated), Observed=mean(x$Observed))
         q <- quantile(x$Estimated, probs=probs)
         y$Estimated.q1 <- q[1]
@@ -182,6 +185,24 @@ Validation <- setRefClass(
       message("Loading file from ", fileName, "...")
       load(fileName)
       return(populationSize)
+    },
+    
+    getValidatedCredibilityIntervalsProportion = function(modelName, probs=c(.025, .975)) {
+      library(plyr)
+      
+      iterations <- getCredibilityIntervalsValidationIterations(modelName=modelName)
+      populationSizeCI <- ldply(iterations, function(iteration) {
+        loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
+      })
+      
+      x <- summarizePopulationSizeCI(populationSizeCI, variables=.(scenario, Year, iteration), probs=probs)
+      validationProportion <- ddply(x, .(scenario), function(x) {
+        y <- with(x, Observed >= Estimated.q1 & Observed <= Estimated.q2)
+        data.frame(Proportion=sum(y)/length(y))
+      })
+      validationProportion$modelName <- modelName
+      
+      return(validationProportion)
     }
   )
 )

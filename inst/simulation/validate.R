@@ -59,16 +59,15 @@ if (isTest) {
   
   populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=as.integer(task_id), nSamples=nSamples, save=T)
   if (F) {
-    #populationSizeCI <- validation$loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
-    #print(validation$summarizePopulationSizeCI(populationSizeCI))
-    #print(validation$summarizePopulationSizeCI(populationSizeCI, probs=c(.25,.75)))
-    
     iterations <- validation$getCredibilityIntervalsValidationIterations(modelName=modelName)
     populationSizeCI <- ldply(iterations, function(iteration) {
       validation$loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
     })
     print(validation$summarizePopulationSizeCI(populationSizeCI))
     print(validation$summarizePopulationSizeCI(populationSizeCI, probs=c(.25,.75)))
+    
+    getValidatedCredibilityIntervalsProportion(modelName, probs=c(.025, .975))
+    getValidatedCredibilityIntervalsProportion(modelName, probs=c(.25,.75))
   }
 }
 
