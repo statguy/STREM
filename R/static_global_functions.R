@@ -215,7 +215,7 @@ parseArguments <- function() {
     extraArgs <<- NULL
   }
   else {
-    if (length(args) < 4) stop("Invalid arguments.")
+    if (length(args) < 3) stop("Invalid arguments.")
     message("Arguments provided:")
     print(args)
     isTest <<- args[1] == "test"
