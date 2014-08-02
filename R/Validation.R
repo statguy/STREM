@@ -191,6 +191,7 @@ Validation <- setRefClass(
       library(plyr)
       
       iterations <- getCredibilityIntervalsValidationIterations(modelName=modelName)
+      if (length(iterations) == 0) return(data.frame())
       populationSizeCI <- ldply(iterations, function(iteration) {
         loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
       })
