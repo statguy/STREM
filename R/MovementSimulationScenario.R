@@ -445,7 +445,7 @@ MovementSimulationScenarioF <- setRefClass(
     },
     
     setup = function(context, response="F", nSurveyRoutes=500, isTest=F, readHabitatIntoMemory=F) {
-      return(callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, withHabitatWeights=TRUE, isTest=isTest, range=100e3, sigma=4, readHabitatIntoMemory=readHabitatIntoMemory))
+      return(callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest, range=100e3, sigma=4, readHabitatIntoMemory=readHabitatIntoMemory))
     },
     
     randomizeHerdSize = function() {
