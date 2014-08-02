@@ -192,7 +192,7 @@ concat <- function(..., sep="") {
   paste(args, collapse=sep)
 }
 
-getMSS <- function(scenario, nSurveyRoutes, readHabitatIntoMemory=TRUE, isTest=FALSE, ...) {
+getMSS <- function(scenario, nSurveyRoutes, readHabitatIntoMemory=F, isTest=FALSE, ...) {
   context <- Context(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
   mss <- {
     if (scenario == "A") MovementSimulationScenarioA(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
