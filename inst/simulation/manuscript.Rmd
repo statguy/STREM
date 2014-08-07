@@ -1,0 +1,134 @@
+---
+title: "Manuscript"
+output: html_document
+---
+
+```{r initialize}
+library(parallel)
+library(doMC)
+registerDoMC(cores=detectCores())
+library(WTC)
+source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+library(ggplot2)
+library(plyr)
+
+context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+scenarios <- c("A","B","C","D","E","F")
+modelNames <- c(paste("SmoothModel", "nbinomial", "matern", "ar1", sep = "-"))
+
+boundaryDF <- ggplot2::fortify(FinlandWTCStudy(context=context, response="canis.lupus")$studyArea$boundary)
+```
+
+```{r track-data}
+#scenario <- "A"
+#iterations <- as.integer(1)
+
+iterations <- as.integer(c(1,1,1,1,3,1))
+i <- 1
+trackData <- data.frame()
+surveyRoutesData <- data.frame()
+
+for (scenario in scenarios) {
+  mss <- getMSS(scenario, nSurveyRoutes=500)
+  study <- mss$study
+  tracks <- study$loadTracks(iteration=iterations[i])
+  intersections <- tracks$countIntersections(surveyRoutes=mss$surveyRoutes, save=F)
+
+  tracks$tracks <- subset(tracks$tracks, year==2001 & yday<59)
+  x <- tracks$toGGDF()
+  x$scenario <- scenario
+  x$observation <- F
+  
+  #plot(tracksSP, col="grey", xlim=c(3.4, 3.5)*1e6, ylim=c(7.0, 7.1)*1e6, asp=1)
+  
+  intersections$tracks$tracks <- subset(intersections$tracks$tracks, year==2001)
+  y <- intersections$tracks$toGGDF()
+  y$scenario <- scenario
+  y$observation <- T
+  levels(y$group) <- paste(levels(y$group), "2")
+  trackData <- rbind(trackData, x, y)
+  #plot(tracksSP, col="black", add=T)
+  
+  x <- intersections$surveyRoutes$toGGDF()
+  x$scenario <- scenario    
+  observedAt <- intersections$intersections$intersections[intersections$intersections$intersections$intersections > 0 & intersections$intersections$intersections$year == 2001,]$surveyRoute
+  y <- data.frame(id=unique(x$id), observed=FALSE)
+  if (length(observedAt) > 0) y[y$id %in% observedAt,]$observed <- TRUE
+  x <- plyr::join(x, y, by="id")
+  surveyRoutesData <- rbind(surveyRoutesData, x)
+  
+  #plot(intersections$surveyRoutes$surveyRoutes, col="blue", add=T)    
+  i <- i + 1
+}
+
+trackData$scenario <- factor(trackData$scenario)
+```
+
+```{r figure-1}
+habitatRaster <- crop(study$studyArea$habitat, extent(c(3.375, 3.4, 6.9, 6.925)*1e6))
+z <- sampleRegular(habitatRaster, 10000, asRaster=TRUE)
+habitatData <- as.data.frame(rasterToPoints(z))
+#habitatData <- as.data.frame(rasterToPoints(habitatRaster))
+colnames(habitatData) <- c("x","y","z")
+habitatData$scenario <- factor("E", levels=scenarios)
+habitatData2 <- habitatData
+habitatData2$scenario <- factor("F", levels=scenarios)
+habitatData <- rbind(habitatData, habitatData2)
+
+habitatData$z <- factor(habitatData$z, levels=0:255)
+col <- study$studyArea$habitat@legend@colortable
+names(col) <- 0:255
+
+p <- ggplot(habitatData) + geom_raster(aes(x, y, fill=z)) + scale_fill_manual(values=col) +
+  geom_path(data=trackData, aes(long, lat, group=group, colour=observation)) + scale_colour_manual(values=c("darkgray","black")) +
+  geom_path(data=surveyRoutesData, aes(long, lat, group=group)) +
+  coord_fixed(ratio=1, xlim=c(3.375,3.4)*1e6, ylim=c(6.9,6.925)*1e6) +
+  facet_wrap(~scenario) + #coord_equal()
+  theme_raster() + theme(panel.border=element_rect(fill="transparent"))
+print(p)
+saveFigure(p, "manuscript-figure-1.png", width=8, height=4)
+```
+
+
+```{r figure-2}
+# TODO: add densities
+
+surveyLocations <- ddply(surveyRoutesData, .(group, scenario), function(x) data.frame(long=mean(x$long), lat=mean(x$lat), scenario=x$scenario[1], observed=x$observed[1]))[,c("long","lat","scenario","observed")]
+surveyLocations$variable <- "Survey routes"
+
+trueLocations <- subset(trackData, observation==T)
+trueLocations <- ddply(trueLocations, .(burst, scenario), function(x) data.frame(long=mean(x$long), lat=mean(x$lat), scenario=x$scenario[1], observed=F))[,c("long","lat","scenario","observed")]
+trueLocations$variable <- "Individual locations"
+
+x <- rbind(surveyLocations, trueLocations)
+
+template <- raster(extent(study$studyArea$boundary), nrows=12, ncols=6, crs=study$studyArea$proj4string)
+template@extent@xmax <- template@extent@xmin + dim(template)[2] * 100 * 1e3
+template@extent@ymax <- template@extent@ymin + dim(template)[1] * 100 * 1e3
+
+p <- ggplot(boundaryDF) + geom_path(aes(long, lat, group=group), colour="grey") +
+  geom_point(data=x, aes(long, lat, colour=observed)) + scale_color_manual(values=c("darkgrey", "black")) + 
+  facet_grid(variable~scenario) + theme_raster() + coord_equal() +
+  scale_x_continuous(breaks=seq(template@extent@xmin, template@extent@xmax, 1e5)) +
+  scale_y_continuous(breaks=seq(template@extent@ymin, template@extent@ymax, 1e5)) +
+  theme(panel.grid.major=element_line(colour="grey"))
+print(p)
+saveFigure(p, "manuscript-figure-2.png", width=8, height=4)
+```
+
+```{r figure-3}
+validation <- Validation()
+populationSizes.temporal <- validation$getValidationTemporalPopulationSizes(modelNames=modelNames)
+
+p <- ggplot(populationSizes.temporal, aes(Observed, Estimated)) + geom_point() + stat_smooth(method="lm", colour="black") +
+  geom_abline(colour="darkgrey") + facet_wrap(~Scenario, scales="free") +
+  theme_minimal() + theme(panel.border=element_rect(fill="transparent"))
+print(p)
+saveFigure(p, "manuscript-figure-3.png", width=8, height=4)
+```
+
+```{r figure-4}
+validation <- Validation()
+populationSizes.spatial <- validation$getValidationSpatialPopulationSizes(modelNames=modelNames)
+
+```

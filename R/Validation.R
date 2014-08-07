@@ -134,6 +134,18 @@ Validation <- setRefClass(
       return(spatialCorrelation)      
     },
     
+    getValidationSpatialPopulationSizes = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
+      x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
+        mss <- getMSS(scenario=x$scenario, isTest=F)
+        validation <- Validation(study=mss$study, populationSizeOverEstimate=populationSizeOverEstimate)
+        x <- validation$validateSpatialPopulationSize(x$modelName)
+        if (nrow(x) == 0) return(NULL)
+        return(x)
+      }, .parallel=T)
+      
+      return(x)
+    },
+    
     getCredibilityIntervalsValidationFileName = function(modelName, iteration) {
       return(study$context$getLongFileName(study$context$scratchDirectory, name="CIValidation", response=study$response, region=study$studyArea$region, tag=paste(modelName, iteration, sep="-")))
     },
