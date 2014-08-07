@@ -42,9 +42,9 @@ Validation <- setRefClass(
         return(x)
       }, .parallel=T)
       
+      if (is.null(populationSize)) return(NULL)
       populationSize$Scenario <- scenario
       populationSize$modelName <- modelName
-      
       return(populationSize)
     },
     
@@ -61,6 +61,19 @@ Validation <- setRefClass(
         y$Observed.q2 <- q[2]
         return(y)
       }, probs=c(.0025, .975))
+    },
+    
+    getValidationTemporalPopulationSizes = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
+      x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
+        mss <- getMSS(scenario=x$scenario, isTest=F)
+        study <- mss$study
+        validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
+        x <- validation$validateTemporalPopulationSize(x$modelName)
+        if (nrow(x) == 0) return(NULL)
+        return(x)
+      }, .parallel=T)
+      
+      return(x)
     },
     
     validateSpatialPopulationSize = function(modelName) {
@@ -204,6 +217,20 @@ Validation <- setRefClass(
       validationProportion$modelName <- modelName
       
       return(validationProportion)
+    },
+    
+    getValidatedCredibilityIntervalsProportions = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
+      x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x, probs, probsName) {
+        mss <- getMSS(scenario=x$scenario, readHabitatIntoMemory=F, isTest=F)
+        study <- mss$study
+        validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
+        x <- validation$getValidatedCredibilityIntervalsProportion(x$modelName, probs=probs)
+        if (nrow(x) == 0) return(NULL)
+        x$CredibleInterval <- probsName
+        return(x)
+      }, probs=c(.025, .975), probsName="95%", .parallel=T)
+      
+      return(x)
     }
   )
 )

@@ -9,7 +9,7 @@
 # args <- c("notest","A","1")
 
 
-population_size <- function(scenario, iteration, isTest, otherTest=F) {
+population_size <- function(scenario, modelName, iteration, isTest, otherTest=F) {
   mss <- getMSS(scenario=scenario, isTest=isTest)
   study <- mss$study
   
@@ -27,10 +27,18 @@ population_size <- function(scenario, iteration, isTest, otherTest=F) {
     populationSize$plotPopulationSize()
   }
   else {
-    estimates <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
-    estimates$setModelName(family="nbinomial", randomEffect=paste("matern", "ar1", sep="-"))
+    if (modelName == "SmoothModel-nbinomial-matern-ar1") {
+      estimates <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
+      #estimates$setModelName(family="nbinomial", randomEffect=paste("matern", "ar1", sep="-"))
+    }
+    else if (modelName == "SmoothModel-nbinomial-ar1") {
+      estimates <- SimulatedSmoothModelTemporal(study=study, iteration=iteration)
+    }
+
+    estimates$modelName <- modelName
     habitatWeights <- study$getHabitatWeights(iteration=iteration)
     populationSize <- study$getPopulationSize(estimates=estimates, habitatWeights=habitatWeights)
+    
     return(invisible(populationSize))
   }
 }
@@ -42,5 +50,5 @@ library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
 parseArguments()
-x <- population_size(scenario=scenario, iteration=as.integer(task_id), isTest=isTest)
-x
+modelName <- extraArgs[1]
+population_size(scenario=scenario, modelName=modelName, iteration=as.integer(task_id), isTest=isTest)

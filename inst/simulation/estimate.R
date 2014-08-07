@@ -6,7 +6,7 @@
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 
 
-estimateSpatioTemporal <- function(scenario, iteration, isTest=FALSE, quick=FALSE) {
+estimateSpatioTemporal <- function(scenario, modelName, iteration, isTest=FALSE, quick=FALSE) {
   mss <- getMSS(scenario=scenario, isTest=isTest)
   study <- mss$study
   
@@ -27,8 +27,15 @@ estimateSpatioTemporal <- function(scenario, iteration, isTest=FALSE, quick=FALS
     populationSize$plotPopulationSize()
   }
   else {
-    model <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
-    modelParams <- list(family="nbinomial", offsetScale=1000^2, meshParams=study$studyArea$getMesh(), timeModel="ar1")
+    if (modelName == "SmoothModel-nbinomial-matern-ar1") {
+      model <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
+      modelParams <- list(family="nbinomial", offsetScale=1000^2, meshParams=study$studyArea$getMesh(), timeModel="ar1")      
+    }
+    else if (modelName == "SmoothModel-nbinomial-ar1") {
+      model <- SimulatedSmoothModelTemporal(study=study, iteration=iteration)
+      modelParams <- list(family="nbinomial", offsetScale=1000^2, timeModel="ar1")
+    }
+    else stop("Unknown model.")
     study$estimate(model=model, params=modelParams)
   }
 }
@@ -40,5 +47,5 @@ library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
 parseArguments()
-
-estimateSpatioTemporal(scenario=scenario, iteration=as.integer(task_id), isTest=isTest)
+modelName <- extraArgs[1]
+estimateSpatioTemporal(scenario=scenario, modelName=modelName, iteration=as.integer(task_id), isTest=isTest)

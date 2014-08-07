@@ -66,8 +66,12 @@ if (isTest) {
     print(validation$summarizePopulationSizeCI(populationSizeCI))
     print(validation$summarizePopulationSizeCI(populationSizeCI, probs=c(.25,.75)))
     
-    getValidatedCredibilityIntervalsProportion(modelName, probs=c(.025, .975))
-    getValidatedCredibilityIntervalsProportion(modelName, probs=c(.25,.75))
+    
+
+    
+    #validation$getValidatedCredibilityIntervalsProportion(modelName, probs=c(.25,.75))
+    
+    
   }
 }
 
