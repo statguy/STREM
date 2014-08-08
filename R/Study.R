@@ -29,10 +29,10 @@ SimulationStudy <- setRefClass(
       return(invisible(.self))
     },
     
-    setup = function(context, surveyRoutes, withHabitatWeights, isTest=F) {
+    setup = function(context, surveyRoutes, withHabitatWeights=F, isTest=F) {
       context <<- context
       withHabitatWeights <<- withHabitatWeights
-      surveyRoutes <<- surveyRoutes # WARNING: this can give us recursion for study object references! TODO: better design
+      if (!missing(surveyRoutes)) surveyRoutes <<- surveyRoutes # WARNING: this can give us recursion for study object references! TODO: better design
       studyArea <<- if (isTest) TestStudyArea$new(context=context)$setup()
       else FinlandStudyArea$new(context=context)$setup()
       return(invisible(.self))

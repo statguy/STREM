@@ -206,9 +206,9 @@ getMSS <- function(scenario, nSurveyRoutes, sampleInitial=F, readHabitatIntoMemo
   return(mss)  
 }
 
-getStudy <- function(scenario, isTest=FALSE) {
+getStudy <- function(scenario, withHabitatWeights=FALSE, surveyRoutes, isTest=FALSE) {
   context <- Context(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-  study <- SimulationStudy(response=scenario)$setup(context=context, isTest=isTest)
+  study <- SimulationStudy(response=scenario)$setup(context=context, withHabitatWeights=withHabitatWeights, surveyRoutes=surveyRoutes, isTest=isTest)
   return(study)
 }
 
