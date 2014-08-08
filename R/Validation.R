@@ -234,15 +234,15 @@ Validation <- setRefClass(
       return(validationProportion)
     },
     
-    getValidatedCredibilityIntervalsProportions = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
+    getValidatedCredibilityIntervalsProportions = function(scenarios=c("A","B","C","D","E","F"), modelNames, probs=c(.025, .975), probsName="95%") {
       x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x, probs, probsName) {
         s <- getStudy(scenario=x$scenario, isTest=F)
         validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
         x <- validation$getValidatedCredibilityIntervalsProportion(x$modelName, probs=probs)
         if (nrow(x) == 0) return(NULL)
-        x$CredibleInterval <- probsName
+        x$Interval <- probsName
         return(x)
-      }, probs=c(.025, .975), probsName="95%", .parallel=T)
+      }, probs=probs, probsName=probsName, .parallel=T)
       
       return(x)
     }

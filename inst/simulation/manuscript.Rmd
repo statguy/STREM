@@ -138,9 +138,18 @@ print(p)
 saveFigure(p, "manuscript-figure-4.png", width=8, height=4)
 ```
 
+```{r credible-intervals}
+
+```
+
 ```{r figure-5}
 study <- getStudy(scenario="A")
 validation <- Validation(study=study)
-credibilityIntervals <- validation$getValidatedCredibilityIntervalsProportions(modelNames=modelNames)
-
+a <- validation$getValidatedCredibilityIntervalsProportions(modelNames=modelNames)
+b <- validation$getValidatedCredibilityIntervalsProportions(modelNames=modelNames, probs=c(.25, .75), probsName="50%")
+credibilityIntervals <- cbind(a, b)
+p <- ggplot(credibilityIntervals, aes(scenario, Proportion, colour=CredibleInterval)) + geom_point() +
+  theme_minimal() + theme(panel.border=element_rect(fill="transparent"))
+print(p)
+saveFigure(p, "manuscript-figure-5.png", width=4, height=4)
 ```
