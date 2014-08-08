@@ -105,6 +105,8 @@ Model <- setRefClass(
     },
     
     getPopulationDensity.internal = function(xyzt, templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary) {
+      if (any(is.infinite(xyzt$z)) | any(is.nan(xyzt$z))) return(NULL)
+      
       cellArea <- prod(res(templateRaster)) # m^2
       densityRaster <- SpatioTemporalRaster(study=study)$interpolate(xyzt, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=sort(unique(xyzt[,4])), weights=cellArea)
       return(densityRaster)

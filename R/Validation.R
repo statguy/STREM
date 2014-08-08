@@ -98,6 +98,10 @@ Validation <- setRefClass(
         estimates <- study$loadEstimates(estimates)
         estimates$collectEstimates()
         estimated <- estimates$getPopulationDensity(templateRaster=template, maskPolygon=NULL, getSD=F)
+        if (is.null(estimated$mean)) {
+          message("Estimation failed for iteration ", iteration, " scenario ", study$response, ".")
+          next
+        }
         estimated$mean$rasterStack <- stack(mask(estimated$mean$rasterStack, coverArea) * coverArea)
         
         tracks <- study$loadTracks(iteration=iteration)
