@@ -236,7 +236,7 @@ Validation <- setRefClass(
     
     getValidatedCredibilityIntervalsProportions = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
       x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x, probs, probsName) {
-        s <- getStudy(scenario=x$scenario, readHabitatIntoMemory=F, isTest=F)
+        s <- getStudy(scenario=x$scenario, isTest=F)
         validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
         x <- validation$getValidatedCredibilityIntervalsProportion(x$modelName, probs=probs)
         if (nrow(x) == 0) return(NULL)

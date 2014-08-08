@@ -117,10 +117,11 @@ saveFigure(p, "manuscript-figure-2.png", width=8, height=4)
 ```
 
 ```{r figure-3}
-validation <- Validation()
-populationSizes.temporal <- validation$getValidationTemporalPopulationSizes(modelNames=modelNames)
+study <- getStudy(scenario="A")
+validation <- Validation(study=study)
+populationSizes <- validation$getValidationTemporalPopulationSizes(modelNames=modelNames)
 
-p <- ggplot(populationSizes.temporal, aes(Observed, Estimated)) + geom_point() + stat_smooth(method="lm", colour="black") +
+p <- ggplot(populationSizes, aes(Observed, Estimated)) + geom_point() + stat_smooth(method="lm", colour="black") +
   geom_abline(colour="darkgrey") + facet_wrap(~Scenario, scales="free") +
   theme_minimal() + theme(panel.border=element_rect(fill="transparent"))
 print(p)
@@ -128,7 +129,18 @@ saveFigure(p, "manuscript-figure-3.png", width=8, height=4)
 ```
 
 ```{r figure-4}
-validation <- Validation()
-populationSizes.spatial <- validation$getValidationSpatialPopulationSizes(modelNames=modelNames)
+study <- getStudy(scenario="A")
+validation <- Validation(study=study)
+populationCorrelations <- validation$getValidationSpatialPopulationSizes(modelNames=modelNames)
+p <- ggplot(populationCorrelations, aes(True, Correlation)) + geom_point() + facet_wrap(~Scenario) +
+  theme_minimal() + theme(panel.border=element_rect(fill="transparent"))
+print(p)
+saveFigure(p, "manuscript-figure-4.png", width=8, height=4)
+```
+
+```{r figure-5}
+study <- getStudy(scenario="A")
+validation <- Validation(study=study)
+credibilityIntervals <- validation$getValidatedCredibilityIntervalsProportions(modelNames=modelNames)
 
 ```
