@@ -45,10 +45,10 @@ MovementSimulationScenario <- setRefClass(
       nSteps <<- as.integer(nSteps.tmp)
       if (length(birthDeathParams) == 0) birthDeathParams <<- list(mean=0, sd=0.1) # 95% = 0.82 - 1.22 variation coefficient each year
       
-      study <<- SimulationStudy$new(response=response)$setup(context=context, surveyRoutes=surveyRoutes, withHabitatWeights=withHabitatWeights, isTest=isTest)
+      study <<- SimulationStudy(response=response)$setup(context=context, surveyRoutes=surveyRoutes, withHabitatWeights=withHabitatWeights, isTest=isTest)
       if (!missing(nSurveyRoutes)) {
-        surveyRoutes <<- if (isTest) FinlandRandomWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
-        else FinlandWTCSurveyRoutes$new(study=study)$loadSurveyRoutes(context=context, nSurveyRoutes=nSurveyRoutes)
+        surveyRoutes <<- if (isTest) FinlandRandomWTCSurveyRoutes(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
+        else FinlandWTCSurveyRoutes(study=study)$loadSurveyRoutes(context=context, nSurveyRoutes=nSurveyRoutes)
       }
         
       return(invisible(.self))
@@ -283,7 +283,7 @@ MovementSimulationScenario <- setRefClass(
     
     simulate = function(iteration, save=TRUE) {
       tracksDF <- randomizeBCRWTracks(iteration=as.integer(iteration))
-      tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$id, date=tracksDF$date, dt=tracksDF$dt, dist=tracksDF$dist, burst=tracksDF$burst, year=tracksDF$year, yday=tracksDF$yday, iteration=as.integer(iteration), herdSize=tracksDF$herdSize)
+      tracks <- SimulatedTracks(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$id, date=tracksDF$date, dt=tracksDF$dt, dist=tracksDF$dist, burst=tracksDF$burst, year=tracksDF$year, yday=tracksDF$yday, iteration=as.integer(iteration), herdSize=tracksDF$herdSize)
       return(invisible(tracks))
     },
     
@@ -291,11 +291,11 @@ MovementSimulationScenario <- setRefClass(
       #nIterations <<- nIterations
       stopifnot(restartIteration <= nIterations)
       
-      simulatedTracks <- SimulatedTracksCollection$new(study=study)
+      simulatedTracks <- SimulatedTracksCollection(study=study)
       for (i in restartIteration:nIterations) {
         message("Iteration ", i, " of ", nIterations, "...")
         tracksDF <- randomizeBCRWTracks(iteration=i)
-        tracks <- SimulatedTracks$new(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$id, date=tracksDF$date, dt=tracksDF$dt, dist=tracksDF$dist, burst=tracksDF$burst, year=tracksDF$year, yday=tracksDF$yday, iteration=i, herdSize=tracksDF$herdSize)
+        tracks <- SimulatedTracks(study=study, preprocessData=save, xy=tracksDF[,c("x","y")], id=tracksDF$id, date=tracksDF$date, dt=tracksDF$dt, dist=tracksDF$dist, burst=tracksDF$burst, year=tracksDF$year, yday=tracksDF$yday, iteration=i, herdSize=tracksDF$herdSize)
         simulatedTracks$addTracks(tracks)
       }
       
@@ -320,7 +320,7 @@ MovementSimulationScenarioA <- setRefClass(
     
     setup = function(context, response="A", nSurveyRoutes=500, isTest=F) {
       callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, withHabitatWeights=FALSE, isTest=isTest)
-      initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)      
+      initialPopulation <<- RandomInitialPopulation(studyArea=study$studyArea)      
       return(invisible(.self))
     }    
   )
@@ -350,7 +350,7 @@ MovementSimulationScenarioB <- setRefClass(
     
     setup = function(context, response="B", nSurveyRoutes=500, isTest=F) {
       callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, withHabitatWeights=FALSE, isTest=isTest)
-      initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
+      initialPopulation <<- RandomInitialPopulation(studyArea=study$studyArea)
       return(invisible(.self))
     }
   )
@@ -373,7 +373,7 @@ MovementSimulationScenarioC <- setRefClass(
     
     setup = function(context, response="C", nSurveyRoutes=500, isTest=F) {
       callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, withHabitatWeights=FALSE, isTest=isTest)
-      initialPopulation <<- RandomInitialPopulation$new(studyArea=study$studyArea)
+      initialPopulation <<- RandomInitialPopulation(studyArea=study$studyArea)
       return(invisible(.self))
     },
     
@@ -393,10 +393,12 @@ MovementSimulationScenarioD <- setRefClass(
       return(invisible(.self))
     },
     
-    setup = function(context, response="D", nSurveyRoutes=500, isTest=F) {
+    setup = function(context, response="D", nSurveyRoutes=500, sampleInitial=F, isTest=F, range=100e3, sigma=4, max.edge=3000) {
       callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, withHabitatWeights=FALSE, isTest=isTest)
-      initialPopulation <<- if (isTest) ClusteredInitialPopulation$new(studyArea=study$studyArea, range=100e3, sigma=4, max.edge=3000)
-      else ClusteredInitialPopulation$new(studyArea=study$studyArea)
+      if (sampleInitial) {
+        initialPopulation <<- if (isTest) ClusteredInitialPopulation(studyArea=study$studyArea, range=range, sigma=sigma, max.edge=max.edge)
+        else ClusteredInitialPopulation(studyArea=study$studyArea)
+      }
       return(invisible(.self))
     }
   )
@@ -417,13 +419,15 @@ MovementSimulationScenarioE <- setRefClass(
       
       callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, withHabitatWeights=TRUE, isTest=isTest)
       
-      if (readHabitatIntoMemory) study$studyArea$readRasterIntoMemory()
+      if (readHabitatIntoMemory) {
+        study$studyArea$readRasterIntoMemory()
+        
+        samplingWeights <- CORINEHabitatWeights(list(Urban=0.1, Agriculture=0.1, Forestland=1, Peatland=0.5, Water=0))
+        initialPopulation <<- if (isTest) ClusteredInitialPopulation(studyArea=study$studyArea, range=range, sigma=sigma, max.edge=3000, habitatWeights=samplingWeights)
+        else ClusteredInitialPopulation(studyArea=study$studyArea, range=range, sigma=sigma, habitatWeights=samplingWeights)
       
-      samplingWeights <- CORINEHabitatWeights$new(list(Urban=0.1, Agriculture=0.1, Forestland=1, Peatland=0.5, Water=0))
-      initialPopulation <<- if (isTest) ClusteredInitialPopulation$new(studyArea=study$studyArea, range=range, sigma=sigma, max.edge=3000, habitatWeights=samplingWeights)
-      else ClusteredInitialPopulation$new(studyArea=study$studyArea, range=range, sigma=sigma, habitatWeights=samplingWeights)
-      
-      habitatWeights <<- CORINEHabitatWeights$new(list(Urban=0.1, Agriculture=0.1, Forestland=1, Peatland=0.5, Water=0.05))
+        habitatWeights <<- CORINEHabitatWeights(list(Urban=0.1, Agriculture=0.1, Forestland=1, Peatland=0.5, Water=0.05))
+      }
       #if (isTest)
       #  surveyRoutes <<- FinlandRandomForestWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
               
@@ -444,7 +448,7 @@ MovementSimulationScenarioF <- setRefClass(
       return(invisible(.self))
     },
     
-    setup = function(context, response="F", nSurveyRoutes=500, isTest=F, readHabitatIntoMemory=F) {
+    setup = function(context, response="F", nSurveyRoutes=500, sampleInitial=F, isTest=F, readHabitatIntoMemory=F) {
       return(callSuper(context=context, response=response, nSurveyRoutes=nSurveyRoutes, isTest=isTest, range=100e3, sigma=4, readHabitatIntoMemory=readHabitatIntoMemory))
     },
     

@@ -20,7 +20,7 @@ simulate = function(scenario, iteration, nAgents=as.integer(200), nYears=as.inte
     if (scenario == "A") MovementSimulationScenarioA$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context, isTest=isTest)
     else if (scenario == "B") MovementSimulationScenarioB$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff)$setup(context=context, isTest=isTest)
     else if (scenario == "C") MovementSimulationScenarioC$new(nAgents=as.integer(nAgents/5), years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context, isTest=isTest)
-    else if (scenario == "D") MovementSimulationScenarioD$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context, isTest=isTest)
+    else if (scenario == "D") MovementSimulationScenarioD$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context, sampleInitial=T, isTest=isTest)
     else if (scenario == "E") MovementSimulationScenarioE$new(nAgents=nAgents, years=nYears, days=nDays, CRWCorrelation=CRWCorrelation)$setup(context=context, readHabitatIntoMemory=T, isTest=isTest)
     else if (scenario == "F") MovementSimulationScenarioF$new(nAgents=as.integer(nAgents/5), years=nYears, days=nDays, CRWCorrelation=CRWCorrelation, BCRWCorrelationBiasTradeoff=BCRWCorrelationBiasTradeoff)$setup(context=context, readHabitatIntoMemory=T, isTest=isTest)
     else stop("unsupported")

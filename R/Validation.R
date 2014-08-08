@@ -65,8 +65,8 @@ Validation <- setRefClass(
     
     getValidationTemporalPopulationSizes = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
       x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
-        mss <- getMSS(scenario=x$scenario, isTest=F)
-        validation <- Validation(study=mss$study, populationSizeOverEstimate=populationSizeOverEstimate)
+        s <- getStudy(scenario=x$scenario, isTest=F)
+        validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
         x <- validation$validateTemporalPopulationSize(x$modelName)
         if (nrow(x) == 0) return(NULL)
         return(x)
@@ -91,7 +91,7 @@ Validation <- setRefClass(
       spatialCorrelation <- data.frame()
       
       for (iteration in iterations) {
-        message("Iteration ", iteration, " of ", length(iterations), " iterations...")
+        message("Iteration ", iteration, " of ", length(iterations), " iterations of scenario ", study$response, "...")
         
         estimates <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
         estimates$modelName <- modelName
@@ -107,7 +107,7 @@ Validation <- setRefClass(
         for (i in unique(tracks$tracks$year) - min(tracks$tracks$year) + 1) {
           year0 <- i + min(tracks$tracks$year) - 1
           
-          message("Iteratation ", iteration, " of ", length(iterations), " iterations, year ", year0, "...")
+          message("Iteration ", iteration, " of ", length(iterations), " iterations, year ", year0, ", scenario ", study$response, "...")
           
           true <- rasterize(subset(cc, year == year0, select=c("x","y")), template, field=1, fun='count', background=0)
           true <- mask(true, coverArea)
@@ -120,7 +120,7 @@ Validation <- setRefClass(
         }
         
         if (any(x$Estimated) > populationSizeOverEstimate) {
-          message("Estimation failed for iteration ", iteration, ".")
+          message("Estimation failed for iteration ", iteration, " scenario ", study$response, ".")
           next
         }
         
@@ -136,8 +136,8 @@ Validation <- setRefClass(
     
     getValidationSpatialPopulationSizes = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
       x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
-        mss <- getMSS(scenario=x$scenario, isTest=F)
-        validation <- Validation(study=mss$study, populationSizeOverEstimate=populationSizeOverEstimate)
+        s <- getStudy(scenario=x$scenario, isTest=F)
+        validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
         x <- validation$validateSpatialPopulationSize(x$modelName)
         if (nrow(x) == 0) return(NULL)
         return(x)
@@ -232,8 +232,8 @@ Validation <- setRefClass(
     
     getValidatedCredibilityIntervalsProportions = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
       x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x, probs, probsName) {
-        mss <- getMSS(scenario=x$scenario, readHabitatIntoMemory=F, isTest=F)
-        validation <- Validation(study=mss$study, populationSizeOverEstimate=populationSizeOverEstimate)
+        s <- getStudy(scenario=x$scenario, readHabitatIntoMemory=F, isTest=F)
+        validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
         x <- validation$getValidatedCredibilityIntervalsProportion(x$modelName, probs=probs)
         if (nrow(x) == 0) return(NULL)
         x$CredibleInterval <- probsName

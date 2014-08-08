@@ -192,18 +192,24 @@ concat <- function(..., sep="") {
   paste(args, collapse=sep)
 }
 
-getMSS <- function(scenario, nSurveyRoutes, readHabitatIntoMemory=F, isTest=FALSE, ...) {
+getMSS <- function(scenario, nSurveyRoutes, sampleInitial=F, readHabitatIntoMemory=F, isTest=FALSE, ...) {
   context <- Context(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
   mss <- {
     if (scenario == "A") MovementSimulationScenarioA(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
     else if (scenario == "B") MovementSimulationScenarioB(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
     else if (scenario == "C") MovementSimulationScenarioC(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
-    else if (scenario == "D") MovementSimulationScenarioD(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
+    else if (scenario == "D") MovementSimulationScenarioD(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, sampleInitial=sampleInitial, isTest=isTest)
     else if (scenario == "E") MovementSimulationScenarioE(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, readHabitatIntoMemory=readHabitatIntoMemory, isTest=isTest)
     else if (scenario == "F") MovementSimulationScenarioF(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, readHabitatIntoMemory=readHabitatIntoMemory, isTest=isTest)
     else stop("unsupported")
   }
   return(mss)  
+}
+
+getStudy <- function(scenario, isTest=FALSE) {
+  context <- Context(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+  study <- SimulationStudy(response=scenario)$setup(context=context, isTest=isTest)
+  return(study)
 }
 
 parseArguments <- function() {
