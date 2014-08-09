@@ -117,7 +117,8 @@ Validation <- setRefClass(
           
           message("Iteration ", iteration, " of ", length(iterations), " iterations, year ", year0, ", scenario ", study$response, "...")
           
-          true <- rasterize(subset(cc, year == year0, select=c("x","y")), template, field=cc$herdSize, fun='sum', background=0)
+          subcc <- subset(cc, year == year0, select=c("x","y","herdSize"))
+          true <- rasterize(subcc[,c("x","y")], template, field=subcc$herdSize, fun='sum', background=0)
           true <- mask(true, coverArea)
           
           correlation <- cor(estimated$mean$rasterStack[[i]][], true[], use="complete.obs", method="spearman")
@@ -128,7 +129,7 @@ Validation <- setRefClass(
           x <- rbind(x, data.frame(Year=year0, Correlation=correlation, True=truepop, Estimated=estpop, TrueError=realtrue-truepop))
         }
         
-        if (any(x$Estimated) > populationSizeOverEstimate) {
+        if (any(x$Estimated > populationSizeOverEstimate)) {
           message("Estimation failed for iteration ", iteration, " scenario ", study$response, ".")
           next
         }
@@ -148,6 +149,7 @@ Validation <- setRefClass(
         s <- getStudy(scenario=x$scenario, isTest=F)
         validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
         x <- validation$validateSpatialPopulationSize(x$modelName)
+        gc()
         if (nrow(x) == 0) return(NULL)
         return(x)
       }, .parallel=T)
