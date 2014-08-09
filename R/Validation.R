@@ -119,6 +119,8 @@ Validation <- setRefClass(
           correlation <- cor(estimated$mean$rasterStack[[i]][], true[], use="complete.obs", method="spearman")
           estpop <- sum(estimated$mean$rasterStack[[i]][], na.rm=T)
           truepop <- sum(true[], na.rm=T)
+          if (truepop != unique(subset(tracks$tracks, year == year0)$id))
+            stop("Grid and track population sizes should match.")
           
           x <- rbind(x, data.frame(Year=year0, Correlation=correlation, True=truepop, Estimated=estpop))
         }
@@ -227,7 +229,7 @@ Validation <- setRefClass(
       x <- summarizePopulationSizeCI(populationSizeCI, variables=.(scenario, Year, iteration), probs=probs)
       validationProportion <- ddply(x, .(scenario), function(x) {
         y <- with(x, Observed >= Estimated.q1 & Observed <= Estimated.q2)
-        data.frame(Proportion=sum(y)/length(y), n=length(y))
+        data.frame(Proportion=mean(y), n=length(y))
       })
       validationProportion$modelName <- modelName
       
