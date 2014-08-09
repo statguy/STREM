@@ -123,11 +123,9 @@ Validation <- setRefClass(
           correlation <- cor(estimated$mean$rasterStack[[i]][], true[], use="complete.obs", method="spearman")
           estpop <- sum(estimated$mean$rasterStack[[i]][], na.rm=T)
           truepop <- sum(true[], na.rm=T)
-          
-          if (truepop != subset(tracks$truePopulationSize, Year == year0)$Observed)
-            stop("Grid and track population sizes should match.")
-          
-          x <- rbind(x, data.frame(Year=year0, Correlation=correlation, True=truepop, Estimated=estpop))
+          realtrue <- subset(tracks$truePopulationSize, Year == year0)$Observed
+                    
+          x <- rbind(x, data.frame(Year=year0, Correlation=correlation, True=truepop, Estimated=estpop, TrueError=realtrue-truepop))
         }
         
         if (any(x$Estimated) > populationSizeOverEstimate) {
