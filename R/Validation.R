@@ -97,15 +97,19 @@ Validation <- setRefClass(
         estimates$modelName <- modelName
         estimates <- study$loadEstimates(estimates)
         estimates$collectEstimates()
+        
         estimated <- estimates$getPopulationDensity(templateRaster=template, maskPolygon=NULL, getSD=F)
         if (is.null(estimated$mean)) {
           message("Estimation failed for iteration ", iteration, " scenario ", study$response, ".")
           next
         }
+        
+        #populationSize <- estimated$mean$integrate(volume = SimulationPopulationSize(study=study, iteration=iteration, modelName=modelName))
+        #if (any(populationSize$sizeData$Estimated > populationSizeOverEstimate))
         estimated$mean$rasterStack <- stack(mask(estimated$mean$rasterStack, coverArea) * coverArea)
         
         tracks <- study$loadTracks(iteration=iteration)
-        cc <- ddply(subset(tracks$tracks, yday == 29), .(year, id), function(x) x[1,])[,c("year","x","y")]
+        cc <- ddply(subset(tracks$tracks, yday == 29), .(year, id), function(x) x[1,])[,c("year","x","y","herdSize")]
         x <- data.frame()  
         
         for (i in unique(tracks$tracks$year) - min(tracks$tracks$year) + 1) {
@@ -113,13 +117,14 @@ Validation <- setRefClass(
           
           message("Iteration ", iteration, " of ", length(iterations), " iterations, year ", year0, ", scenario ", study$response, "...")
           
-          true <- rasterize(subset(cc, year == year0, select=c("x","y")), template, field=1, fun='count', background=0)
+          true <- rasterize(subset(cc, year == year0, select=c("x","y")), template, field=cc$herdSize, fun='sum', background=0)
           true <- mask(true, coverArea)
           
           correlation <- cor(estimated$mean$rasterStack[[i]][], true[], use="complete.obs", method="spearman")
           estpop <- sum(estimated$mean$rasterStack[[i]][], na.rm=T)
           truepop <- sum(true[], na.rm=T)
-          if (truepop != unique(subset(tracks$tracks, year == year0)$id))
+          
+          if (truepop != subset(tracks$truePopulationSize, Year == year0)$Observed)
             stop("Grid and track population sizes should match.")
           
           x <- rbind(x, data.frame(Year=year0, Correlation=correlation, True=truepop, Estimated=estpop))
