@@ -119,6 +119,37 @@ getTracks(responses=responses, context=context)
 Figure 3: GPS movements, juvenile is no more than 1 years old individual
 ------------------------------------------------------------------------
 
+```{r gps-stats}
+library(plyr)
+response <- "canis.lupus"
+
+study <- FinlandWTCStudy$new(context=context, response=response)
+tracks <- FinlandWTCTracks$new(study=study)
+tracks$loadTracks()
+tracks$loadMetadata()
+xtabs(sex~born, tracks$metadata)
+
+library(reshape2)
+
+dcast(tracks$metadata, .~sex)
+dcast(tracks$metadata, .~born)
+dcast(tracks$metadata, .~dispersing)$"TRUE"
+dcast(tracks$metadata, .~homerange)$"TRUE"
+dcast(tracks$metadata, .~alpha)
+
+x <- ld(tracks$tracks)$dt/3600
+sort(x[x<=24])
+sort(x[x<=24])*3600
+
+tracksSP <- tracks$getSpatialLines(variables=.(id,year,burst))
+x <- tracksSP@data
+x$juvenile <- if ("born" %in% colnames(x)) factor(ifelse(x$year - x$born <= 1, "juvenile", "adult")) else factor("unknown")
+x$juvenile <- factor(x$juvenile, levels=c(levels(x$juvenile), "unknown"))
+x$juvenile[is.na(x$juvenile)] <- "unknown"
+dcast(x, .~juvenile)
+
+```
+
 ```{r gps-movements, fig.width=double_width}
 getTracks <- function(responses, context) {
   library(plyr)

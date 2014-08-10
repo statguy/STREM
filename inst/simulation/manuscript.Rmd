@@ -15,15 +15,15 @@ library(plyr)
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
 scenarios <- c("A","B","C","D","E","F")
 modelNames <- c(paste("SmoothModel", "nbinomial", "matern", "ar1", sep = "-"))
+iterations <- as.integer(c(1,1,1,1,3,1))
 
 boundaryDF <- ggplot2::fortify(FinlandWTCStudy(context=context, response="canis.lupus")$studyArea$boundary)
 ```
 
-```{r track-data}
+```{r figure-1-init}
 #scenario <- "A"
 #iterations <- as.integer(1)
 
-iterations <- as.integer(c(1,1,1,1,3,1))
 i <- 1
 trackData <- data.frame()
 surveyRoutesData <- data.frame()
@@ -80,65 +80,204 @@ col <- study$studyArea$habitat@legend@colortable
 names(col) <- 0:255
 
 p <- ggplot(habitatData) + geom_raster(aes(x, y, fill=z)) + scale_fill_manual(values=col) +
-  geom_path(data=trackData, aes(long, lat, group=group, colour=observation)) + scale_colour_manual(values=c("darkgray","black")) +
+  geom_path(data=trackData, aes(long, lat, group=group, colour=observation)) +#, alpha=observation)) +
+  scale_colour_manual(values=c("gray40","black")) +# scale_alpha_manual(values=c(.5,1)) +
   geom_path(data=surveyRoutesData, aes(long, lat, group=group)) +
   coord_fixed(ratio=1, xlim=c(3.375,3.4)*1e6, ylim=c(6.9,6.925)*1e6) +
   facet_wrap(~scenario) + #coord_equal()
-  theme_raster() + theme(panel.border=element_rect(fill="transparent"))
-print(p)
+  theme_raster(base_size=10) + theme(panel.border=element_rect(fill="transparent"))
+#print(p)
 saveFigure(p, "manuscript-figure-1.png", width=8, height=4)
+
+
+getRaster <- function(habitatRaster, xlim, ylim, size=10000) {
+  x <- crop(habitatRaster, extent(c(xlim, ylim)))
+  y <- sampleRegular(x, size=size, asRaster=TRUE)
+  habitatData <- as.data.frame(rasterToPoints(y))
+  colnames(habitatData) <- c("x","y","z")
+  habitatData$z <- factor(habitatData$z, levels=0:255)
+  col <- habitatRaster@legend@colortable
+  names(col) <- 0:255
+  return(habitatData)
+}
+
+getPanel <- function(scenario, xlim=c(3.375,3.4)*1e6, ylim=c(6.9,6.925)*1e6, habitatRaster, trackData, surveyRoutesData) {
+  s <- scenario
+  p <- if (!missing(habitatRaster)) {
+    habitatData <- getRaster(habitatRaster=habitatRaster, xlim=xlim, ylim=ylim)
+    ggplot(habitatData) + geom_raster(aes(x, y, fill=z)) + scale_fill_manual(values=col) +
+      geom_path(data=subset(trackData, scenario==s), aes(long, lat, group=group, colour=observation))
+  }
+  else {
+     ggplot(subset(trackData, scenario==s)) +
+       geom_path(aes(long, lat, group=group, colour=observation))
+  }
+  
+  p <- p + scale_colour_manual(values=c("gray40","black")) +
+    geom_path(data=subset(surveyRoutesData, scenario==s), aes(long, lat, group=group)) +
+    coord_fixed(ratio=1, xlim=xlim, ylim=ylim) +
+    theme_raster(base_size=10, panel.border=element_rect(fill="transparent"), plot.title=element_text(size=12)) +
+    ggtitle(s)
+
+  return(p)
+}
+
+library(gridExtra)
+
+p1 <- getPanel(scenario="A", trackData=trackData, surveyRoutesData=surveyRoutesData)
+p2 <- getPanel(scenario="B", trackData=trackData, surveyRoutesData=surveyRoutesData)
+p3 <- getPanel(scenario="C", trackData=trackData, surveyRoutesData=surveyRoutesData)
+p4 <- getPanel(scenario="D", trackData=trackData, surveyRoutesData=surveyRoutesData)
+p5 <- getPanel(scenario="E", habitatRaster=study$studyArea$habitat, trackData=trackData, surveyRoutesData=surveyRoutesData)
+p6 <- getPanel(scenario="F", habitatRaster=study$studyArea$habitat, trackData=trackData, surveyRoutesData=surveyRoutesData)
+p <- arrangeGrob(p1, p2, p3, p4, p5, p6, ncol=3, nrow=2)
+saveFigure(p, "manuscript-figure-1.png")
 ```
 
+```{r figure-2-init}
+getSurveyRouteLocations = function(scenarios, modelName, iterations, years) {
+  ddply(data.frame(scenario=scenarios, iteration=iterations, stringsAsFactors=FALSE), .(scenario, iteration), function(x, modelName, years) {
+    message("Scenario = ", x$scenario, ", iteration = ", x$iteration)
+    study <- getStudy(scenario=x$scenario)
+    estimates <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=x$iteration)
+    estimates$modelName <- modelName
+    estimates <- study$loadEstimates(estimates)
+    surveyRoutes <- data.frame(estimates$getUnscaledObservationCoordinates(), Intersection=subset(estimates$data, year %in% years)$intersections>0)
+    surveyRoutes$Scenario <- x$scenario
+    surveyRoutes$Iteration <- x$iteration
+    return(surveyRoutes)
+  }, modelName=modelName, years=years)
+}
+
+getAgentLocations = function(scenarios, modelName, iterations, years) {
+  ddply(data.frame(scenario=scenarios, iteration=iterations, stringsAsFactors=FALSE), .(scenario, iteration), function(x, modelName, years) {
+    study <- getStudy(scenario=x$scenario)
+    tracks <- study$loadTracks(iteration=x$iteration)
+    tracks$tracks <- subset(tracks$tracks, year %in% years & yday<59)
+    intersections <- study$loadIntersections(iteration=x$iteration)
+    
+    # If no intersection, randomized track can be anywhere else except on the survey route
+    
+    observedBursts <- aaply(intersections$intersectionsMatrix, 2, function(x) if (any(x>0)) TRUE else FALSE)
+    observationTracks <- tracks$randomizeObservationDayTracks(days=1)
+    
+    a <- ddply(observationTracks$tracks, .(id, year, burst), function(x, observationTracks) {
+      name <- with(x[1,], paste(id, year, burst))
+      if (observedBursts[name] == FALSE) return(data.frame(x=mean(x$x), y=mean(x$y), year=x$year))
+      NULL
+    }, observationTracks=observationTracks)[,c("x","y","year")]
+    a$Observed <- F
+    
+    index <- intersections$intersections$intersections > 0 & intersections$intersections$year %in% years
+    if (all(index == FALSE)) b <- data.frame() else {
+      x <- intersections$intersections[index,]
+      b <- data.frame(coordinates(x), year=x$year)
+      b$Observed <- T
+    }
+    agentLocations <- rbind(a, b)
+    agentLocations$Scenario <- x$scenario
+    agentLocations$Model <- x$modelName
+    
+    return(agentLocations)
+  }, modelName=modelName, years=years)
+}
+
+getEstimatedDensity = function(scenarios, modelName, iterations, year, sd=FALSE) {
+  ddply(data.frame(scenario=scenarios, iteration=iterations, stringsAsFactors=FALSE), .(scenario, iteration), function(x, modelName, year0, sd) {
+    message("Scenario = ", x$scenario, ", iteration = ", x$iteration)
+    study <- getStudy(scenario=x$scenario)
+    estimates <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=x$iteration)
+    estimates$modelName <- modelName
+    estimates <- study$loadEstimates(estimates)
+    estimates$collectEstimates()
+    
+    estimates$data <- subset(estimates$data, year == year0)
+    density <- estimates$getPopulationDensity(getSD=sd)
+    density <- if (sd) density$sd else density$mean
+    if (is.null(density) || maxValue(density$rasterStack[[1]]) > 1) stop("Estimation failed.")
+    density <- as.data.frame(density$rasterStack[[1]], xy=T)
+    density$Scenario <- x$scenario
+    density$Iteration <- x$iteration
+    density$Model <- modelName
+    density$Year <- year0
+
+    return(density)
+  }, modelName=modelName, year0=year, sd=sd)
+}
+```
 
 ```{r figure-2}
-# TODO: add densities
+iterations <- as.integer(c(1,1,3,2,5,6))
+#iterations <- as.integer(c(1,1,3,2,5,7))
+surveyRoutes <- getSurveyRouteLocations(scenarios=scenarios, modelName=modelNames[1], iterations, years=2001)
+surveyRoutes <- rbind(surveyRoutes[surveyRoutes$Intersection == FALSE,], surveyRoutes[surveyRoutes$Intersection == TRUE,])
+agents <- getAgentLocations(scenarios=scenarios, modelName=modelNames[1], iterations, years=2001)
+densities <- getEstimatedDensity(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, year=2001, sd=F)
+densitiesScaled <- ddply(densities, .(scenario), function(x) { x$X2001 <- scale(x$X2001); return(x) })
+limits <- extent(study$studyArea$boundary)
 
-surveyLocations <- ddply(surveyRoutesData, .(group, scenario), function(x) data.frame(long=mean(x$long), lat=mean(x$lat), scenario=x$scenario[1], observed=x$observed[1]))[,c("long","lat","scenario","observed")]
-surveyLocations$variable <- "Survey routes"
+#p <- ggplot(boundaryDF) + geom_polygon(aes(long, lat, group=group), fill=terrain.colors(100)[1]) +
+p <- ggplot(densitiesScaled) + geom_raster(aes(x, y, fill=X2001)) + scale_fill_gradientn(colours=terrain.colors(100), na.value="transparent") +
+  geom_path(data=boundaryDF, aes(long, lat, group=group), colour="darkgreen") +
+  geom_point(data=agents, aes(x, y, colour=Observed), size=1) + scale_color_manual(values=c("darkgray", "black")) + 
+  scale_x_continuous(limits=c(limits@xmin, limits@xmax), expand=c(0,0)) +
+  scale_y_continuous(limits=c(limits@ymin, limits@ymax), expand=c(0,0)) +
+  facet_grid(~scenario) + theme_raster(base_size=10) + coord_equal()
+print(p)
+saveFigure(p, "manuscript-figure-2a.png", width=8)
 
-trueLocations <- subset(trackData, observation==T)
-trueLocations <- ddply(trueLocations, .(burst, scenario), function(x) data.frame(long=mean(x$long), lat=mean(x$lat), scenario=x$scenario[1], observed=F))[,c("long","lat","scenario","observed")]
-trueLocations$variable <- "Individual locations"
-
-x <- rbind(surveyLocations, trueLocations)
-
-template <- raster(extent(study$studyArea$boundary), nrows=12, ncols=6, crs=study$studyArea$proj4string)
-template@extent@xmax <- template@extent@xmin + dim(template)[2] * 100 * 1e3
-template@extent@ymax <- template@extent@ymin + dim(template)[1] * 100 * 1e3
+gridTemplate <- raster(extent(study$studyArea$boundary), nrows=12, ncols=6, crs=study$studyArea$proj4string)
+gridTemplate@extent@xmax <- gridTemplate@extent@xmin + dim(gridTemplate)[2] * 100 * 1e3
+gridTemplate@extent@ymax <- gridTemplate@extent@ymin + dim(gridTemplate)[1] * 100 * 1e3
 
 p <- ggplot(boundaryDF) + geom_path(aes(long, lat, group=group), colour="grey") +
-  geom_point(data=x, aes(long, lat, colour=observed)) + scale_color_manual(values=c("darkgrey", "black")) + 
-  facet_grid(variable~scenario) + theme_raster() + coord_equal() +
-  scale_x_continuous(breaks=seq(template@extent@xmin, template@extent@xmax, 1e5)) +
-  scale_y_continuous(breaks=seq(template@extent@ymin, template@extent@ymax, 1e5)) +
-  theme(panel.grid.major=element_line(colour="grey"))
+  geom_point(data=surveyRoutes, aes(x, y, colour=Intersection), size=1) + scale_color_manual(values=c("darkgrey", "black")) +
+  scale_x_continuous(breaks=seq(gridTemplate@extent@xmin, gridTemplate@extent@xmax, 1e5), expand=c(0,0)) +
+  scale_y_continuous(breaks=seq(gridTemplate@extent@ymin, gridTemplate@extent@ymax, 1e5), expand=c(0,0)) +
+  facet_grid(~scenario) + theme_raster(base_size=10) + coord_equal() + theme(panel.grid.major=element_line(colour="grey"))
 print(p)
-saveFigure(p, "manuscript-figure-2.png", width=8, height=4)
+saveFigure(p, "manuscript-figure-2b.png", width=8)
+```
+
+```{r figure-3-test, eval=FALSE}
+study <- getStudy(scenario="A")
+validation <- Validation(study=study)
+x <- validation$validateTemporalPopulationSize(modelNames[1])
+validation$summarizePopulationSize(x)
 ```
 
 ```{r figure-3}
 study <- getStudy(scenario="A")
 validation <- Validation(study=study)
 populationSizes <- validation$getValidationTemporalPopulationSizes(modelNames=modelNames)
-
-p <- ggplot(populationSizes, aes(Observed, Estimated)) + geom_point() + stat_smooth(method="lm", colour="black") +
-  geom_abline(colour="darkgrey") + facet_wrap(~Scenario, scales="free") +
-  theme_minimal() + theme(panel.border=element_rect(fill="transparent"))
+p <- ggplot(populationSizes, aes(Observed, Estimated, colour=modelName)) + geom_point() + stat_smooth(method="lm", colour="black") +
+  scale_colour_manual("Model", values=c("black", "darkgray"), labels=c("ST", "T")) +
+  geom_abline(colour="darkgrey", linetype="longdash") + facet_wrap(~Scenario, scales="free") +
+  xlab("True population size") + ylab("Estimated population size") +
+  theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"))
 print(p)
 saveFigure(p, "manuscript-figure-3.png", width=8, height=4)
+```
+
+```{r figure-4-test, eval=FALSE}
+study <- getStudy(scenario="F")
+validation <- Validation(study=study)
+x <- validation$validateSpatialPopulationSize(modelNames[1])
 ```
 
 ```{r figure-4}
 study <- getStudy(scenario="A")
 validation <- Validation(study=study)
 populationCorrelations <- validation$getValidationSpatialPopulationSizes(modelNames=modelNames)
-p <- ggplot(populationCorrelations, aes(True, Correlation)) + geom_point() + facet_wrap(~Scenario) +
-  theme_minimal() + theme(panel.border=element_rect(fill="transparent"))
+p <- ggplot(populationCorrelations, aes(True, Correlation, colour=modelName)) + geom_point() +
+  scale_colour_manual("Model", values=c("black", "darkgray"), labels=c("ST", "T")) +
+  facet_wrap(~Scenario) + xlab("True population size") +
+  theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"), axis.text.x=element_text(angle=45, hjust=.5, vjust=1))
 print(p)
 saveFigure(p, "manuscript-figure-4.png", width=8, height=4)
 ```
 
-```{r credible-intervals}
+```{r figure-5-init}
 
 ```
 
@@ -147,9 +286,11 @@ study <- getStudy(scenario="A")
 validation <- Validation(study=study)
 a <- validation$getValidatedCredibilityIntervalsProportions(modelNames=modelNames)
 b <- validation$getValidatedCredibilityIntervalsProportions(modelNames=modelNames, probs=c(.25, .75), probsName="50%")
-credibilityIntervals <- cbind(a, b)
-p <- ggplot(credibilityIntervals, aes(scenario, Proportion, colour=CredibleInterval)) + geom_point() +
-  theme_minimal() + theme(panel.border=element_rect(fill="transparent"))
+credibilityIntervals <- rbind(a, b)
+p <- ggplot(credibilityIntervals, aes(scenario, Proportion, shape=Interval, colour=modelName)) + geom_point() +
+  scale_shape_manual(values=c(16, 1)) + scale_colour_manual("Model", values=c("black", "darkgray"), labels=c("ST", "T")) +
+  theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent")) +
+  xlab("Scenario")
 print(p)
-saveFigure(p, "manuscript-figure-5.png", width=4, height=4)
+saveFigure(p, "manuscript-figure-5.png", width=4, height=2)
 ```

@@ -90,7 +90,10 @@ theme_raster <- function(base_size=12, base_family="", ...) {
     axis.title.y=element_blank(),
     axis.ticks=element_blank(),
     strip.background=element_blank(),
-    plot.margin=unit(c(0,0,-1,-1), "lines"),
+    #plot.margin=unit(c(0,0,-1,-1), "lines"),
+    plot.margin=unit(c(0,0,-.5,-.5), "lines"),
+    axis.ticks.length=unit(0,"lines"),axis.ticks.margin=unit(0,"lines"),
+    #plot.margin=rep(unit(0,"null"),4),panel.margin=unit(0,"null"),axis.ticks.length=unit(0,"null"),axis.ticks.margin=unit(0,"null"),
     legend.position="none",
     ...
   )

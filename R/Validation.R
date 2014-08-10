@@ -68,6 +68,7 @@ Validation <- setRefClass(
         s <- getStudy(scenario=x$scenario, isTest=F)
         validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
         x <- validation$validateTemporalPopulationSize(x$modelName)
+        gc()
         if (nrow(x) == 0) return(NULL)
         return(x)
       }, .parallel=T)
