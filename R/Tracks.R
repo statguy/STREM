@@ -368,7 +368,8 @@ SimulatedTracks <- setRefClass(
     sample = function(nSamples) {
       library(plyr)
       tracks <<- ddply(tracks, .(year), function(x, nSamples) {
-        nIds <- min(length(unique(tracks$id)), nSamples)
+        nIds <- length(unique(tracks$id))
+        if (nIds < nSamples) nSamples <- nIds
         sampledIds <- base::sample(1:nIds, nSamples)
         return(subset(x, id %in% sampledIds))
       }, nSamples=nSamples)
