@@ -266,14 +266,13 @@ Validation <- setRefClass(
         s <- getStudy(scenario=x$scenario, isTest=F)
         validation <- Validation(study=s)
         iterations <- validation$getPopulationSizeFileIterations(x$modelName)
-        #print(iterations)
         x <- laply(iterations, function(iteration, modelName, study) {
           message("scenario = ", x$scenario, ", iteration = ", iteration, ", model = ", modelName)
           populationSize <- study$loadPopulationSize(iteration=iteration, modelName=modelName)
-          if (any(populationSize$sizeData$Estimated > populationSizeOverEstimate)) return(NULL)
+          if (any(populationSize$sizeData$Estimated > populationSizeOverEstimate)) return(NA)
           return(iteration)
         }, modelName=x$modelName, study=s, .parallel=T)
-        data.frame(nEstimated=length(x))
+        data.frame(nEstimated=length(x[!is.na(x)]))
       })
       return(x)
     }
