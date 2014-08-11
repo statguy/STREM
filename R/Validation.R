@@ -76,7 +76,7 @@ Validation <- setRefClass(
         gc()
         if (nrow(x) == 0) return(NULL)
         return(x)
-      }, .parallel=T)
+      })
       
       return(x)
     },

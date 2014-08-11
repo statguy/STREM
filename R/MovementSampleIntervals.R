@@ -27,11 +27,41 @@ MovementSampleIntervals <- setRefClass(
     # Determines sampling intervals of the recorded movements for each day
     getSampleIntervals = function(tracks) {
       library(adehabitatLT)
-      library(plyr)
+      library(dplyr)
       
       tracksDF <- if (inherits(tracks$tracks, "ltraj")) ld(tracks$tracks) else tracks$tracks
       tracksDF <- data.frame(tracksDF, breakDownDate(tracksDF$date))
-
+      
+      getInterval <- function(dt, dist) {
+        if (is.na(dt[length(dt)])) dt[length(dt)] <- mean(dt, na.rm=T)
+        s <- sum(dt, na.rm=T) / 3600
+        if (s < 23 | s > 25) return(NA)
+        distKm <- sum(dist, na.rm=T) / 1e3
+        if (is.na(distKm) | distKm > 100) return(NA)
+        intervalMin <- 24 / length(dt) * 60
+        if (intervalMin > 24*60) return(NA)
+        return(intervalMin)
+        #return(list(intervalMin=intervalMin, distKm=distKm))
+      }
+      
+      x <- tracksDF %.% group_by(id, yday, year) %.%
+        summarise(id2=paste(id[1], yday[1], year[1]), burst=burst[1], individualId=id[1], date=date[1],
+                  intervalMin=getInterval(dt, dist), distanceKm=sum(dist, na.rm=T) / 1e3, x=mean(x), y=mean(y)) %.%
+        mutate(intervalH=intervalMin / 60, intervalSec=intervalMin * 60)
+      x$id <- x$id2
+      x$id2 <- NULL
+      x <- x[!is.na(x$intervalMin),]
+      intervals <<- as.data.frame(x)
+      
+      message("Distance distribution:")
+      print(summary(x$distanceKm))
+      message("Interval distribution:")
+      print(summary(x$intervalH))
+      message("Speed distribution:")
+      print(summary(x$distanceKm / x$intervalH))
+      
+      if (F) {
+      library(plyr)
       intervals <<- ddply(tracksDF, .(id, yday, year), function(x) {
         if (is.na(x$dt[nrow(x)])) x$dt[nrow(x)] <- mean(x$dt, na.rm=T)
         
@@ -55,6 +85,7 @@ MovementSampleIntervals <- setRefClass(
                         y=mean(x$y))
         return(y)
       }, .parallel=TRUE)
+      }
       
       if (nrow(intervals) == 0) warning("Unable to determine sampling intervals.")
       else intervals$thinId <<- tracks$thinId

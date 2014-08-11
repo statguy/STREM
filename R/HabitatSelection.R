@@ -5,9 +5,15 @@ HabitatSelection <- setRefClass(
     tracks = "Tracks",
     nullModelUsage = "data.frame",
     realizedUsage = "data.frame",
-    relativeUsage = "data.frame"
+    relativeUsage = "data.frame",
+    maxTracks = "integer"
   ),
   methods = list(
+    initialize = function(maxTracks=10000, ...) {
+      callSuper(...)
+      maxTracks <<- maxTracks
+    },
+    
     randomizeSteps = function(movements, location, nSamples) {
       randomizedSteps <- movements[sample(1:nrow(movements), min(nSamples, nrow(movements))), c("dx","dy")]
       randomizedLocations <- cbind(x=location$x + randomizedSteps$dx, y=location$y + randomizedSteps$dy)
@@ -46,8 +52,10 @@ HabitatSelection <- setRefClass(
     getRealizedMovementHabitatDistributions = function(movements, habitatWeightsTemplate) {
       library(plyr)
       library(raster)
+      library(dplyr)
       
       movements <- movements[!(is.na(movements$x) | is.na(movements$y) | is.na(movements$dx) | is.na(movements$dy)),]
+      if (nrow(movements) > maxTracks) movements <- sample_n(movements, maxTracks)
       
       p <- dlply(movements, .(id, burst), function(m, habitat, habitatWeightsTemplate) {
         message("Processing burst = ", m$burst[1], " n = ", nrow(m), "...")
@@ -81,9 +89,12 @@ HabitatSelection <- setRefClass(
     
     # TODO: Remove the movements when the individuals are not moving
     getHabitatPreferences = function(tracks, habitatWeightsTemplate, nSamples=30, save=FALSE) {
+      message("Finding tracks with highest number of samples and constant frequency...")
       tracksDF <- getMovements(tracks)
       
+      message("Estimating potential habitat usage...")
       nullModelUsage <<- getNullModelMovementHabitatDistributions(movements=tracksDF, habitatWeightsTemplate=habitatWeightsTemplate, nSamples=nSamples)
+      message("Counting actual habitat usage...")
       realizedUsage <<- getRealizedMovementHabitatDistributions(movements=tracksDF, habitatWeightsTemplate=habitatWeightsTemplate)
       relativeUsage <<- as.data.frame(as.list(colSums(realizedUsage) / colSums(nullModelUsage)))
       
