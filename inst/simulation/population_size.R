@@ -29,7 +29,7 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
     populationSize$plotPopulationSize()
   }
   else {
-    estimate <- if (modelName == "SmoothModel-nbinomial-matern-ar1") SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
+    estimates <- if (modelName == "SmoothModel-nbinomial-matern-ar1") SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
     else if (modelName == "SmoothModel-nbinomial-ar1") SimulatedSmoothModelTemporal(study=study, iteration=iteration)
     estimates$modelName <- modelName
     habitatWeights <- study$getHabitatWeights(iteration=iteration)
