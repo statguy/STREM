@@ -187,9 +187,10 @@ SmoothModelTemporal <- setRefClass(
     collectEstimates = function(observationWeights=1, predictionWeights=1) {
       library(INLA)
       
-      data$eta <<- result$summary.linear.predictor$mean + log(observationWeights)
-      data$fittedMean <<- result$summary.fitted.values$mean * observationWeights
-      data$fittedSD <<- result$summary.fitted.values$sd * observationWeights
+      index <- 1:nrow(data)
+      data$eta <<- result$summary.linear.predictor$mean[index] + log(observationWeights)
+      data$fittedMean <<- result$summary.fitted.values$mean[index] * observationWeights
+      data$fittedSD <<- result$summary.fitted.values$sd[index] * observationWeights
       observedOffset <- getObservedOffset()
       
       message("Fitted values sums all years:")

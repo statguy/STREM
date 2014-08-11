@@ -16,8 +16,10 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
   if (otherTest) {
     #iteration <- as.integer(50)
     estimates <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
+    
     estimates <- study$loadEstimates(estimates=estimates)
     estimates$collectEstimates(predictionWeights=estimates$getPredictedOffset())
+    
     #estimates$collectHyperparameters()
     populationSize <- estimates$getPopulationSize(withHabitatWeights=mss$hasHabitatWeights())
     populationSize$loadValidationData()
@@ -27,14 +29,8 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
     populationSize$plotPopulationSize()
   }
   else {
-    if (modelName == "SmoothModel-nbinomial-matern-ar1") {
-      estimates <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
-      #estimates$setModelName(family="nbinomial", randomEffect=paste("matern", "ar1", sep="-"))
-    }
-    else if (modelName == "SmoothModel-nbinomial-ar1") {
-      estimates <- SimulatedSmoothModelTemporal(study=study, iteration=iteration)
-    }
-
+    estimate <- if (modelName == "SmoothModel-nbinomial-matern-ar1") SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
+    else if (modelName == "SmoothModel-nbinomial-ar1") SimulatedSmoothModelTemporal(study=study, iteration=iteration)
     estimates$modelName <- modelName
     habitatWeights <- study$getHabitatWeights(iteration=iteration)
     populationSize <- study$getPopulationSize(estimates=estimates, habitatWeights=habitatWeights)

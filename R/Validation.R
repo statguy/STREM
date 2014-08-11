@@ -10,6 +10,11 @@ Validation <- setRefClass(
       populationSizeOverEstimate <<- populationSizeOverEstimate
     },
     
+    #getTracksFileIterations = function() {
+    #  tracks <- SimulatedTracks(study=study)
+    #  tracks$ge
+    #},
+    
     getPopulationSizeFileIterations = function(modelName) {
       populationSize <- SimulationPopulationSize(study=study, modelName=modelName)
       return(populationSize$getPopulationSizeFileIterations())
@@ -252,6 +257,22 @@ Validation <- setRefClass(
         return(x)
       }, probs=probs, probsName=probsName, .parallel=T)
       
+      return(x)
+    },
+    
+    # Count also number of tracks
+    countFailedEstimations = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
+      x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
+        s <- getStudy(scenario=x$scenario, isTest=F)
+        validation <- Validation(study=s)
+        iterations <- validation$getPopulationSizeFileIterations(modelName)
+        x <- laply(iterations, function(iteration, modelName) {
+          populationSize <- study$loadPopulationSize(iteration=iteration, modelName=modelName)
+          if (any(populationSize$sizeData$Estimated > populationSizeOverEstimate)) return(NULL)
+          return(iteration)
+        }, modelName=modelName, .parallel=T)
+        data.frame(nEstimated=length(x))
+      })
       return(x)
     }
   )
