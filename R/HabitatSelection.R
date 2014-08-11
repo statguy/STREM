@@ -52,9 +52,9 @@ HabitatSelection <- setRefClass(
     },
     
     getRealizedMovementHabitatDistributions = function(movements, habitatWeightsTemplate) {
+      library(dplyr)
       library(plyr)
       library(raster)
-      library(dplyr)
       
       movements <- movements[!(is.na(movements$x) | is.na(movements$y) | is.na(movements$dx) | is.na(movements$dy)),]
       if (nrow(movements) > maxTracks) movements <- sample_n(movements, maxTracks)
@@ -91,7 +91,7 @@ HabitatSelection <- setRefClass(
     },
     
     # TODO: Remove the movements when the individuals are not moving
-    getHabitatPreferences = function(tracks, habitatWeightsTemplate, nSamples=30, save=FALSE) {
+    getHabitatPreferences = function(tracks, habitatWeightsTemplate, nSamples=10, save=FALSE) {
       message("Finding tracks with highest number of samples and constant frequency...")
       tracksDF <- getMovements(tracks)
       
@@ -100,6 +100,7 @@ HabitatSelection <- setRefClass(
       message("Counting actual habitat usage...")
       realizedUsage <<- getRealizedMovementHabitatDistributions(movements=tracksDF, habitatWeightsTemplate=habitatWeightsTemplate)
       relativeUsage <<- as.data.frame(as.list(colSums(realizedUsage) / colSums(nullModelUsage)))
+      #relativeUsage95 <<- 
       
       if (save) saveHabitatSelection()
       

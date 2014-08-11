@@ -13,7 +13,6 @@
 
 population_size <- function(scenario, modelName, iteration, isTest, otherTest=F) {
   readHabitatIntoMemory <- if (scenario == "E" || scenario == "F") TRUE else FALSE
-  
   mss <- getMSS(scenario=scenario, isTest=isTest, readHabitatIntoMemory=readHabitatIntoMemory)
   study <- mss$study
   
