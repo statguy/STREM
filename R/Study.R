@@ -103,8 +103,8 @@ SimulationStudy <- setRefClass(
     getHabitatWeights = function(tracks, iteration) {
       if (withHabitatWeights == FALSE) return(NULL)
       
-      habitatWeights <- CORINEHabitatWeights$new(study=study)
-      if (missing(tracks)) tracks <- study$loadTracks(iteration=iteration)
+      habitatWeights <- CORINEHabitatWeights$new(study=.self)
+      if (missing(tracks)) tracks <- loadTracks(iteration=iteration)
       habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=FALSE) # TODO: save
       habitatWeights$setHabitatSelectionWeights(habitatSelection)
       habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=FALSE)

@@ -1,8 +1,10 @@
 # Run test:
-# ./parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R test A
+# ./parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R test A SmoothModel-nbinomial-matern-ar1
 # Run full:
-# ./parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R notest A
-# R --vanilla --args notest A 1 < population_size.R
+# ./parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R notest A SmoothModel-nbinomial-matern-ar1
+# ./parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R notest A SmoothModel-nbinomial-ar1
+#
+# R --vanilla --args notest E SmoothModel-nbinomial-ar1 3 < ~/git/Winter-Track-Counts/inst/simulation/population_size.R
 
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 # echo 'library(devtools); install_github("statguy/Winter-Track-Counts")' | R --slave
@@ -10,7 +12,9 @@
 
 
 population_size <- function(scenario, modelName, iteration, isTest, otherTest=F) {
-  mss <- getMSS(scenario=scenario, isTest=isTest)
+  readHabitatIntoMemory <- if (scenario == "E" || scenario == "F") TRUE else FALSE
+  
+  mss <- getMSS(scenario=scenario, isTest=isTest, readHabitatIntoMemory=readHabitatIntoMemory)
   study <- mss$study
   
   if (otherTest) {
@@ -38,6 +42,7 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
     return(invisible(populationSize))
   }
 }
+
 
 library(parallel)
 library(doMC)
