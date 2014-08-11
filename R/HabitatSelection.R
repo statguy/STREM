@@ -9,7 +9,7 @@ HabitatSelection <- setRefClass(
     maxTracks = "integer"
   ),
   methods = list(
-    initialize = function(maxTracks=10000, ...) {
+    initialize = function(maxTracks=as.integer(10000), ...) {
       callSuper(...)
       maxTracks <<- maxTracks
     },
