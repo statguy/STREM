@@ -74,7 +74,7 @@ HabitatSelection <- setRefClass(
 
     getMovements = function(tracks) {
       tracks$sample(nCollaredIndividuals)
-      intervals <- tracks$getSampleIntervals(collaredIndividuals=collaredIndividuals)
+      intervals <- tracks$getSampleIntervals()
       maxIntervalH <- as.numeric(names(which.max(table(intervals$intervals$intervalH))))
       maxIntervals <- subset(intervals$intervals, intervalH == maxIntervalH)
 
