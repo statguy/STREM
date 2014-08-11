@@ -55,7 +55,7 @@ Tracks <- setRefClass(
       
       return(invisible(.self))
     },
-    
+        
     getTracks = function() {
       if (nrow(tracks) == 0) loadTracks()
       return(tracks)
@@ -363,6 +363,15 @@ SimulatedTracks <- setRefClass(
       if (nrow(truePopulationSize) == 0)
         setTruePopulationSize()
       return(truePopulationSize)
+    },
+    
+    sample = function(nSamples) {
+      library(plyr)
+      tracks <<- ddply(tracks, .(year), function(x, nSamples) {
+        nIds <- min(length(unique(tracks$id)), nSamples)
+        sampledIds <- base::sample(1:nIds, nSamples)
+        return(subset(x, id %in% sampledIds))
+      }, nSamples=nSamples)
     }
   )
 )

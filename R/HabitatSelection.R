@@ -6,11 +6,13 @@ HabitatSelection <- setRefClass(
     nullModelUsage = "data.frame",
     realizedUsage = "data.frame",
     relativeUsage = "data.frame",
+    nCollaredIndividuals = "integer",
     maxTracks = "integer"
   ),
   methods = list(
-    initialize = function(maxTracks=as.integer(10000), ...) {
+    initialize = function(nCollaredIndividuals=as.integer(30), maxTracks=as.integer(10000), ...) {
       callSuper(...)
+      nCollaredIndividuals <<- nCollaredIndividuals
       maxTracks <<- maxTracks
     },
     
@@ -71,7 +73,8 @@ HabitatSelection <- setRefClass(
     },
 
     getMovements = function(tracks) {
-      intervals <- tracks$getSampleIntervals()
+      tracks$sample(nCollaredIndividuals)
+      intervals <- tracks$getSampleIntervals(collaredIndividuals=collaredIndividuals)
       maxIntervalH <- as.numeric(names(which.max(table(intervals$intervals$intervalH))))
       maxIntervals <- subset(intervals$intervals, intervalH == maxIntervalH)
 
