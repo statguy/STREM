@@ -740,7 +740,7 @@ SimulatedSmoothModelSpatioTemporal <- setRefClass(
     getEstimatesFileIterations = function() {
       if (inherits(study, "undefinedField") | length(modelName) == 0)
         stop("Provide study and modelName parameters.")
-      return(iterations <- study$context$getIterationIds(dir=study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag="(\\d+)"))
+      return(study$context$getIterationIds(dir=study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag="(\\d+)"))
     },
     
     getEstimatesFileName = function() {
