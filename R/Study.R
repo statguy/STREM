@@ -105,7 +105,7 @@ SimulationStudy <- setRefClass(
       
       habitatWeights <- CORINEHabitatWeights$new(study=.self)
       if (missing(tracks)) tracks <- loadTracks(iteration=iteration)
-      habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=FALSE) # TODO: save
+      habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=TRUE)
       habitatWeights$setHabitatSelectionWeights(habitatSelection)
       habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=FALSE)
       

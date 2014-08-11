@@ -53,10 +53,10 @@ Validation <- setRefClass(
       return(populationSize)
     },
     
-    summarizePopulationSize = function(populationSize) {
+    summarizePopulationSize = function(populationSizes) {
       library(plyr)
       
-      ddply(populationSize, .(Scenario, Year), function(x, probs) {
+      ddply(populationSizes, .(Scenario, Year, modelName), function(x, probs) {
         y <- data.frame(n=nrow(x), Estimated=mean(x$Estimated), Observed=mean(x$Observed))
         q <- quantile(x$Estimated, probs=probs)
         y$Estimated.q1 <- q[1]
@@ -265,12 +265,12 @@ Validation <- setRefClass(
       x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
         s <- getStudy(scenario=x$scenario, isTest=F)
         validation <- Validation(study=s)
-        iterations <- validation$getPopulationSizeFileIterations(modelName)
+        iterations <- validation$getPopulationSizeFileIterations(x$modelName)
         x <- laply(iterations, function(iteration, modelName) {
           populationSize <- study$loadPopulationSize(iteration=iteration, modelName=modelName)
           if (any(populationSize$sizeData$Estimated > populationSizeOverEstimate)) return(NULL)
           return(iteration)
-        }, modelName=modelName, .parallel=T)
+        }, modelName=x$modelName, .parallel=T)
         data.frame(nEstimated=length(x))
       })
       return(x)
