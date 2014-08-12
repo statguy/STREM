@@ -164,7 +164,7 @@ Validation <- setRefClass(
     },
     
     validateCredibilityIntervals = function(modelName, iteration, nSamples=100, save=F) {      
-      model <- SimulatedSmoothModelSpatioTemporal$new(study=study, iteration=iteration)
+      model <- study$getModel(modelName=modelName, iteration=iteration)
       model$modelName <- modelName
       model$loadEstimates()
       model$collectEstimates()
