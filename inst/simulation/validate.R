@@ -1,3 +1,5 @@
+# ./parallel_r.py -t 1:50 -n 70 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/validate.R notest A SmoothModel-nbinomial-ar1
+
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 
 library(parallel)
@@ -58,6 +60,7 @@ if (isTest) {
   }
   
   populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=as.integer(task_id), nSamples=nSamples, save=T)
+  
   if (F) {
     iterations <- validation$getCredibilityIntervalsValidationIterations(modelName=modelName)
     populationSizeCI <- ldply(iterations, function(iteration) {
@@ -65,25 +68,5 @@ if (isTest) {
     })
     print(validation$summarizePopulationSizeCI(populationSizeCI))
     print(validation$summarizePopulationSizeCI(populationSizeCI, probs=c(.25,.75)))
-    
-    
-
-    
-    #validation$getValidatedCredibilityIntervalsProportion(modelName, probs=c(.25,.75))
-    
-    
   }
-}
-
-
-
-if (F) {
-  summary(lm(Estimated~Observed, populationSize))
-  p <- ggplot(size, aes(Observed, Estimated)) + geom_abline(colour="darkgrey") +
-    geom_point() + geom_smooth(method="lm", colour="black") +
-    facet_grid(~scenario)
- 
-  summary(lm(Correlation~True, spatialCorrelation))
-  ggplot(spatialCorrelation, aes(True, Correlation)) + geom_point() + geom_smooth(method="lm", colour="black") +
-    facet_grid(~scenario)
 }

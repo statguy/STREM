@@ -2,7 +2,7 @@
 # ./parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R test A SmoothModel-nbinomial-matern-ar1
 # Run full:
 # ./parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R notest A SmoothModel-nbinomial-matern-ar1
-# ./parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R notest A SmoothModel-nbinomial-ar1
+# ./parallel_r.py -t 1:50 -n 60 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R notest E SmoothModel-nbinomial-ar1
 #
 # R --vanilla --args notest E SmoothModel-nbinomial-ar1 3 < ~/git/Winter-Track-Counts/inst/simulation/population_size.R
 
@@ -32,12 +32,9 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
     populationSize$plotPopulationSize()
   }
   else {
-    estimates <- if (modelName == "SmoothModel-nbinomial-matern-ar1") SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
-    else if (modelName == "SmoothModel-nbinomial-ar1") SimulatedSmoothModelTemporal(study=study, iteration=iteration)
-    estimates$modelName <- modelName
+    estimates <- study$getModel(modelName=modelName, iteration=iteration)
     habitatWeights <- study$getHabitatWeights(iteration=iteration)
     populationSize <- study$getPopulationSize(estimates=estimates, habitatWeights=habitatWeights)
-    
     return(invisible(populationSize))
   }
 }
