@@ -1,4 +1,5 @@
 # ./parallel_r.py -t 1:50 -n 70 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/validate.R notest A SmoothModel-nbinomial-ar1
+# ./parallel_r.py -t 1:50 -n 70 -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/validate.R notest A SmoothModel-nbinomial-matern-ar1
 
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 
@@ -18,7 +19,6 @@ if (isTest) {
   populationSizeOverEstimate <- 2000
 }
 
-modelName <- paste("SmoothModel", "nbinomial", "matern", "ar1", sep = "-")
 mss <- getMSS(scenario=scenario, isTest=isTest)
 study <- mss$study
 validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
