@@ -92,15 +92,13 @@ Validation <- setRefClass(
       coverArea[coverArea[] == 0] <- NA
       coverArea <- coverArea / 100
       
-      #iterations <- study$context$getIterationIds(dir=study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag="(\\d+)")
       iterations <- getEstimatesFileIterations(modelName)
       spatialCorrelation <- data.frame()
       
       for (iteration in iterations) {
         message("Iteration ", iteration, " of ", length(iterations), " iterations of scenario ", study$response, "...")
         
-        estimates <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
-        estimates$modelName <- modelName
+        estimates <- study$getModel(modelName=modelName, iteration=iteration)
         estimates <- study$loadEstimates(estimates)
         estimates$collectEstimates()
         
@@ -110,8 +108,6 @@ Validation <- setRefClass(
           next
         }
         
-        #populationSize <- estimated$mean$integrate(volume = SimulationPopulationSize(study=study, iteration=iteration, modelName=modelName))
-        #if (any(populationSize$sizeData$Estimated > populationSizeOverEstimate))
         estimated$mean$rasterStack <- stack(mask(estimated$mean$rasterStack, coverArea) * coverArea)
         
         tracks <- study$loadTracks(iteration=iteration)
