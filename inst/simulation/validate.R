@@ -10,6 +10,7 @@ library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
 parseArguments()
+modelName <- extraArgs[1]
 
 if (isTest) {
   nSamples <- 50
