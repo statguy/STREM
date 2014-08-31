@@ -14,7 +14,7 @@ library(plyr)
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
 scenarios <- c("A","B","C","D","E","F")
-modelNames <- c(paste("SmoothModel", "nbinomial", "matern", "ar1", sep = "-"), paste("SmoothModel", "nbinomial", "ar1", sep = "-"))
+modelNames <- c(paste("SmoothModel", "nbinomial", "matern", "ar1", sep = "-"), paste("SmoothModel", "nbinomial", "ar1", sep = "-"), "FMPModel")
 iterations <- as.integer(c(1,1,1,1,3,1))
 
 boundaryDF <- ggplot2::fortify(FinlandWTCStudy(context=context, response="canis.lupus")$studyArea$boundary)
@@ -247,7 +247,7 @@ validation$summarizePopulationSize(x)
 ```
 
 ```{r figure-3}
-study <- getStudy(scenario="A")
+study <- getStudy(scenario="A") # Get study object, scenario doesn't matter
 validation <- Validation(study=study)
 populationSizes <- validation$getValidationTemporalPopulationSizes(modelNames=modelNames)
 validation$summarizePopulationSize(populationSizes)

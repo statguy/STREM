@@ -22,7 +22,7 @@ for (i in 1:length(responses)) {
   model$offsetScale <- 1000^2 # TODO: quickfix
   
   #populationSize <- study$getPopulationSize(model=model, withHabitatWeights=TRUE, saveDensityPlots=TRUE, getSD=FALSE)
-  populationSize <- study$getPopulationSize(model=model, withHabitatWeights=TRUE, saveDensityPlots=FALSE)
+  populationSize <- study$getPopulationSize(model=model, withHabitatWeights=TRUE, saveDensityPlots=FALSE) # TODO: fix
   populationSize$loadValidationData()
   populationSize$plotPopulationSize()
   print(populationSize)
