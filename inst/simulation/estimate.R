@@ -13,7 +13,7 @@ estimateSpatioTemporal <- function(scenario, modelName, iteration, isTest=FALSE,
   if (quick) {
     stop("TODO")
     intersections <- study$loadIntersections(iteration=iteration)
-    model <- SimulatedSmoothModelSpatioTemporal$new(study=study, iteration=iteration)
+    model <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
     meshParams <- list(maxEdge=c(.1e6, .2e6), cutOff=.05e6, coordsScale=1e-6)
     modelParams <- list(family="nbinomial", offsetScale=1000^2, meshParams=meshParams, timeModel="ar1")
     model$setup(intersections=intersections, params=modelParams)
@@ -34,6 +34,10 @@ estimateSpatioTemporal <- function(scenario, modelName, iteration, isTest=FALSE,
     else if (modelName == "SmoothModel-nbinomial-ar1") {
       model <- SimulatedSmoothModelTemporal(study=study, iteration=iteration)
       modelParams <- list(family="nbinomial", offsetScale=1000^2, timeModel="ar1")
+    }
+    else if (modelName == "FMPModel") {
+      model <- SimulatedFMPModel(study=study, iteration=iteration)
+      modelParams <- NULL
     }
     else stop("Unknown model.")
     study$estimate(model=model, params=modelParams)

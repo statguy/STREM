@@ -14,7 +14,7 @@ library(plyr)
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
 scenarios <- c("A","B","C","D","E","F")
-modelNames <- c(paste("SmoothModel", "nbinomial", "matern", "ar1", sep = "-"))
+modelNames <- c(paste("SmoothModel", "nbinomial", "matern", "ar1", sep = "-"), paste("SmoothModel", "nbinomial", "ar1", sep = "-"))
 iterations <- as.integer(c(1,1,1,1,3,1))
 
 boundaryDF <- ggplot2::fortify(FinlandWTCStudy(context=context, response="canis.lupus")$studyArea$boundary)
@@ -250,8 +250,10 @@ validation$summarizePopulationSize(x)
 study <- getStudy(scenario="A")
 validation <- Validation(study=study)
 populationSizes <- validation$getValidationTemporalPopulationSizes(modelNames=modelNames)
-p <- ggplot(populationSizes, aes(Observed, Estimated, colour=modelName)) + geom_point() + stat_smooth(method="lm", colour="black") +
-  scale_colour_manual("Model", values=c("black", "darkgray"), labels=c("ST", "T")) +
+validation$summarizePopulationSize(populationSizes)
+
+p <- ggplot(populationSizes, aes(Observed, Estimated, colour=modelName)) + geom_point(size=1) + stat_smooth(method="lm", aes(colour=modelName), se=F) +
+  scale_colour_manual("Model", values=c("darkgray","black"), labels=c("T", "ST")) +
   geom_abline(colour="darkgrey", linetype="longdash") + facet_wrap(~Scenario, scales="free") +
   xlab("True population size") + ylab("Estimated population size") +
   theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"))
@@ -259,8 +261,23 @@ print(p)
 saveFigure(p, "manuscript-figure-3.png", width=8, height=4)
 ```
 
+```{r table-1}
+ddply(populationSizes, .(Scenario, modelName), function(x) {
+  y <- lm(Estimated~Observed, x)
+  data.frame(Intercept=round(coef(y)[1], 0), Slope=round(coef(y)[2], 2))
+})
+```
+
+```{r table-2}
+study <- getStudy(scenario="A")
+validation <- Validation(study=study)
+failedEstimations <- validation$countFailedEstimations(modelNames=modelNames)
+failedEstimations$pFailed <- (1 - failedEstimations$nEstimated / 50) * 100
+failedEstimations
+```
+
 ```{r figure-4-test, eval=FALSE}
-study <- getStudy(scenario="F")
+study <- getStudy(scenario="A")
 validation <- Validation(study=study)
 x <- validation$validateSpatialPopulationSize(modelNames[1])
 ```
@@ -268,17 +285,13 @@ x <- validation$validateSpatialPopulationSize(modelNames[1])
 ```{r figure-4}
 study <- getStudy(scenario="A")
 validation <- Validation(study=study)
-populationCorrelations <- validation$getValidationSpatialPopulationSizes(modelNames=modelNames)
-p <- ggplot(populationCorrelations, aes(True, Correlation, colour=modelName)) + geom_point() +
-  scale_colour_manual("Model", values=c("black", "darkgray"), labels=c("ST", "T")) +
-  facet_wrap(~Scenario) + xlab("True population size") +
-  theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"), axis.text.x=element_text(angle=45, hjust=.5, vjust=1))
+populationCorrelations <- validation$getValidationSpatialPopulationSizes(modelNames=modelNames[1])
+
+p <- ggplot(populationCorrelations, aes(True, Correlation)) + geom_point(size=1, colour="black") +
+  facet_wrap(~Scenario, ncol=2) + xlab("True population size") +
+  theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"))#, axis.text.x=element_text(angle=45, hjust=.5, vjust=1))
 print(p)
-saveFigure(p, "manuscript-figure-4.png", width=8, height=4)
-```
-
-```{r figure-5-init}
-
+saveFigure(p, "manuscript-figure-4.png", width=4, height=4)
 ```
 
 ```{r figure-5}
@@ -287,10 +300,11 @@ validation <- Validation(study=study)
 a <- validation$getValidatedCredibilityIntervalsProportions(modelNames=modelNames)
 b <- validation$getValidatedCredibilityIntervalsProportions(modelNames=modelNames, probs=c(.25, .75), probsName="50%")
 credibilityIntervals <- rbind(a, b)
+
 p <- ggplot(credibilityIntervals, aes(scenario, Proportion, shape=Interval, colour=modelName)) + geom_point() +
-  scale_shape_manual(values=c(16, 1)) + scale_colour_manual("Model", values=c("black", "darkgray"), labels=c("ST", "T")) +
+  scale_shape_manual(values=c(16, 1)) + scale_colour_manual("Model", values=c("darkgray", "black"), labels=c("T", "ST")) +
   theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent")) +
-  xlab("Scenario")
+  xlab("Scenario") + ylab("Proportion within CI")
 print(p)
 saveFigure(p, "manuscript-figure-5.png", width=4, height=2)
 ```

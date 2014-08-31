@@ -152,6 +152,48 @@ Model <- setRefClass(
   )
 )
 
+FMPModel <- setRefClass(
+  Class = "FMPModel",
+  contains = "Model",
+  fields = list(
+  ),
+  methods = list(
+    setup = function(intersections, params) {
+      coordsScale <<- 1
+      offsetScale <<- 1
+      modelName <<- "FMPModel"
+      
+      data <<- intersections$getData()
+      data$response <<- data$intersections
+      locations <<- intersections$getCoordinates() * coordsScale
+      years <<- as.integer(sort(unique(data$year)))
+      
+      return(invisible(.self))      
+    },
+    
+    saveEstimates = function(fileName=getEstimatesFileName()) {
+      message("Saving result to ", fileName, "...")
+      save(locations, data, coordsScale, years, offsetScale, file=fileName)
+    },
+    
+    estimate = function(save=FALSE, fileName=getEstimatesFileName(), verbose=TRUE) {
+      if (save) saveEstimates(fileName=fileName)
+    },
+    
+    collectEstimates = function(observationWeights=1, predictionWeights=1) {
+      index <- 1:nrow(data)
+
+      data$fittedMean <<- data$intersections / getObservedOffset() * observationWeights
+      data$fittedSD <<- NA
+      observedOffset <- getObservedOffset()
+      
+      message("Fitted values sums all years:")
+      message("observed = ", sum(data$intersections))
+      message("estimated = ", sum(data$fittedMean * observedOffset))
+    }
+  )
+)
+
 SmoothModelTemporal <- setRefClass(
   Class = "SmoothModelTemporal",
   contains = "Model",
@@ -705,6 +747,27 @@ SmoothModelSpatioTemporal <- setRefClass(
       print(p)
       
       return(invisible(p))
+    }
+  )
+)
+
+SimulatedFMPModel <- setRefClass(
+  Class = "SimulatedFMPModel",
+  contains = "FMPModel",
+  fields = list(
+    iteration = "integer"
+  ),
+  methods = list(
+    getEstimatesFileIterations = function() {
+      if (inherits(study, "undefinedField") | length(modelName) == 0)
+        stop("Provide study and modelName parameters.")
+      return(study$context$getIterationIds(dir=study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag="(\\d+)"))
+    },
+    
+    getEstimatesFileName = function() {
+      if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
+        stop("Provide study, modelName and iteration parameters.")
+      return(study$context$getLongFileName(study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
     }
   )
 )

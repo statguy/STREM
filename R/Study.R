@@ -53,6 +53,7 @@ SimulationStudy <- setRefClass(
     getModel = function(modelName, iteration) {
       estimates <- if (modelName == "SmoothModel-nbinomial-matern-ar1") SimulatedSmoothModelSpatioTemporal(study=.self, iteration=iteration)
       else if (modelName == "SmoothModel-nbinomial-ar1") SimulatedSmoothModelTemporal(study=.self, iteration=iteration)
+      else if (modelName == "FMPModel") SimulatedFMPModel(study=.self, iteration=iteration)
       else stop("Invalid model.")
       estimates$modelName <- modelName
       return(estimates)
