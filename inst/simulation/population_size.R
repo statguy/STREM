@@ -19,10 +19,9 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
   
   if (otherTest) {
     #iteration <- as.integer(50)
-    estimates <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
-    
+    estimates <- study$getModel(modelName=modelName, iteration=iteration)
     estimates <- study$loadEstimates(estimates=estimates)
-    estimates$collectEstimates(predictionWeights=estimates$getPredictedOffset())
+    estimates$collectEstimates()
     
     #estimates$collectHyperparameters()
     populationSize <- estimates$getPopulationSize(withHabitatWeights=mss$hasHabitatWeights())

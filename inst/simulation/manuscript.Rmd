@@ -139,10 +139,11 @@ getSurveyRouteLocations = function(scenarios, modelName, iterations, years) {
   ddply(data.frame(scenario=scenarios, iteration=iterations, stringsAsFactors=FALSE), .(scenario, iteration), function(x, modelName, years) {
     message("Scenario = ", x$scenario, ", iteration = ", x$iteration)
     study <- getStudy(scenario=x$scenario)
-    estimates <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=x$iteration)
+    estimates <- study$getModel(modelName=modelName, iteration=x$iteration) 
     estimates$modelName <- modelName
     estimates <- study$loadEstimates(estimates)
-    surveyRoutes <- data.frame(estimates$getUnscaledObservationCoordinates(), Intersection=subset(estimates$data, year %in% years)$intersections>0)
+    intersections <- subset(estimates$data, year %in% years)$intersections>0
+    surveyRoutes <- data.frame(estimates$getUnscaledObservationCoordinates(), Intersection=intersections)
     surveyRoutes$Scenario <- x$scenario
     surveyRoutes$Iteration <- x$iteration
     return(surveyRoutes)
@@ -160,7 +161,7 @@ getAgentLocations = function(scenarios, modelName, iterations, years) {
     
     observedBursts <- aaply(intersections$intersectionsMatrix, 2, function(x) if (any(x>0)) TRUE else FALSE)
     observationTracks <- tracks$randomizeObservationDayTracks(days=1)
-    
+
     a <- ddply(observationTracks$tracks, .(id, year, burst), function(x, observationTracks) {
       name <- with(x[1,], paste(id, year, burst))
       if (observedBursts[name] == FALSE) return(data.frame(x=mean(x$x), y=mean(x$y), year=x$year))
@@ -186,7 +187,7 @@ getEstimatedDensity = function(scenarios, modelName, iterations, year, sd=FALSE)
   ddply(data.frame(scenario=scenarios, iteration=iterations, stringsAsFactors=FALSE), .(scenario, iteration), function(x, modelName, year0, sd) {
     message("Scenario = ", x$scenario, ", iteration = ", x$iteration)
     study <- getStudy(scenario=x$scenario)
-    estimates <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=x$iteration)
+    estimates <- study$getModel(modelName=modelName, iteration=x$iteration)
     estimates$modelName <- modelName
     estimates <- study$loadEstimates(estimates)
     estimates$collectEstimates()
@@ -206,18 +207,50 @@ getEstimatedDensity = function(scenarios, modelName, iterations, year, sd=FALSE)
 }
 ```
 
+```{r figure-2-test}
+iterations <- as.integer(c(1,1,3,2,5,6))
+year <- 2010
+surveyRoutes <- getSurveyRouteLocations(scenarios=scenarios[1], modelName=modelNames[1], iterations=iterations[1], years=year)
+surveyRoutes <- rbind(surveyRoutes[surveyRoutes$Intersection == FALSE,], surveyRoutes[surveyRoutes$Intersection == TRUE,])
+agents <- getAgentLocations(scenarios=scenarios[1], modelName=modelNames[1], iterations=iterations[1], years=year)
+densityST <- getEstimatedDensity(scenarios[1], modelNames[1], iterations[1], year=year, sd=FALSE)
+densityFMP <- getEstimatedDensity(scenarios[1], modelNames[3], iterations[1], year=year, sd=FALSE)
+limits <- extent(study$studyArea$boundary)
+
+p <- ggplot(densityST) + geom_raster(aes_string(x="x", y="y", fill=paste0("X", year))) + scale_fill_gradientn(colours=terrain.colors(100), na.value="transparent") +
+  geom_path(data=boundaryDF, aes(long, lat, group=group), colour="darkgreen") +
+  geom_point(data=agents, aes(x, y, colour=Observed), size=1) + scale_color_manual(values=c("darkgray", "black")) + 
+  scale_x_continuous(limits=c(limits@xmin, limits@xmax), expand=c(0,0)) +
+  scale_y_continuous(limits=c(limits@ymin, limits@ymax), expand=c(0,0)) +
+  facet_grid(~scenario) + theme_raster(base_size=10) + coord_equal()
+print(p)
+saveFigure(p, "tmp_compare_densities_ST.png", width=8)
+
+p <- ggplot(densityFMP) + geom_raster(aes_string(x="x", y="y", fill=paste0("X", year))) + scale_fill_gradientn(colours=terrain.colors(100), na.value="transparent") +
+  geom_path(data=boundaryDF, aes(long, lat, group=group), colour="darkgreen") +
+  geom_point(data=agents, aes(x, y, colour=Observed), size=1) + scale_color_manual(values=c("darkgray", "black")) + 
+  scale_x_continuous(limits=c(limits@xmin, limits@xmax), expand=c(0,0)) +
+  scale_y_continuous(limits=c(limits@ymin, limits@ymax), expand=c(0,0)) +
+  facet_grid(~scenario) + theme_raster(base_size=10) + coord_equal()
+print(p)
+saveFigure(p, "tmp_compare_densities_FMP.png", width=8)
+```
+
 ```{r figure-2}
 iterations <- as.integer(c(1,1,3,2,5,6))
 #iterations <- as.integer(c(1,1,3,2,5,7))
-surveyRoutes <- getSurveyRouteLocations(scenarios=scenarios, modelName=modelNames[1], iterations, years=2001)
+year <- 2010
+yearLayer <- paste0("X", year)
+surveyRoutes <- getSurveyRouteLocations(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, years=year)
 surveyRoutes <- rbind(surveyRoutes[surveyRoutes$Intersection == FALSE,], surveyRoutes[surveyRoutes$Intersection == TRUE,])
-agents <- getAgentLocations(scenarios=scenarios, modelName=modelNames[1], iterations, years=2001)
-densities <- getEstimatedDensity(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, year=2001, sd=F)
-densitiesScaled <- ddply(densities, .(scenario), function(x) { x$X2001 <- scale(x$X2001); return(x) })
+agents <- getAgentLocations(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, years=year)
+densities <- getEstimatedDensity(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, year=year, sd=F)
+# TODO: do not use scaling??
+densitiesScaled <- ddply(densities, .(scenario), function(x, yearLayer) { x[,yearLayer] <- scale(x[,yearLayer]); return(x) }, yearLayer=yearLayer)
 limits <- extent(study$studyArea$boundary)
 
 #p <- ggplot(boundaryDF) + geom_polygon(aes(long, lat, group=group), fill=terrain.colors(100)[1]) +
-p <- ggplot(densitiesScaled) + geom_raster(aes(x, y, fill=X2001)) + scale_fill_gradientn(colours=terrain.colors(100), na.value="transparent") +
+p <- ggplot(densitiesScaled) + geom_raster(aes_string(x="x", y="y", fill=yearLayer)) + scale_fill_gradientn(colours=terrain.colors(100), na.value="transparent") +
   geom_path(data=boundaryDF, aes(long, lat, group=group), colour="darkgreen") +
   geom_point(data=agents, aes(x, y, colour=Observed), size=1) + scale_color_manual(values=c("darkgray", "black")) + 
   scale_x_continuous(limits=c(limits@xmin, limits@xmax), expand=c(0,0)) +
@@ -253,7 +286,7 @@ populationSizes <- validation$getValidationTemporalPopulationSizes(modelNames=mo
 validation$summarizePopulationSize(populationSizes)
 
 p <- ggplot(populationSizes, aes(Observed, Estimated, colour=modelName)) + geom_point(size=1) + stat_smooth(method="lm", aes(colour=modelName), se=F) +
-  scale_colour_manual("Model", values=c("darkgray","black"), labels=c("T", "ST")) +
+  scale_colour_manual("Model", values=c("lightgray", "darkgray","black"), labels=c("I", "T", "ST")) +
   geom_abline(colour="darkgrey", linetype="longdash") + facet_wrap(~Scenario, scales="free") +
   xlab("True population size") + ylab("Estimated population size") +
   theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"))
@@ -264,7 +297,7 @@ saveFigure(p, "manuscript-figure-3.png", width=8, height=4)
 ```{r table-1}
 ddply(populationSizes, .(Scenario, modelName), function(x) {
   y <- lm(Estimated~Observed, x)
-  data.frame(Intercept=round(coef(y)[1], 0), Slope=round(coef(y)[2], 2))
+  data.frame(Intercept=round(coef(y)[1], 0), Slope=round(coef(y)[2], 2), R2=round(summary(y)$r.squared, 2))
 })
 ```
 

@@ -190,6 +190,24 @@ FMPModel <- setRefClass(
       message("Fitted values sums all years:")
       message("observed = ", sum(data$intersections))
       message("estimated = ", sum(data$fittedMean * observedOffset))
+      
+      
+      stat <- data.frame()
+      for (year in years) {
+        yearWhich <- data$year == year
+        yearIndex <- year - min(years) + 1
+        x <- data.frame(
+          Year=years[yearIndex],
+          Observed=sum(data$intersections[yearWhich]),
+          EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich]),
+          ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich]),
+          EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
+          ObservedOffset=mean(observedOffset[yearWhich])
+        )
+        stat <- rbind(stat, x)
+      }
+      message("Year by year summary:")
+      print(stat)
     }
   )
 )
@@ -246,8 +264,8 @@ SmoothModelTemporal <- setRefClass(
         x <- data.frame(
           Year=years[yearIndex],
           Observed=sum(data$intersections[yearWhich]),
-          EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich]),
-          ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich]),
+          EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich] / offsetScale),
+          ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich] / offsetScale),
           EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
           ObservedOffset=mean(observedOffset[yearWhich])
         )
@@ -521,14 +539,14 @@ SmoothModelSpatioTemporal <- setRefClass(
             Year=years[yearIndex],
             
             Observed=sum(data$intersections[yearWhich]),
-            EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich]),
+            EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich] / offsetScale),
             EstimatedAtNodes=sum(node$mean[,yearIndex] * predictedOffset[,yearIndex]),
             
-            ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich]),
+            ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich] / offsetScale),
             EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
             EstimatedAtNodesScaled=sum(node$mean[,yearIndex]),
             
-            ObservedOffset=mean(observedOffset[yearWhich]),
+            ObservedOffset=mean(observedOffset[yearWhich]) / offsetScale,
             predictedOffset=mean(predictedOffset[,yearIndex])
           )
         else
