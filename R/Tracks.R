@@ -304,7 +304,7 @@ SimulatedTracks <- setRefClass(
         if (max(randomDays) + 1 - days < 0)
           stop("Too many days to randomize, max days available = ", max(randomDays) + 1)
         randomDays <- randomDays[randomDays <= max(randomDays) + 1 - days]
-        randomDay <- sample(randomDays, 1)
+        randomDay <- base::sample(randomDays, 1)
         return(subset(x, yday %in% randomDay:(randomDay + days - 1)))
       }, days=days)
       
