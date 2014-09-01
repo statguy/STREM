@@ -274,6 +274,12 @@ SimulatedTracks <- setRefClass(
     
     getTracksDirectory = function() return(study$context$scratchDirectory),
     
+    getTracksFileIterations = function() {
+      if (inherits(study, "undefinedField"))
+        stop("Provide study parameter.")
+      return(study$context$getIterationIds(dir=getTracksDirectory(), name="Tracks", response=study$response, region=study$studyArea$region, tag="(\\d+)"))
+    },
+    
     getTracksFileName = function() {
       if (inherits(study, "undefinedField") | length(iteration) == 0)
         stop("Provide study and iteration parameters.")
