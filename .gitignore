@@ -4,10 +4,10 @@
 # Example code in package build process
 *-Ex.R
 .Rproj.user
-.RData
-.o
-.so
-.html
+*.RData
+*.o
+*.so
+*.html
 
 test/
 setup/

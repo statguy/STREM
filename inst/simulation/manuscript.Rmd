@@ -279,19 +279,47 @@ x <- validation$validateTemporalPopulationSize(modelNames[1])
 validation$summarizePopulationSize(x)
 ```
 
-```{r figure-3}
+```{r figure-3-init}
 study <- getStudy(scenario="A") # Get study object, scenario doesn't matter
 validation <- Validation(study=study)
 populationSizes <- validation$getValidationTemporalPopulationSizes(modelNames=modelNames)
 validation$summarizePopulationSize(populationSizes)
 
-p <- ggplot(populationSizes, aes(Observed, Estimated, colour=modelName)) + geom_point(size=1) + stat_smooth(method="lm", aes(colour=modelName), se=F) +
+meanPopulationSizes <- ddply(populationSizes, .(scenario, modelName), function(x) {
+  data.frame(True=mean(x$Observed), Estimated=mean(x$Estimated), Scenario=x$scenario)
+})
+logPopulationSizes <- populationSizes
+logPopulationSizes$Observed <- log10(logPopulationSizes$Observed + 1)
+logPopulationSizes$Estimated <- log10(logPopulationSizes$Estimated + 1)
+logMeanPopulationSizes <- ddply(populationSizes, .(scenario, modelName), function(x) {
+  data.frame(True=mean(log10(x$Observed+1)), Estimated=mean(log10(x$Estimated+1)), Scenario=x$scenario)
+})
+```
+
+```{r figure-3a}
+p <- ggplot(populationSizes, aes(Observed, Estimated, colour=modelName)) + geom_point(size=1) +
+  stat_smooth(method="lm", aes(colour=modelName), se=F) +
   scale_colour_manual("Model", values=c("lightgray", "darkgray","black"), labels=c("I", "T", "ST")) +
-  geom_abline(colour="darkgrey", linetype="longdash") + facet_wrap(~Scenario, scales="free") +
+  geom_abline(colour="darkgrey", linetype="longdash") +
+  geom_point(data=meanPopulationSizes, aes(True, Estimated, colour=modelName), size=2, shape=15) +
+  facet_wrap(~Scenario, scales="free") +
   xlab("True population size") + ylab("Estimated population size") +
   theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"))
 print(p)
-saveFigure(p, "manuscript-figure-3.png", width=8, height=4)
+saveFigure(p, "manuscript-figure-3a.png", width=8, height=4)
+```
+
+```{r figure-3b}
+p <- ggplot(logPopulationSizes, aes(Observed, Estimated, colour=modelName)) + geom_point(size=1) +
+  stat_smooth(method="lm", aes(colour=modelName), se=F) +
+  scale_colour_manual("Model", values=c("lightgray", "darkgray","black"), labels=c("I", "T", "ST")) +
+  geom_abline(colour="darkgrey", linetype="longdash") + 
+  geom_point(data=logMeanPopulationSizes, aes(True, Estimated, colour=modelName), size=2, shape=15) +
+  facet_wrap(~Scenario, scales="free") +
+  xlab("True population size") + ylab("Estimated population size") +
+  theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"))
+print(p)
+saveFigure(p, "manuscript-figure-3b.png", width=8, height=4)
 ```
 
 ```{r table-1}
@@ -299,6 +327,7 @@ ddply(populationSizes, .(Scenario, modelName), function(x) {
   y <- lm(Estimated~Observed, x)
   data.frame(Intercept=round(coef(y)[1], 0), Slope=round(coef(y)[2], 2), R2=round(summary(y)$r.squared, 2))
 })
+meanPopulationSizes
 ```
 
 ```{r table-2}
