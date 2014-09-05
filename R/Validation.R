@@ -39,7 +39,7 @@ Validation <- setRefClass(
         
         populationSize <- study$loadPopulationSize(iteration=iteration, modelName=modelName)
         if (any(populationSize$sizeData$Estimated > populationSizeOverEstimate)) {
-          message("Estimation failed for iteration ", iteration, " scenario ", study$response, ".")
+          message("Estimation failed for iteration ", iteration, " scenario ", study$response)
           return(NULL)
         }
         x <- populationSize$sizeData
@@ -74,7 +74,7 @@ Validation <- setRefClass(
         validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
         x <- validation$validateTemporalPopulationSize(x$modelName)
         gc()
-        if (nrow(x) == 0) return(NULL)
+        if (is.null(x) || nrow(x) == 0) return(NULL)
         return(x)
       })
       

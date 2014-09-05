@@ -279,7 +279,7 @@ x <- validation$validateTemporalPopulationSize(modelNames[1])
 validation$summarizePopulationSize(x)
 ```
 
-```{r figure-3-init}
+```{r figure-3-init-200}
 study <- getStudy(scenario="A") # Get study object, scenario doesn't matter
 validation <- Validation(study=study)
 populationSizes <- validation$getValidationTemporalPopulationSizes(modelNames=modelNames)
@@ -321,6 +321,38 @@ p <- ggplot(logPopulationSizes, aes(Observed, Estimated, colour=modelName)) + ge
 print(p)
 saveFigure(p, "manuscript-figure-3b.png", width=8, height=4)
 ```
+
+```{r figure-3-init-2000}
+study <- getStudy(scenario="A") # Get study object, scenario doesn't matter
+validation <- Validation(study=study)
+populationSizes2000 <- validation$getValidationTemporalPopulationSizes(scenarios=paste0(scenarios, "combined"), modelNames=modelNames)
+validation$summarizePopulationSize(populationSizes2000)
+
+meanPopulationSizes2000 <- ddply(populationSizes2000, .(scenario, modelName), function(x) {
+  data.frame(True=mean(x$Observed), Estimated=mean(x$Estimated), Scenario=x$scenario)
+})
+logPopulationSizes2000 <- populationSizes2000
+logPopulationSizes2000$Observed <- log10(logPopulationSizes2000$Observed + 1)
+logPopulationSizes2000$Estimated <- log10(logPopulationSizes2000$Estimated + 1)
+logMeanPopulationSizes2000 <- ddply(populationSizes2000, .(scenario, modelName), function(x) {
+  data.frame(True=mean(log10(x$Observed+1)), Estimated=mean(log10(x$Estimated+1)), Scenario=x$scenario)
+})
+```
+
+
+```{r figure-3c}
+p <- ggplot(populationSizes2000, aes(Observed, Estimated, colour=modelName)) + geom_point(size=1) +
+  stat_smooth(method="lm", aes(colour=modelName), se=F) +
+  scale_colour_manual("Model", values=c("lightgray", "darkgray","black"), labels=c("I", "T", "ST")) +
+  geom_abline(colour="darkgrey", linetype="longdash") +
+  geom_point(data=meanPopulationSizes2000, aes(True, Estimated, colour=modelName), size=2, shape=15) +
+  facet_wrap(~Scenario, scales="free") +
+  xlab("True population size") + ylab("Estimated population size") +
+  theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"))
+print(p)
+saveFigure(p, "manuscript-figure-3c.png", width=8, height=4)
+```
+
 
 ```{r table-1}
 ddply(populationSizes, .(Scenario, modelName), function(x) {
