@@ -10,7 +10,7 @@ then
 echo "Missing parameter 'iterations'".
 exit
 fi
-if [ -z "$4" ]
+if [ -z "$3" ]
 then
 echo "Missing parameter 'max_nodes'".
 exit
