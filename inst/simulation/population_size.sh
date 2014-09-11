@@ -36,4 +36,4 @@ reset
 python "$exec_path"/parallel_r.py -t "$iterations" -n "$max_nodes" -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/validate.R notest "$scenario"
 reset
 
-# ./population_size.sh ~/git/RParallelScreen/ combinedA 1:9 10
+# ./population_size.sh ~/git/RParallelScreen/ Acombined 1:9 10
