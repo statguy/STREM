@@ -24,3 +24,5 @@ count_days=1
 for scenario in A B C D E F; do
   python "$exec_path"/parallel_r.py -t "$iterations" -n "$max_nodes" -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/simulate.R notest "$scenario"
 done
+
+# ./simulate_tracks.R ~/git/RParallelScreen/ 51:100 60
