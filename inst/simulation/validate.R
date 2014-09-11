@@ -18,6 +18,8 @@ if (isTest) {
 } else {
   nSamples <- 50
   populationSizeOverEstimate <- 2000
+  
+  if (nchar(scenario) > 1) populationSizeOverEstimate <- 20000
 }
 
 mss <- getMSS(scenario=scenario, isTest=isTest)

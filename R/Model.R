@@ -787,6 +787,10 @@ SimulatedFMPModel <- setRefClass(
       if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
         stop("Provide study, modelName and iteration parameters.")
       return(study$context$getLongFileName(study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
+    },
+    
+    samplePosterior = function(n, index) {
+      stop("Unsupported.")
     }
   )
 )
