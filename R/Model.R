@@ -92,6 +92,7 @@ Model <- setRefClass(
     },
     
     samplePosterior = function(n, index) {
+      library(INLA)
       posteriorSamples <- inla.posterior.sample(n=n, result=result)
       xy <- getUnscaledObservationCoordinates()
       if (missing(index)) index <- 1:nrow(xy)
