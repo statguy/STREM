@@ -354,12 +354,22 @@ saveFigure(p, "manuscript-figure-3c.png", width=8, height=4)
 ```
 
 
-```{r table-1}
-ddply(populationSizes, .(Scenario, modelName), function(x) {
+```{r table-1a}
+x <- ddply(populationSizes, .(Scenario, modelName), function(x) {
   y <- lm(Estimated~Observed, x)
   data.frame(Intercept=round(coef(y)[1], 0), Slope=round(coef(y)[2], 2), R2=round(summary(y)$r.squared, 2))
 })
-meanPopulationSizes
+y <- unique(meanPopulationSizes)
+join(x, y)
+```
+
+```{r table-1b}
+x <- ddply(populationSizes2000, .(Scenario, modelName), function(x) {
+  y <- lm(Estimated~Observed, x)
+  data.frame(Intercept=round(coef(y)[1], 0), Slope=round(coef(y)[2], 2), R2=round(summary(y)$r.squared, 2))
+})
+y <- unique(meanPopulationSizes2000)
+join(x, y)
 ```
 
 ```{r table-2}
@@ -376,7 +386,7 @@ validation <- Validation(study=study)
 x <- validation$validateSpatialPopulationSize(modelNames[1])
 ```
 
-```{r figure-4}
+```{r figure-4a}
 study <- getStudy(scenario="A")
 validation <- Validation(study=study)
 populationCorrelations <- validation$getValidationSpatialPopulationSizes(modelNames=modelNames[1])
@@ -385,7 +395,19 @@ p <- ggplot(populationCorrelations, aes(True, Correlation)) + geom_point(size=1,
   facet_wrap(~Scenario, ncol=2) + xlab("True population size") +
   theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"))#, axis.text.x=element_text(angle=45, hjust=.5, vjust=1))
 print(p)
-saveFigure(p, "manuscript-figure-4.png", width=4, height=4)
+saveFigure(p, "manuscript-figure-4a.png", width=4, height=4)
+```
+
+```{r figure-4b}
+study <- getStudy(scenario="A")
+validation <- Validation(study=study)
+populationCorrelations <- validation$getValidationSpatialPopulationSizes(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[1])
+
+p <- ggplot(populationCorrelations, aes(True, Correlation)) + geom_point(size=1, colour="black") +
+  facet_wrap(~Scenario, ncol=2) + xlab("True population size") +
+  theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"))#, axis.text.x=element_text(angle=45, hjust=.5, vjust=1))
+print(p)
+saveFigure(p, "manuscript-figure-4b.png", width=4, height=4)
 ```
 
 ```{r figure-5}
