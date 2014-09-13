@@ -147,14 +147,26 @@ Validation <- setRefClass(
     },
     
     getValidationSpatialPopulationSizes = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
-      x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
+      y <- expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE)
+      spatialCorrelations <- data.frame()
+      for (i in 1:nrow(y)) {
+        x <- y[i,]
         s <- getStudy(scenario=x$scenario, isTest=F)
         validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
-        x <- validation$validateSpatialPopulationSize(x$modelName)
-        gc()
-        if (nrow(x) == 0) return(NULL)
-        return(x)
-      }, .parallel=T)
+        z <- validation$validateSpatialPopulationSize(x$modelName)
+        if (nrow(z) == 0) next
+        spatialCorrelations <- rbind(spatialCorrelations, z)
+      }
+      return(spatialCorrelations)
+      
+      #x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
+      #  s <- getStudy(scenario=x$scenario, isTest=F)
+      #  validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
+      #  x <- validation$validateSpatialPopulationSize(x$modelName)
+      #  gc()
+      #  if (nrow(x) == 0) return(NULL)
+      #  return(x)
+      #}, .parallel=T)
       
       return(x)
     },
