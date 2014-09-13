@@ -198,12 +198,12 @@ concat <- function(..., sep="") {
 getMSS <- function(scenario, nSurveyRoutes, sampleInitial=F, readHabitatIntoMemory=F, isTest=FALSE, ...) {
   context <- Context(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
   mss <- {
-    if (scenario == "A" | scenario == "Acombined") MovementSimulationScenarioA(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
-    else if (scenario == "B" | scenario == "Bcombined") MovementSimulationScenarioB(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
-    else if (scenario == "C" | scenario == "Ccombined") MovementSimulationScenarioC(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
-    else if (scenario == "D" | scenario == "Dcombined") MovementSimulationScenarioD(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, sampleInitial=sampleInitial, isTest=isTest)
-    else if (scenario == "E" | scenario == "Ecombined") MovementSimulationScenarioE(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, readHabitatIntoMemory=readHabitatIntoMemory, isTest=isTest)
-    else if (scenario == "F" | scenario == "Fcombined") MovementSimulationScenarioF(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, readHabitatIntoMemory=readHabitatIntoMemory, isTest=isTest)
+    if (substr(scenario, 1, 1) == "A") MovementSimulationScenarioA(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
+    else if (substr(scenario, 1, 1) == "B") MovementSimulationScenarioB(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
+    else if (substr(scenario, 1, 1) == "C") MovementSimulationScenarioC(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
+    else if (substr(scenario, 1, 1) == "D") MovementSimulationScenarioD(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, sampleInitial=sampleInitial, isTest=isTest)
+    else if (substr(scenario, 1, 1) == "E") MovementSimulationScenarioE(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, readHabitatIntoMemory=readHabitatIntoMemory, isTest=isTest)
+    else if (substr(scenario, 1, 1) == "F") MovementSimulationScenarioF(...)$setup(context=context, nSurveyRoutes=nSurveyRoutes, readHabitatIntoMemory=readHabitatIntoMemory, isTest=isTest)
     else stop("unsupported")
   }
   mss$study$response <- scenario

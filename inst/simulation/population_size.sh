@@ -53,3 +53,7 @@ fi
 # ./population_size.sh ~/git/RParallelScreen/ Acombined 1:9 10 FMPModel 1
 # ./population_size.sh ~/git/RParallelScreen/ Acombined 1:9 10 SmoothModel-nbinomial-ar1
 # ./population_size.sh ~/git/RParallelScreen/ Acombined 1:9 10 SmoothModel-nbinomial-matern-ar1
+
+# ./population_size.sh ~/git/RParallelScreen/ A10days 1:50 60 FMPModel 10
+# ./population_size.sh ~/git/RParallelScreen/ A10days 1:50 60 SmoothModel-nbinomial-ar1
+# ./population_size.sh ~/git/RParallelScreen/ A10days 1:50 60 SmoothModel-nbinomial-matern-ar1
