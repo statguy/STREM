@@ -94,6 +94,7 @@ Validation <- setRefClass(
       
       iterations <- getEstimatesFileIterations(modelName)
       spatialCorrelation <- data.frame()
+      if (length(iterations) == 0) return(spatialCorrelation)
       
       for (iteration in iterations) {
         message("Iteration ", iteration, " of ", length(iterations), " iterations of scenario ", study$response, "...")
