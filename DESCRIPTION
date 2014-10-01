@@ -9,7 +9,7 @@ Description: Winter track counts
 Depends: data.table
 Imports: ST,INLA,sp,CircStats,plyr,maptools,raster,rgdal,parallel,adehabitatLT,gdata,methods,fields,gstat,rasterVis,Rcpp (>= 0.11.0),rstan,doMC,dplyr,R.utils
 LinkingTo: Rcpp
-Suggests: grid,lattice,ggplot2,reshape2,knitr
+Suggests: grid,lattice,ggplot2,reshape2,knitr,xlsx
 License: MIT
 Collate:
   RcppExports.R
