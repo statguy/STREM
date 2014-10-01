@@ -105,26 +105,27 @@ Model <- setRefClass(
                  index=index, .parallel=T)
       return(x)
     },
-    
-    getPopulationDensity.internal = function(xyzt, templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary) {
-      if (any(is.infinite(xyzt$z)) | any(is.nan(xyzt$z))) return(NULL)
-      
-      cellArea <- prod(res(templateRaster)) # m^2
-      densityRaster <- SpatioTemporalRaster(study=study)$interpolate(xyzt, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=sort(unique(xyzt[,4])), weights=cellArea)
-      return(densityRaster)
-    },
-    
+           
     getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
       if (is.null(data$fittedMean))
         stop("Did you forgot to run collectEstimates() first?")
       
       library(raster)
+      library(plyr)
       
-      xyztMean <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedMean / offsetScale, t=data$year)
-      xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale, t=data$year)
-      meanPopulationDensityRaster <- getPopulationDensity.internal(xyztMean, templateRaster=templateRaster, maskPolygon=maskPolygon)
-      sdPopulationDensityRaster <- if (getSD) getPopulationDensity.internal(xyztSD, templateRaster=templateRaster, maskPolygon=maskPolygon)
-      else SpatioTemporalRaster$new(study=study)
+      #area <- maskPolygon@polygons[[1]]@area
+      meanPopulationDensity <- ddply(data, .(year), function(x)
+        data.frame(z=mean(x$fittedMean / offsetScale), year=x$year[1]))
+      
+      cellArea <- prod(res(templateRaster))
+      meanPopulationDensityRaster <- SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$z, boundary=maskPolygon, layerNames=meanPopulationDensity$year, weights=cellArea)
+      
+      sdPopulationDensityRaster <- if (getSD) {
+        sdPopulationDensity <- ddply(data, .(year), function(x)
+          data.frame(z=mean(x$fittedSD / offsetScale), year=x$year[1]))
+        SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$z, boundary=maskPolygon, layerNames=meanPopulationDensity$year, weights=cellArea)
+      }
+      else SpatioTemporalRaster(study=study)
       
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
     },
@@ -210,26 +211,6 @@ FMPModel <- setRefClass(
       }
       message("Year by year summary:")
       print(stat)
-    },
-    
-    TODO_getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
-      if (is.null(data$fittedMean))
-        stop("Did you forgot to run collectEstimates() first?")
-      
-      library(raster)
-      
-      #mean(data$fittedMean / offsetScale) * study$studyArea$boundary@polygons[[1]]@area
-      #sd(data$fittedMean / offsetScale) * study$studyArea$boundary@polygons[[1]]@area
-      
-      
-      
-      #xyztMean <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedMean / offsetScale, t=data$year)
-      #xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale, t=data$year)
-      #meanPopulationDensityRaster <- getPopulationDensity.internal(xyztMean, templateRaster=templateRaster, maskPolygon=maskPolygon)
-      #sdPopulationDensityRaster <- if (getSD) getPopulationDensity.internal(xyztSD, templateRaster=templateRaster, maskPolygon=maskPolygon)
-      #else SpatioTemporalRaster$new(study=study)
-      
-      return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
     }
   )
 )
@@ -329,28 +310,24 @@ SmoothModelTemporal <- setRefClass(
       return(x)
     },
     
-    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
+    TODO_getPopulationSize = function(populationDensity, tracks, habitatWeights) {
       if (is.null(data$fittedMean))
         stop("Did you forgot to run collectEstimates() first?")
       
-      library(raster)
-      library(plyr)
+      if (!missing(habitatWeights)) if (!is.null(habitatWeights)) populationDensity$weight(habitatWeights)
       
+      # TODO: this can be done faster without the rasters, but need the area of the study area
       #area <- maskPolygon@polygons[[1]]@area
-      meanPopulationDensity <- ddply(data, .(year), function(x)
-        data.frame(z=mean(x$fittedMean / offsetScale), year=x$year[1]))
+      #if (!missing(habitatWeights)) if (!is.null(habitatWeights)) area <- cellStats(habitatWeights, sum)      
+      #meanPopulationSize <- ddply(data, .(year), function(x, area)
+      #  data.frame(z=mean(x$fittedMean / offsetScale) * area, year=x$year[1], area))
+      #populationSize <- SimulationPopulationSize(study=study, iteration=iteration, modelName=modelName)
       
-      cellArea <- prod(res(templateRaster))
-      meanPopulationDensityRaster <- SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$z, boundary=maskPolygon, layerNames=meanPopulationDensity$year, weights=cellArea)
+      populationSize <- populationDensity$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration, modelName=modelName))
+      if (missing(tracks)) populationSize$loadValidationData()
+      else populationSize$loadValidationData(tracks=tracks)
       
-      sdPopulationDensityRaster <- if (getSD) {
-        sdPopulationDensity <- ddply(data, .(year), function(x, area)
-          data.frame(z=mean(x$fittedSD / offsetScale) * area, year=x$year[1]), area=area)
-        SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$z, boundary=maskPolygon, layerNames=meanPopulationDensity$year, weights=cellArea)
-      }
-      else SpatioTemporalRaster(study=study)
-       
-      return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
+      return(invisible(populationSize))
     }
   )
 )
@@ -651,6 +628,29 @@ SmoothModelSpatioTemporal <- setRefClass(
         projectionRaster <- mask(projectionRaster, maskPolygon)
       
       return(invisible(projectionRaster))
+    },
+    
+    getPopulationDensity.internal = function(xyzt, templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary) {
+      if (any(is.infinite(xyzt$z)) | any(is.nan(xyzt$z))) return(NULL)
+      
+      cellArea <- prod(res(templateRaster)) # m^2
+      densityRaster <- SpatioTemporalRaster(study=study)$interpolate(xyzt, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=sort(unique(xyzt[,4])), weights=cellArea)
+      return(densityRaster)
+    },
+    
+    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=TRUE) {
+      if (is.null(data$fittedMean))
+        stop("Did you forgot to run collectEstimates() first?")
+      
+      library(raster)
+      
+      xyztMean <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedMean / offsetScale, t=data$year)
+      xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale, t=data$year)
+      meanPopulationDensityRaster <- getPopulationDensity.internal(xyztMean, templateRaster=templateRaster, maskPolygon=maskPolygon)
+      sdPopulationDensityRaster <- if (getSD) getPopulationDensity.internal(xyztSD, templateRaster=templateRaster, maskPolygon=maskPolygon)
+      else SpatioTemporalRaster$new(study=study)
+      
+      return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
     },
     
     # Unreliable?!?!
