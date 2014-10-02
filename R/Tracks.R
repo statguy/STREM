@@ -244,7 +244,7 @@ Tracks <- setRefClass(
     },
     
     getHabitatPreferences = function(habitatWeightsTemplate, nSamples=30, save=FALSE) {
-      habitatPreferences <- HabitatSelection$new(study=study)
+      habitatPreferences <- HabitatSelection$new(study=study, iteration=iteration)
       habitatPreferences$getHabitatPreferences(tracks=.self, habitatWeightsTemplate=habitatWeightsTemplate, nSamples=nSamples, save=save)
       return(habitatPreferences)
     }

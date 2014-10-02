@@ -16,6 +16,7 @@ modelName <- modelNames[2]
 mss <- getMSS(scenario=scenario, isTest=isTest)
 study <- mss$study
 context <- study$context
+.self <- study
 
 estimates <- study$getModel(modelName=modelName, iteration=iteration)
 estimates <- study$loadEstimates(estimates=estimates)

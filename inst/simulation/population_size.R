@@ -39,7 +39,6 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
   else {
     estimates <- study$getModel(modelName=modelName, iteration=iteration)
     habitatWeights <- study$getHabitatWeights(iteration=iteration)
-    print(habitatWeights)
     populationSize <- study$getPopulationSize(estimates=estimates, habitatWeights=habitatWeights)
     return(invisible(populationSize))
   }

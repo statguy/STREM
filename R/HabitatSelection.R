@@ -2,6 +2,7 @@ HabitatSelection <- setRefClass(
   Class = "HabitatSelection",
   fields = list(
     study = "Study",
+    iteration = "integer",
     tracks = "Tracks",
     nullModelUsage = "data.frame",
     realizedUsage = "data.frame",
@@ -108,7 +109,10 @@ HabitatSelection <- setRefClass(
     },
 
     getHabitatSelectionFileName = function() {
-      return(study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region))
+      if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
+        stop("Provide study, modelName and iteration parameters.")
+      return(study$context$getLongFileName(study$context$scratchDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region, tag=iteration))
+      #return(study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region))
     },
     
     saveHabitatSelection = function() {
