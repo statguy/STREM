@@ -109,7 +109,7 @@ SimulationStudy <- setRefClass(
       return(invisible(populationSize))
     },
     
-    getHabitatWeights = function(tracks, iteration) {
+    getHabitatWeights = function(tracks, iteration, save=TRUE) {
       if (withHabitatWeights == FALSE) return(NULL)
       
       habitatWeights <- CORINEHabitatWeights$new(study=.self)
@@ -119,7 +119,7 @@ SimulationStudy <- setRefClass(
       habitatSelection <- if (file.exists(fileName)) habitatPreferences$loadHabitatSelection()
       else {      
         if (missing(tracks)) tracks <- loadTracks(iteration=iteration)
-        tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=TRUE)
+        tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=save)
       }
       
       message("Processing habitat weights raster...")

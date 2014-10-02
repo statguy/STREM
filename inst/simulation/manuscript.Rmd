@@ -16,6 +16,7 @@ context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirecto
 scenarios <- c("A","B","C","D","E","F")
 modelNames <- c(paste("SmoothModel", "nbinomial", "matern", "ar1", sep = "-"), paste("SmoothModel", "nbinomial", "ar1", sep = "-"), "FMPModel")
 iterations <- as.integer(c(1,1,1,1,3,1))
+populationSizeOverEstimate <- 1e100
 
 boundaryDF <- ggplot2::fortify(FinlandWTCStudy(context=context, response="canis.lupus")$studyArea$boundary)        
 ```
@@ -274,14 +275,14 @@ saveFigure(p, "manuscript-figure-2b.png", width=8)
 
 ```{r figure-3-test, eval=FALSE}
 study <- getStudy(scenario="A")
-validation <- Validation(study=study)
+validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 x <- validation$validateTemporalPopulationSize(modelNames[1])
 validation$summarizePopulationSize(x)
 ```
 
 ```{r figure-3-init-200}
 study <- getStudy(scenario="A") # Get study object, scenario doesn't matter
-validation <- Validation(study=study)
+validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 populationSizes <- validation$getValidationTemporalPopulationSizes(modelNames=modelNames)
 validation$summarizePopulationSize(populationSizes)
 
@@ -289,14 +290,19 @@ meanPopulationSizes <- ddply(populationSizes, .(scenario, modelName), function(x
   data.frame(True=mean(x$Observed), Estimated=mean(x$Estimated), Scenario=x$scenario)
 })
 logPopulationSizes <- populationSizes
-logPopulationSizes$Observed <- log10(logPopulationSizes$Observed + 1)
-logPopulationSizes$Estimated <- log10(logPopulationSizes$Estimated + 1)
+logPopulationSizes$Observed <- logPopulationSizes$Observed + 1
+logPopulationSizes$Estimated <- logPopulationSizes$Estimated + 1
 logMeanPopulationSizes <- ddply(populationSizes, .(scenario, modelName), function(x) {
-  data.frame(True=mean(log10(x$Observed+1)), Estimated=mean(log10(x$Estimated+1)), Scenario=x$scenario)
+  data.frame(True=mean(x$Observed+1), Estimated=mean(x$Estimated+1), Scenario=x$scenario)
 })
+#logPopulationSizes$Observed <- log10(logPopulationSizes$Observed + 1)
+#logPopulationSizes$Estimated <- log10(logPopulationSizes$Estimated + 1)
+#logMeanPopulationSizes <- ddply(populationSizes, .(scenario, modelName), function(x) {
+#  data.frame(True=mean(log10(x$Observed+1)), Estimated=mean(log10(x$Estimated+1)), Scenario=x$scenario)
+#})
 ```
 
-```{r figure-3a}
+```{r figure-3a, eval=FALSE}
 p <- ggplot(populationSizes, aes(Observed, Estimated, colour=modelName)) + geom_point(size=1) +
   stat_smooth(method="lm", aes(colour=modelName), se=F) +
   scale_colour_manual("Model", values=c("lightgray", "darkgray","black"), labels=c("I", "T", "ST")) +
@@ -310,21 +316,36 @@ saveFigure(p, "manuscript-figure-3a.png", width=8, height=4)
 ```
 
 ```{r figure-3b}
-p <- ggplot(logPopulationSizes, aes(Observed, Estimated, colour=modelName)) + geom_point(size=1) +
-  stat_smooth(method="lm", aes(colour=modelName), se=F) +
-  scale_colour_manual("Model", values=c("lightgray", "darkgray","black"), labels=c("I", "T", "ST")) +
-  geom_abline(colour="darkgrey", linetype="longdash") + 
-  geom_point(data=logMeanPopulationSizes, aes(True, Estimated, colour=modelName), size=2, shape=15) +
-  facet_wrap(~Scenario, scales="free") +
-  xlab("True population size") + ylab("Estimated population size") +
-  theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"))
-print(p)
-saveFigure(p, "manuscript-figure-3b.png", width=8, height=4)
+plotLogPopulationSize <- function(size, meanSize) {
+  p <- ggplot(size, aes(Observed, Estimated, colour=modelName)) +
+    #geom_point(size=1) +
+    #stat_smooth(method="lm", aes(colour=modelName), se=F) +
+    geom_point(size=1, colour="darkgray") +
+    stat_smooth(method="lm", se=F, colour="black") +
+    #scale_colour_manual("Model", values=c("lightgray", "darkgray","black"), labels=c("I", "T", "ST")) +
+    #scale_colour_manual("Model", values=c("darkgray","black")) +
+    geom_abline(colour="black", linetype="longdash") + 
+    #geom_point(data=meanSize, aes(True, Estimated, colour=modelName), size=2, shape=15) +
+    geom_point(data=meanSize, aes(True, Estimated), size=2, shape=15, colour="black") +
+    facet_wrap(~Scenario, scales="free") +
+    scale_x_log10() + scale_y_log10() +
+    xlab("True population size") + ylab("Estimated population size") +
+    theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"))
+  print(p)
+  return(p)
+}
+
+p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[1]), subset(logMeanPopulationSizes, modelName==modelNames[1]))
+saveFigure(p, "manuscript-figure-3b1.png", width=8, height=4)
+p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[2]), subset(logMeanPopulationSizes, modelName==modelNames[2]))
+saveFigure(p, "manuscript-figure-3b2.png", width=8, height=4)
+p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[3]), subset(logMeanPopulationSizes, modelName==modelNames[3]))
+saveFigure(p, "manuscript-figure-3b3.png", width=8, height=4)
 ```
 
 ```{r figure-3-init-2000}
 study <- getStudy(scenario="A") # Get study object, scenario doesn't matter
-validation <- Validation(study=study, populationSizeOverEstimate=20000)
+validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 populationSizes2000 <- validation$getValidationTemporalPopulationSizes(scenarios=paste0(scenarios, "combined"), modelNames=modelNames)
 validation$summarizePopulationSize(populationSizes2000)
 
@@ -332,14 +353,14 @@ meanPopulationSizes2000 <- ddply(populationSizes2000, .(scenario, modelName), fu
   data.frame(True=mean(x$Observed), Estimated=mean(x$Estimated), Scenario=x$scenario)
 })
 logPopulationSizes2000 <- populationSizes2000
-logPopulationSizes2000$Observed <- log10(logPopulationSizes2000$Observed + 1)
-logPopulationSizes2000$Estimated <- log10(logPopulationSizes2000$Estimated + 1)
+logPopulationSizes2000$Observed <- (logPopulationSizes2000$Observed + 1)
+logPopulationSizes2000$Estimated <- (logPopulationSizes2000$Estimated + 1)
 logMeanPopulationSizes2000 <- ddply(populationSizes2000, .(scenario, modelName), function(x) {
-  data.frame(True=mean(log10(x$Observed+1)), Estimated=mean(log10(x$Estimated+1)), Scenario=x$scenario)
+  data.frame(True=mean((x$Observed+1)), Estimated=mean((x$Estimated+1)), Scenario=x$scenario)
 })
 ```
 
-```{r figure-3c}
+```{r figure-3c, eval=FALSE}
 p <- ggplot(populationSizes2000, aes(Observed, Estimated, colour=modelName)) + geom_point(size=1) +
   stat_smooth(method="lm", aes(colour=modelName), se=F) +
   scale_colour_manual("Model", values=c("lightgray", "darkgray","black"), labels=c("I", "T", "ST")) +
@@ -354,7 +375,7 @@ saveFigure(p, "manuscript-figure-3c.png", width=8, height=4)
 
 ```{r figure-3-init-10days}
 study <- getStudy(scenario="A") # Get study object, scenario doesn't matter
-validation <- Validation(study=study, populationSizeOverEstimate=2000)
+validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 populationSizes10days <- validation$getValidationTemporalPopulationSizes(scenarios=paste0(scenarios, "10days"), modelNames=modelNames)
 validation$summarizePopulationSize(populationSizes10days)
 
@@ -362,14 +383,14 @@ meanPopulationSizes10days <- ddply(populationSizes10days, .(scenario, modelName)
   data.frame(True=mean(x$Observed), Estimated=mean(x$Estimated), Scenario=x$scenario)
 })
 logPopulationSizes10days <- populationSizes10days
-logPopulationSizes10days$Observed <- log10(logPopulationSizes10days$Observed + 1)
-logPopulationSizes10days$Estimated <- log10(logPopulationSizes10days$Estimated + 1)
+logPopulationSizes10days$Observed <- (logPopulationSizes10days$Observed + 1)
+logPopulationSizes10days$Estimated <- (logPopulationSizes10days$Estimated + 1)
 logMeanPopulationSizes10days <- ddply(populationSizes10days, .(scenario, modelName), function(x) {
-  data.frame(True=mean(log10(x$Observed+1)), Estimated=mean(log10(x$Estimated+1)), Scenario=x$scenario)
+  data.frame(True=mean((x$Observed+1)), Estimated=mean((x$Estimated+1)), Scenario=x$scenario)
 })
 ```
 
-```{r figure-3d}
+```{r figure-3d, eval=FALSE}
 p <- ggplot(populationSizes10days, aes(Observed, Estimated, colour=modelName)) + geom_point(size=1) +
   stat_smooth(method="lm", aes(colour=modelName), se=F) +
   scale_colour_manual("Model", values=c("lightgray", "darkgray","black"), labels=c("I", "T", "ST")) +
@@ -384,7 +405,7 @@ saveFigure(p, "manuscript-figure-3d.png", width=8, height=4)
 
 ```{r table-1abc}
 prettyModelName <- function(x) {
-  lookup <- data.frame(x=c("SmoothModel-nbinomial-matern-ar1", "SmoothModel-nbinomial-ar1", "FMPModel") , y=c("ST", "S", "I"), stringsAsFactors=F)
+  lookup <- data.frame(x=c("SmoothModel-nbinomial-matern-ar1", "SmoothModel-nbinomial-ar1", "FMPModel") , y=c("ST", "T", "I"), stringsAsFactors=F)
   lookup$y[match(x, lookup$x)]
 }
 
@@ -416,7 +437,7 @@ getPopulationSizesTable(populationSizes10days, meanPopulationSizes10days, file=f
 
 ```{r table-2}
 study <- getStudy(scenario="A")
-validation <- Validation(study=study)
+validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 failedEstimations <- validation$countFailedEstimations(modelNames=modelNames)
 failedEstimations$pFailed <- (1 - failedEstimations$nEstimated / 50) * 100
 failedEstimations
@@ -424,13 +445,13 @@ failedEstimations
 
 ```{r figure-4-test, eval=FALSE}
 study <- getStudy(scenario="A")
-validation <- Validation(study=study)
+validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 x <- validation$validateSpatialPopulationSize(modelNames[1])
 ```
 
 ```{r figure-4a}
 study <- getStudy(scenario="A")
-validation <- Validation(study=study)
+validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 populationCorrelations <- validation$getValidationSpatialPopulationSizes(modelNames=modelNames[1])
 
 p <- ggplot(populationCorrelations, aes(True, Correlation)) + geom_point(size=1, colour="black") +
@@ -442,7 +463,7 @@ saveFigure(p, "manuscript-figure-4a.png", width=4, height=4)
 
 ```{r figure-4b}
 study <- getStudy(scenario="A")
-validation <- Validation(study=study, populationSizeOverEstimate=20000)
+validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 populationCorrelations <- validation$getValidationSpatialPopulationSizes(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[1])
 
 p <- ggplot(populationCorrelations, aes(True, Correlation)) + geom_point(size=1, colour="black") +
@@ -454,7 +475,7 @@ saveFigure(p, "manuscript-figure-4b.png", width=4, height=4)
 
 ```{r figure-4c}
 study <- getStudy(scenario="A")
-validation <- Validation(study=study, populationSizeOverEstimate=2000)
+validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 populationCorrelations <- validation$getValidationSpatialPopulationSizes(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[1])
 
 p <- ggplot(populationCorrelations, aes(True, Correlation)) + geom_point(size=1, colour="black") +
@@ -466,7 +487,7 @@ saveFigure(p, "manuscript-figure-4c.png", width=4, height=4)
 
 ```{r figure-5a}
 study <- getStudy(scenario="A")
-validation <- Validation(study=study)
+validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 a <- validation$getValidatedCredibilityIntervalsProportions(modelNames=modelNames)
 b <- validation$getValidatedCredibilityIntervalsProportions(modelNames=modelNames, probs=c(.25, .75), probsName="50%")
 credibilityIntervals <- rbind(a, b)
@@ -481,7 +502,7 @@ saveFigure(p, "manuscript-figure-5a.png", width=4, height=2)
 
 ```{r figure-5b}
 study <- getStudy(scenario="A")
-validation <- Validation(study=study)
+validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 a <- validation$getValidatedCredibilityIntervalsProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames)
 b <- validation$getValidatedCredibilityIntervalsProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames, probs=c(.25, .75), probsName="50%")
 credibilityIntervals <- rbind(a, b)
@@ -496,7 +517,7 @@ saveFigure(p, "manuscript-figure-5b.png", width=4, height=2)
 
 ```{r figure-5c}
 study <- getStudy(scenario="A")
-validation <- Validation(study=study)
+validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 a <- validation$getValidatedCredibilityIntervalsProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames)
 b <- validation$getValidatedCredibilityIntervalsProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames, probs=c(.25, .75), probsName="50%")
 credibilityIntervals <- rbind(a, b)

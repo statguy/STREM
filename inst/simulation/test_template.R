@@ -15,9 +15,17 @@ scenario <- scenarios[6]
 modelName <- modelNames[2]
 mss <- getMSS(scenario=scenario, isTest=isTest)
 study <- mss$study
+context <- study$context
 
 estimates <- study$getModel(modelName=modelName, iteration=iteration)
 estimates <- study$loadEstimates(estimates=estimates)
 estimates$collectEstimates()
 data <- estimates$data
 offsetScale <- estimates$offsetScale
+
+#habitatWeights2 <- study$getHabitatWeights(iteration=iteration)
+populationSize <- study$getPopulationSize(estimates=estimates, habitatWeights=habitatWeights2)
+populationSize
+mean(populationSize$sizeData$Estimated)
+
+populationSizeOverEstimate <- 1e6
