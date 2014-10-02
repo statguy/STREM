@@ -114,7 +114,7 @@ SimulationStudy <- setRefClass(
       
       habitatWeights <- CORINEHabitatWeights$new(study=.self)
       
-      habitatPreferences <- HabitatSelection$new(study=.self)
+      habitatPreferences <- HabitatSelection$new(study=.self, iteration=iteration)
       fileName <- habitatPreferences$getHabitatSelectionFileName()
       habitatSelection <- if (file.exists(fileName)) habitatPreferences$loadHabitatSelection()
       else {      

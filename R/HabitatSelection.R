@@ -110,7 +110,7 @@ HabitatSelection <- setRefClass(
 
     getHabitatSelectionFileName = function() {
       if (inherits(study, "undefinedField") | length(iteration) == 0)
-        stop("Provide study, modelName and iteration parameters.")
+        stop("Provide study and iteration parameters.")
       return(study$context$getLongFileName(study$context$scratchDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region, tag=iteration))
       #return(study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region))
     },
