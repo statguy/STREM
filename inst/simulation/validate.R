@@ -72,3 +72,6 @@ if (isTest) {
     print(validation$summarizePopulationSizeCI(populationSizeCI, probs=c(.25,.75)))
   }
 }
+
+# Task 1 at ukko075.hpc.cs.helsinki.fi terminated with return code 0. 25 tasks left.
+# Task 42 at ukko076.hpc.cs.helsinki.fi terminated with return code 1. 24 tasks left.
