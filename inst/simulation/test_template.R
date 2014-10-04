@@ -24,7 +24,7 @@ estimates$collectEstimates()
 data <- estimates$data
 offsetScale <- estimates$offsetScale
 
-#habitatWeights2 <- study$getHabitatWeights(iteration=iteration)
+habitatWeights2 <- study$getHabitatWeights(iteration=iteration)
 populationSize <- study$getPopulationSize(estimates=estimates, habitatWeights=habitatWeights2)
 populationSize
 mean(populationSize$sizeData$Estimated)
