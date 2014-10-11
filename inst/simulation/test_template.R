@@ -12,7 +12,7 @@ isTest <- F
 iteration <- as.integer(1)
 
 scenario <- scenarios[6]
-modelName <- modelNames[2]
+modelName <- modelNames[1]
 mss <- getMSS(scenario=scenario, isTest=isTest)
 study <- mss$study
 context <- study$context
