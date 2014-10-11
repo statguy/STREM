@@ -7,9 +7,18 @@ models=(FMPModel SmoothModel-nbinomial-ar1 SmoothModel-nbinomial-matern-ar1)
 nodes=(1:50 1:10 1:50)
 max_nodes=(60 11 60)
 
+test="no-test"
+if [ "$1" == "test" ]
+then
+  test="test"
+fi
+
 function population_size_single {
-  echo $1 $2 $3 $4
-  ./population_size.sh ~/git/RParallelScreen/ $1 $2 $3 $4
+  echo $test $1 $2 $3 $4
+  if [ test == "test" ]
+  then
+    ./population_size.sh ~/git/RParallelScreen/ $1 $2 $3 $4
+  fi
 }
 
 function population_size_scenario {
@@ -29,9 +38,9 @@ function population_size_scenario {
   done
 }
 
-population_size_scenario scenarios models "${nodes[1]}" "${max_nodes[1]}"
-population_size_scenario scenarios2000 models "${nodes[2]}" "${max_nodes[2]}"
-population_size_scenario scenarios10days models "${nodes[3]}" "${max_nodes[3]}"
+population_size_scenario scenarios models "${nodes[0]}" "${max_nodes[0]}"
+population_size_scenario scenarios2000 models "${nodes[1]}" "${max_nodes[1]}"
+population_size_scenario scenarios10days models "${nodes[2]}" "${max_nodes[2]}"
 
 
 
