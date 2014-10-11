@@ -15,7 +15,7 @@ fi
 
 function population_size_single {
   echo $test $1 $2 $3 $4
-  if [ test == "test" ]
+  if [ test != "test" ]
   then
     ./population_size.sh ~/git/RParallelScreen/ $1 $2 $3 $4
   fi
