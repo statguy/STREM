@@ -99,10 +99,11 @@ Model <- setRefClass(
       if (missing(index)) index <- 1:nrow(xy)
       x <- llply(posteriorSamples,
                  function(x, index) {
-                   predictorIndex <- grep("Predictor.", rownames(x$latent))[index]
-                   data.frame(x=xy[,1], y=xy[,2], z=exp(x$latent[predictorIndex]) / offsetScale, t=data$year)
+                   predictorIndex <- grep("Predictor\\.", rownames(x$latent)[index])
+                   #data.frame(x=xy[,1], y=xy[,2], z=exp(x$latent[predictorIndex]) / offsetScale, t=data$year)
+                   data.frame(x=xy[,1], y=xy[,2], z=exp(x$latent[predictorIndex]), t=data$year)
                  },
-                 index=index, .parallel=T)
+                 index=index, .parallel=F)
       return(x)
     },
            

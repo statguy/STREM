@@ -403,10 +403,10 @@ getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, file=f
 
 
 ```{r figure-4-init}
-getPopulationCorrelations <- function(modelName) {
+getPopulationCorrelations <- function(scenarios, modelNames) {
   study <- getStudy(scenario="A")
   validation <- Validation(study=study, populationSizeOverEstimate=Inf)
-  populationCorrelations <- validation$getValidationSpatialPopulationSizes(modelNames=modelName)
+  populationCorrelations <- validation$getValidationSpatialPopulationSizes(scenarios=scenarios, modelNames=modelNames)
   return(populationCorrelations)
 }
 
@@ -419,17 +419,57 @@ plotPopulationCorrelations <- function(populationCorrelations) {
 ```
 
 ```{r figure-4abc}
-pc1 <- getPopulationCorrelations(scenarios=scenarios, modelName=modelNames[1])
-pc2 <- getPopulationCorrelations(scenarios=paste0(scenarios, "combined"), modelName=modelNames[1])
-pc3 <- getPopulationCorrelations(scenarios=paste0(scenarios, "10days"), modelName=modelNames[1])
+pc1 <- getPopulationCorrelations(scenarios=scenarios, modelNames=modelNames[1])
+pc2 <- getPopulationCorrelations(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[1])
+pc3 <- getPopulationCorrelations(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[1])
 
 p1 <- plotPopulationCorrelations(p1)
 saveFigure(p1, "manuscript-figure-4a.png", width=4, height=4)
-plotPopulationCorrelations(p2)
-p2 <- saveFigure(p2, "manuscript-figure-4b.png", width=4, height=4)
-plotPopulationCorrelations(p3)
-p3 <- saveFigure(p3, "manuscript-figure-4c.png", width=4, height=4)
+p2 <- plotPopulationCorrelations(p2)
+saveFigure(p2, "manuscript-figure-4b.png", width=4, height=4)
+p3 <- plotPopulationCorrelations(p3)
+saveFigure(p3, "manuscript-figure-4c.png", width=4, height=4)
 ```
+
+
+```{r figure-5-init}
+getCIProportions <- function(scenarios, modelNames) {
+  study <- getStudy(scenario="A")
+  validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
+  a <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames)
+  b <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames, probs=c(.25, .75), probsName="50%")
+  credibilityIntervals <- rbind(a, b)
+  return(credibilityIntervals)  
+}
+
+plotCIProportions <- function(credibilityIntervals) {
+  p <- ggplot(credibilityIntervals, aes(scenario, Proportion, shape=Interval, colour=modelName)) + geom_point() +
+    scale_shape_manual(values=c(16, 1)) + scale_colour_manual("Model", values=c("darkgray", "black"), labels=c("T", "ST")) +
+    theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent")) +
+    xlab("Scenario") + ylab("Proportion within CI")
+  return(p)
+}
+```
+
+```{r figure-5abc}
+cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames)
+cip2 <- getCIProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames)
+cip2 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames)
+
+p1 <- plotCIProportions(cip1)
+saveFigure(p1, "manuscript-figure-5a.png", width=4, height=2)
+p2 <- plotCIProportions(cip2)
+saveFigure(p2, "manuscript-figure-5b.png", width=4, height=2)
+p3 <- plotCIProportions(cip3)
+saveFigure(p3, "manuscript-figure-5c.png", width=4, height=2)
+
+
+```
+
+
+
+
+
 
 
 

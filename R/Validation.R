@@ -191,7 +191,6 @@ Validation <- setRefClass(
       for (sample in 1:nSamples) {
         message("Processing sample ", sample, " / ", nSamples, " of iteration ", iteration, "...")
         
-        #populationDensity <- model$getPopulationDensity.internal(posteriorSamples[[sample]])
         model$data <- posteriorSamples[[sample]]
         model$data$fittedMean <- model$data$z
         model$data$year <- model$data$t
