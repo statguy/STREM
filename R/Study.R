@@ -145,6 +145,16 @@ FinlandWTCStudy <- setRefClass(
       return(invisible(.self))
     },
     
+    getModel = function(modelName, iteration) {
+# TODO
+#      estimates <- if (modelName == "SmoothModel-nbinomial-matern-ar1") SimulatedSmoothModelSpatioTemporal(study=.self, iteration=iteration)
+#      else if (modelName == "SmoothModel-nbinomial-ar1") SimulatedSmoothModelTemporal(study=.self, iteration=iteration)
+#      else if (modelName == "FMPModel") SimulatedFMPModel(study=.self, iteration=iteration)
+#      else stop("Invalid model.")
+#      estimates$modelName <- modelName
+#      return(estimates)
+    },
+    
     getPrettyResponse = function(response) {
       x <- if (missing(response)) .self$response else response
       y <- switch (x,

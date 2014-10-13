@@ -191,8 +191,13 @@ Validation <- setRefClass(
       for (sample in 1:nSamples) {
         message("Processing sample ", sample, " / ", nSamples, " of iteration ", iteration, "...")
         
-        populationDensity <- model$getPopulationDensity.internal(posteriorSamples[[sample]])
-        x <- model$getPopulationSize(populationDensity=populationDensity, tracks=tracks)$sizeData
+        #populationDensity <- model$getPopulationDensity.internal(posteriorSamples[[sample]])
+        model$data <- posteriorSamples[[sample]]
+        model$data$fittedMean <- model$data$z
+        model$data$year <- model$data$t
+        populationDensity <- model$getPopulationDensity(getSD=FALSE)
+        
+        x <- model$getPopulationSize(populationDensity=populationDensity$mean, tracks=tracks)$sizeData
         if (any(x$Estimated > populationSizeOverEstimate)) {
           message("Estimation failed for iteration ", iteration, ".")
           break

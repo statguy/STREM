@@ -43,7 +43,9 @@ if (test == "test") {
   populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study))
   populationSize$loadValidationData()
   populationSize
-} else {
+} else if (FALSE) {
+  # OLD
+  
   # For the full estimation
   
   estimate <- function(response, spatialModel, timeModel) {
@@ -65,4 +67,30 @@ if (test == "test") {
   spatialModels <- c(T, T, F)
   timeModels <- c("ar1", "ar1", "rw2")
   estimate(response=response, spatialModel=spatialModels[task_id], timeModel=timeModels[task_id])
+} else {
+  estimate <- function(response, modelName) {
+    context <- Context(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+    study <- FinlandWTCStudy(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
+    
+    if (modelName == "SmoothModel-nbinomial-matern-ar1") {
+      model <- FinlandSmoothModelSpatioTemporal(study=study)
+      modelParams <- list(family="nbinomial", offsetScale=1000^2, meshParams=study$studyArea$getMesh(), timeModel="ar1")      
+    }
+    else if (modelName == "SmoothModel-nbinomial-ar1") {
+      model <- FinlandSmoothModelTemporal(study=study)
+      modelParams <- list(family="nbinomial", offsetScale=1000^2, timeModel="ar1")
+    }
+    else if (modelName == "FMPModel") {
+      model <- FinlandFMPModel(study=study)
+      modelParams <- NULL
+    }
+    
+    model <- study$estimate(model=model, params=modelParams, save=T)
+  }
+  
+  responses <- c("canis.lupus", "lynx.lynx", "rangifer.tarandus.fennicus")
+  response <- responses[task_id]
+  #spatialModels <- c(T, T, F)
+  #timeModels <- c("ar1", "ar1", "rw2")
+  estimate(response=response, modelName)
 }

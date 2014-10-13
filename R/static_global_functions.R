@@ -219,7 +219,7 @@ getStudy <- function(scenario, withHabitatWeights=FALSE, surveyRoutes, isTest=FA
 parseArguments <- function() {
   args <- commandArgs(trailingOnly=TRUE)
   if (is.null(args) | length(args) == 0) {
-    isTest <<- TRUE
+    isTest <<- FALSE
     scenario <<- "A"
     task_id <<- as.integer(1)
     extraArgs <<- NULL

@@ -64,3 +64,5 @@ population_size_scenario scenarios10days models "${nodes[2]}" "${max_nodes[2]}"
 #./population_size.sh ~/git/RParallelScreen/ F10days 1:50 60 FMPModel
 #./population_size.sh ~/git/RParallelScreen/ F10days 1:50 60 SmoothModel-nbinomial-ar1
 #./population_size.sh ~/git/RParallelScreen/ F10days 1:50 60 SmoothModel-nbinomial-matern-ar1
+
+#./population_size.sh ~/git/RParallelScreen/ B10days 26 1 SmoothModel-nbinomial-ar1
