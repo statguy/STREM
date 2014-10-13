@@ -402,6 +402,38 @@ getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, file=f
 ```
 
 
+```{r figure-4-init}
+getPopulationCorrelations <- function(modelName) {
+  study <- getStudy(scenario="A")
+  validation <- Validation(study=study, populationSizeOverEstimate=Inf)
+  populationCorrelations <- validation$getValidationSpatialPopulationSizes(modelNames=modelName)
+  return(populationCorrelations)
+}
+
+plotPopulationCorrelations <- function(populationCorrelations) {
+  p <- ggplot(populationCorrelations, aes(True, Correlation)) + geom_point(size=1, colour="black") +
+  facet_wrap(~Scenario, ncol=2) + xlab("True population size") +
+  theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"))#, axis.text.x=element_text(angle=45, hjust=.5, vjust=1))
+  return(p)
+}
+```
+
+```{r figure-4abc}
+pc1 <- getPopulationCorrelations(scenarios=scenarios, modelName=modelNames[1])
+pc2 <- getPopulationCorrelations(scenarios=paste0(scenarios, "combined"), modelName=modelNames[1])
+pc3 <- getPopulationCorrelations(scenarios=paste0(scenarios, "10days"), modelName=modelNames[1])
+
+p1 <- plotPopulationCorrelations(p1)
+saveFigure(p1, "manuscript-figure-4a.png", width=4, height=4)
+plotPopulationCorrelations(p2)
+p2 <- saveFigure(p2, "manuscript-figure-4b.png", width=4, height=4)
+plotPopulationCorrelations(p3)
+p3 <- saveFigure(p3, "manuscript-figure-4c.png", width=4, height=4)
+```
+
+
+
+
 
 
 ```{r, eval=FALSE}
@@ -472,7 +504,7 @@ print(p)
 saveFigure(p, "manuscript-figure-3c.png", width=8, height=4)
 ```
 
-```{r figure-3-init-10days}
+```{r figure-3-init-10days, eval=FALSE}
 study <- getStudy(scenario="A") # Get study object, scenario doesn't matter
 validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 populationSizes10days <- validation$getValidationTemporalPopulationSizes(scenarios=paste0(scenarios, "10days"), modelNames=modelNames)
@@ -506,7 +538,8 @@ saveFigure(p, "manuscript-figure-3d.png", width=8, height=4)
 ```
 
 
-```{r table-2}
+```{r table-2, eval=FALSE}
+# TODO: Combine with table 1
 study <- getStudy(scenario="A")
 validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 failedEstimations <- validation$countFailedEstimations(modelNames=modelNames)
@@ -519,6 +552,8 @@ study <- getStudy(scenario="A")
 validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
 x <- validation$validateSpatialPopulationSize(modelNames[1])
 ```
+
+
 
 ```{r figure-4a}
 study <- getStudy(scenario="A")

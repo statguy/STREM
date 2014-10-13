@@ -103,7 +103,7 @@ Validation <- setRefClass(
         estimates <- study$loadEstimates(estimates)
         estimates$collectEstimates()
         
-        estimated <- estimates$getPopulationDensity(templateRaster=template, maskPolygon=NULL, getSD=F)
+        estimated <- estimates$getPopulationDensityInterpolate(templateRaster=template, maskPolygon=NULL, getSD=F)
         if (is.null(estimated$mean)) {
           message("Estimation failed for iteration ", iteration, " scenario ", study$response, ".")
           next
