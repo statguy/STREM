@@ -2,7 +2,8 @@ PopulationSize <- setRefClass(
   Class = "PopulationSize",
   fields = list(
     study = "Study",
-    sizeData = "data.frame"
+    sizeData = "data.frame",
+    modelName = "character"
   ),
   methods = list(
     initialize = function(...) {
@@ -47,7 +48,8 @@ PopulationSize <- setRefClass(
     },
     
     getPopulationSizeFileName = function() {
-      return(study$context$getFileName(dir=study$context$resultDataDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region))
+      if (length(modelName) == 0) stop("Provide modelName parameter.")
+      return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region, tag=modelName))
     },
     
     savePopulationSize = function(fileName=getPopulationSizeFileName()) {
@@ -67,6 +69,13 @@ PopulationSize <- setRefClass(
     
     show = function() {
       print(sizeData)
+      return(invisible(.self))
+    },
+    
+    getPopulationSize = function(populationDensity, habitatWeights=1, loadHabitatWeights=TRUE, loadValidationData=TRUE) {
+      if (loadHabitatWeights) habitatWeights <- study$loadHabitatWeightsRaster()
+      populationDensity$integrate(volume=.self, weights=habitatWeights)      
+      if (loadValidationData) .self$loadValidationData()
       return(invisible(.self))
     }
   )
@@ -95,8 +104,7 @@ SimulationPopulationSize <- setRefClass(
   Class = "SimulationPopulationSize",
   contains = "PopulationSize",
   fields = list(
-    iteration = "integer",
-    modelName = "character"
+    iteration = "integer"
   ),
   methods = list(
     getPopulationSizeFileIterations = function() {

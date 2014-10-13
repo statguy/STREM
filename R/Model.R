@@ -130,7 +130,7 @@ Model <- setRefClass(
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
     },
     
-    # Move this to *PopulationSize classes
+    # Remove this and use *PopulationSize class instead
     getPopulationSize = function(populationDensity, tracks, habitatWeights) {
       if (missing(populationDensity)) populationDensity <- getPopulationDensity(getSD=FALSE)$mean
       if (!missing(habitatWeights)) if (!is.null(habitatWeights)) populationDensity$weight(habitatWeights)
@@ -200,6 +200,15 @@ FMPModel <- setRefClass(
       message("Year by year summary:")
       print(stat)
     }
+  )
+)
+
+SmoothModelMeanTemporal <- setRefClass(
+  Class = "SmoothModelMeanTemporal",
+  contains = "Model",
+  fields = list(
+  ),
+  methods = list(
   )
 )
 

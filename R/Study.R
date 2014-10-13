@@ -145,14 +145,26 @@ FinlandWTCStudy <- setRefClass(
       return(invisible(.self))
     },
     
-    getModel = function(modelName, iteration) {
-# TODO
-#      estimates <- if (modelName == "SmoothModel-nbinomial-matern-ar1") SimulatedSmoothModelSpatioTemporal(study=.self, iteration=iteration)
-#      else if (modelName == "SmoothModel-nbinomial-ar1") SimulatedSmoothModelTemporal(study=.self, iteration=iteration)
-#      else if (modelName == "FMPModel") SimulatedFMPModel(study=.self, iteration=iteration)
-#      else stop("Invalid model.")
-#      estimates$modelName <- modelName
-#      return(estimates)
+    getModel = function(modelName) {
+      estimates <- if (modelName == "SmoothModel-nbinomial-matern-ar1") FinlandSmoothModelSpatioTemporal(study=.self)
+      else if (modelName == "SmoothModel-nbinomial-ar1") FinlandSmoothModelTemporal(study=.self)
+      else if (modelName == "SmoothModel-nbinomial-rw2") FinlandSmoothModelTemporal(study=.self)
+      else if (modelName == "FMPModel") FinlandFMPModel(study=.self)
+      else stop("Invalid model.")
+      estimates$modelName <- modelName
+      return(estimates)
+    },
+    
+    getModelParams = function(modelName) {
+      modelParams <- if (modelName == "SmoothModel-nbinomial-matern-ar1")
+        list(family="nbinomial", offsetScale=1000^2, meshParams=.self$studyArea$getMesh(), timeModel="ar1")
+      else if (modelName == "SmoothModel-nbinomial-ar1")
+        list(family="nbinomial", offsetScale=1000^2, timeModel="ar1")
+      else if (modelName == "SmoothModel-nbinomial-rw2")
+        list(family="nbinomial", offsetScale=1000^2, timeModel="rw2")
+      else if (modelName == "FMPModel") NULL
+      else stop("Invalid model.")
+      return(modelParams)
     },
     
     getPrettyResponse = function(response) {
@@ -296,7 +308,7 @@ FinlandWTCStudy <- setRefClass(
       return(estimates)
     },
     
-    getPopulationDensity = function(model, withHabitatWeights=TRUE, saveDensityPlots=FALSE, getSD=FALSE) {
+    NEEDS_UPDATE_getPopulationDensity = function(model, withHabitatWeights=TRUE, saveDensityPlots=FALSE, getSD=FALSE) {
       estimates <- collectEstimates(model)
       
       habitatWeights <- if (withHabitatWeights) loadHabitatWeightsRaster() else HabitatWeights$new(study=study)$getWeightsRaster()
@@ -317,27 +329,23 @@ FinlandWTCStudy <- setRefClass(
       
       return(populationDensity)
     },
-    
-    #getPopulationDensity2 = function(model, withHabitatWeights=TRUE, saveDensityPlots=FALSE, getSD=FALSE) {
-    #  estimates <- collectEstimates(model)
-    #  
-    #  habitatWeights <- if (withHabitatWeights) loadHabitatWeightsRaster() else HabitatWeights$new(study=study)$getWeightsRaster()
-    #  populationDensity <- estimates$getPopulationDensity2(templateRaster=habitatWeights, getSD=getSD)
-    #  populationDensity$mean$weight(habitatWeights)
-    #  
-    #  if (saveDensityPlots) {
-    #    populationDensity$mean$animate(name=estimates$modelName)
-    #    if (getSD) populationDensity$sd$animate(name=estimates$modelName)
-    #  }
-    #  
-    #  return(populationDensity)
-    #},
-    
-    #getPopulationSize = function(model, withHabitatWeights=TRUE, saveDensityPlots=FALSE) {
-    #  populationDensity <- getPopulationDensity(model=model, withHabitatWeights=withHabitatWeights, saveDensityPlots=saveDensityPlots)
-    #  populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study))
-    #  return(populationSize)
-    #},
+        
+    getPopulationSize = function(modelName) {
+      #populationDensity <- getPopulationDensity(model=model, withHabitatWeights=withHabitatWeights, saveDensityPlots=saveDensityPlots)
+      #populationSize <- populationDensity$mean$integrate(volume=FinlandPopulationSize$new(study=study))
+      
+      habitatWeightsRaster <- loadHabitatWeightsRaster()
+      model <- getModel(modelName=modelName)  
+      model$offsetScale <- 1000^2 # quickfix, remove when not needed anymore
+      model$loadEstimates()
+      model$collectEstimates()
+      populationDensity <- model$getPopulationDensity(templateRaster=habitatWeightsRaster, getSD=FALSE)
+      populationSize <- FinlandPopulationSize(study=.self, modelName=modelName)$getPopulationSize(populationDensity=populationDensity$mean, habitatWeights=habitatWeightsRaster, loadHabitatWeights=FALSE)
+      #populationSize$plotPopulationSize()
+      #print(populationSize)
+      
+      return(populationSize)
+    },
     
     show = function() {
       cat("Response: ", response, "\n")

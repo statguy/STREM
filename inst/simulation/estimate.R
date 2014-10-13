@@ -31,9 +31,12 @@ estimateSpatioTemporal <- function(scenario, modelName, iteration, isTest=FALSE,
     populationSize$plotPopulationSize()
   }
   else {
+    model <- study$getModel(modelName=modelName)
+    #modelParams <- study$getModelParams(modelName=modelName)
+    
     if (modelName == "SmoothModel-nbinomial-matern-ar1") {
       model <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
-      modelParams <- list(family="nbinomial", offsetScale=1000^2, meshParams=study$studyArea$getMesh(), timeModel="ar1")      
+      modelParams <- list(family="nbinomial", offsetScale=1000^2, meshParams=study$studyArea$getMesh(), timeModel="ar1")
     }
     else if (modelName == "SmoothModel-nbinomial-ar1") {
       model <- SimulatedSmoothModelTemporal(study=study, iteration=iteration)
