@@ -454,7 +454,7 @@ plotCIProportions <- function(credibilityIntervals) {
 ```{r figure-5abc}
 cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames)
 cip2 <- getCIProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames)
-cip2 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames)
+cip3 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames)
 
 p1 <- plotCIProportions(cip1)
 saveFigure(p1, "manuscript-figure-5a.png", width=4, height=2)
@@ -462,8 +462,6 @@ p2 <- plotCIProportions(cip2)
 saveFigure(p2, "manuscript-figure-5b.png", width=4, height=2)
 p3 <- plotCIProportions(cip3)
 saveFigure(p3, "manuscript-figure-5c.png", width=4, height=2)
-
-
 ```
 
 

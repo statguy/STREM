@@ -183,7 +183,7 @@ Validation <- setRefClass(
       model$collectEstimates()
       
       tracks <- study$loadTracks(iteration=iteration)
-      # TODO: habitat weights
+      habitatWeights <- study$getHabitatWeights(tracks=tracks, iteration=iteration, save=F)
       
       posteriorSamples <- model$samplePosterior(n=nSamples)
       populationSize <- data.frame()
@@ -196,7 +196,7 @@ Validation <- setRefClass(
         model$data$year <- model$data$t
         populationDensity <- model$getPopulationDensity(getSD=FALSE)
         
-        x <- model$getPopulationSize(populationDensity=populationDensity$mean, tracks=tracks)$sizeData
+        x <- model$getPopulationSize(populationDensity=populationDensity$mean, tracks=tracks, habitatWeights=habitatWeights)$sizeData
         if (any(x$Estimated > populationSizeOverEstimate)) {
           message("Estimation failed for iteration ", iteration, ".")
           break

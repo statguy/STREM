@@ -12,15 +12,6 @@ source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 parseArguments()
 modelName <- extraArgs[1]
 
-if (isTest) {
-  nSamples <- 50
-  populationSizeOverEstimate <- 200
-} else {
-  nSamples <- 50
-  populationSizeOverEstimate <- 2000
-  if (substr(scenario, 2, 9) == "combined") populationSizeOverEstimate <- 20000
-}
-
 nSamples <- 50
 populationSizeOverEstimate <- Inf
 mss <- getMSS(scenario=scenario, isTest=isTest)
@@ -54,26 +45,5 @@ if (isTest) {
   summary(lm(Estimated.y~Estimated.x, xy)) # OK !
   
 } else {
-  if (F) {
-    populationSize <- validation$validateTemporalPopulationSize(modelName=modelName)
-    validation$summarizePopulationSize(populationSize)
-    summary(lm(Estimated~Observed, populationSize))  
-    
-    spatialCorrelation <- validation$validateSpatialPopulationSize(modelName=modelName)
-    summary(lm(Correlation~True, spatialCorrelation))
-  }
-  
   populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=as.integer(task_id), nSamples=nSamples, save=T)
-  
-  if (F) {
-    iterations <- validation$getCredibilityIntervalsValidationIterations(modelName=modelName)
-    populationSizeCI <- ldply(iterations, function(iteration) {
-      validation$loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
-    })
-    print(validation$summarizePopulationSizeCI(populationSizeCI))
-    print(validation$summarizePopulationSizeCI(populationSizeCI, probs=c(.25,.75)))
-  }
 }
-
-# Task 1 at ukko075.hpc.cs.helsinki.fi terminated with return code 0. 25 tasks left.
-# Task 42 at ukko076.hpc.cs.helsinki.fi terminated with return code 1. 24 tasks left.
