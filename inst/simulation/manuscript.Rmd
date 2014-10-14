@@ -423,11 +423,11 @@ pc1 <- getPopulationCorrelations(scenarios=scenarios, modelNames=modelNames[1])
 pc2 <- getPopulationCorrelations(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[1])
 pc3 <- getPopulationCorrelations(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[1])
 
-p1 <- plotPopulationCorrelations(p1)
+p1 <- plotPopulationCorrelations(pc1)
 saveFigure(p1, "manuscript-figure-4a.png", width=4, height=4)
-p2 <- plotPopulationCorrelations(p2)
+p2 <- plotPopulationCorrelations(pc2)
 saveFigure(p2, "manuscript-figure-4b.png", width=4, height=4)
-p3 <- plotPopulationCorrelations(p3)
+p3 <- plotPopulationCorrelations(pc3)
 saveFigure(p3, "manuscript-figure-4c.png", width=4, height=4)
 ```
 

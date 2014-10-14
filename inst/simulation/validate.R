@@ -21,6 +21,7 @@ if (isTest) {
   if (substr(scenario, 2, 9) == "combined") populationSizeOverEstimate <- 20000
 }
 
+nSamples <- 50
 populationSizeOverEstimate <- Inf
 mss <- getMSS(scenario=scenario, isTest=isTest)
 study <- mss$study
