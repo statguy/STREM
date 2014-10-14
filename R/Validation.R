@@ -253,7 +253,7 @@ Validation <- setRefClass(
       x <- summarizePopulationSizeCI(populationSizeCI, variables=.(scenario, Year, iteration), probs=probs)
       validationProportion <- ddply(x, .(scenario), function(x) {
         y <- with(x, Observed >= Estimated.q1 & Observed <= Estimated.q2)
-        data.frame(Proportion=mean(y), n=length(y))
+        data.frame(Proportion=mean(y), n=length(y), True=mean(x$Observed), Estimated=mean(x$Estimated), Estimated.q1=mean(x$Estimated.q1), Estimated.q2=mean(x$Estimated.q2))
       })
       validationProportion$modelName <- modelName
       

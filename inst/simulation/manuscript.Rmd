@@ -435,7 +435,7 @@ saveFigure(p3, "manuscript-figure-4c.png", width=4, height=4)
 ```{r figure-5-init}
 getCIProportions <- function(scenarios, modelNames) {
   study <- getStudy(scenario="A")
-  validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
+  validation <- Validation(study=study, populationSizeOverEstimate=Inf)
   a <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames)
   b <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames, probs=c(.25, .75), probsName="50%")
   credibilityIntervals <- rbind(a, b)
