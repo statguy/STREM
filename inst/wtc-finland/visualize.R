@@ -11,6 +11,7 @@ study <- FinlandWTCStudy$new(context=context, response="canis.lupus")
 study$studyArea$loadBoundary(thin=F, tolerance=0.001)
 boundaryDF <- study$studyArea$toGGDF()
 responses <- c("canis.lupus", "lynx.lynx", "rangifer.tarandus.fennicus")
+models <- c("FMPModel", "SmoothModel-nbinomial-ar1", "SmoothModel-nbinomial-matern-ar1", "SmoothModel-nbinomial-rw2")
 
 ######
 ### Survey routes
@@ -93,7 +94,7 @@ getIntersectionsRate <- function(responses, context) {
 
 intersectionsRate <- getIntersectionsRate(responses, context)
 p <- ggplot(intersectionsRate, aes(year, intersections)) + geom_line(size=1) + facet_grid(~response) +
-  xlab("Year") + ylab("Intersections rate") + theme_presentation(16)
+  xlab("Year") + ylab("Intersections / km") + theme_presentation(16)
 print(p)
 saveFigure(p, filename="IntersectionsRate.svg", bg="transparent")
 
@@ -331,21 +332,18 @@ saveFigure(p, filename="PredictedDistanceDistributions.svg")
 ### Population density
 ######
 
-getPopulationDensity <- function(responses, timeModels, spatialModels, context, withHabitatWeights=FALSE) {
+getPopulationDensity <- function(responses, modelName, context, withHabitatWeights=TRUE, interpolated=FALSE) {
   populationDensity <- list()
   for (i in 1:length(responses)) {
-    response <- responses[i]
-    timeModel <- timeModels[i]
-    spatialModel <- spatialModels[i]
-    
-    context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+    #context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
     study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
-    
-    model <- if (spatialModel) FinlandSmoothModelSpatioTemporal(study=study)$setModelName("nbinomial", paste("matern", timeModel, sep="-"))
-    else FinlandSmoothModelTemporal(study=study)$setModelName("nbinomial", timeModel)
+    model <- study$getModel(modelName)
     model$offsetScale <- 1000^2 # TODO: quickfix
     
-    populationDensity[[response]] <- study$getPopulationDensity(model=model, withHabitatWeights=withHabitatWeights, saveDensityPlots=FALSE, getSD=FALSE)
+    populationDensity[[response]] <- if (interpolated)
+      study$getPopulationDensityInterpolated(modelName=modelName, withHabitatWeights=withHabitatWeights, saveDensityPlots=FALSE, getSD=FALSE)
+    else
+      study$getPopulationDensity(modelName=modelName, withHabitatWeights=withHabitatWeights, saveDensityPlots=FALSE, getSD=FALSE)
 
     #study <- FinlandWTCStudy$new(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
     #populationDensity[[response]] <- study$getPopulationDensity2(withHabitatWeights=withHabitatWeights) # NOTE!!!
@@ -355,7 +353,7 @@ getPopulationDensity <- function(responses, timeModels, spatialModels, context, 
 
 # TODO: legend
 # TODO: standard deviation, include all focal species when data available
-populationDensity <- getPopulationDensity(responses=responses, timeModels=c("ar1", "ar1", "rw2"), spatialModels=c(T, T, F), context=context)
+populationDensity <- getPopulationDensity(responses=responses, modelName=models[3], interpolated=TRUE, context=context, withHabitatWeights=FALSE)
 for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)  
   popdens <- populationDensity[[response]]$mean
@@ -363,7 +361,7 @@ for (response in responses) {
   popdens$animate(name="PopulationDensity", delay=50, ggfun=function(i, params) theme_raster(20))
 }
 
-weightedPopulationDensity <- getPopulationDensity(responses=responses, timeModels=c("ar1", "ar1", "rw2"), spatialModels=c(T, T, F), context=context, withHabitatWeights=TRUE)
+weightedPopulationDensity <- getPopulationDensity(responses=responses, modelName=models[3], interpolated=TRUE, context=context, withHabitatWeights=TRUE)
 for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   wpopdens <- weightedPopulationDensity[[response]]$mean
@@ -376,26 +374,34 @@ for (response in responses) {
 ### Population size
 ######
 
-populationSize <- data.frame()
+prettyModelName <- function(x) {
+  lookup <- data.frame(x=c("SmoothModel-nbinomial-matern-ar1", "SmoothModel-nbinomial-ar1", "FMPModel", "SmoothModel-nbinomial-rw2"),
+                       y=c("ST", "T", "I", "T2"), stringsAsFactors=F)
+  lookup$y[match(x, lookup$x)]
+}
 
+populationSize <- data.frame()
 for (response in responses) {
-  study <- FinlandWTCStudy$new(context=context, response=response)
-  names(weightedPopulationDensity[[response]]$mean$rasterStack) <- 1989:2011  # TODO: quickfix, fix the bug...
-  x <- weightedPopulationDensity[[response]]$mean$integrate(volume=FinlandPopulationSize$new(study=study))
-  x$loadValidationData()
-  y <- x$sizeData
-  y$response <- study$getPrettyResponse(response)
-  print(coef(x$match()))
-  if (response == "canis.lupus") y$"Adjusted estimated" <- y$Estimated * .75
-  else if (response == "lynx.lynx") {
-    y$"Adjusted estimated" <- y$Estimated * .3
-    y$Estimated <- y$Estimated / 2
+  for (modelName in models) {
+    if (modelName=="SmoothModel-nbinomial-rw2" & response!="rangifer.tarandus.fennicus") next
+    
+    study <- FinlandWTCStudy$new(context=context, response=response)
+    x <- study$getPopulationSize(modelName=modelName)
+    y <- x$sizeData
+    y$response <- study$getPrettyResponse(response)
+    y$model <- modelName
+    #print(coef(x$match()))
+    #if (response == "canis.lupus") y$"Adjusted estimated" <- y$Estimated * .75
+    #else if (response == "lynx.lynx") {
+    #  y$"Adjusted estimated" <- y$Estimated * .3
+    #  y$Estimated <- y$Estimated / 2
+    #}
+    #else if (response == "rangifer.tarandus.fennicus") {
+    #  y$"Adjusted estimated" <- y$Estimated / 2
+    #  #y$Validation <- with(y, approx(Year, Validation, n=nrow(y)))$y
+    #}
+    populationSize <- rbind(populationSize, y)
   }
-  else if (response == "rangifer.tarandus.fennicus") {
-    y$"Adjusted estimated" <- y$Estimated / 2
-    #y$Validation <- with(y, approx(Year, Validation, n=nrow(y)))$y
-  }
-  populationSize <- rbind(populationSize, y)
 }
 
 l <- levels(populationSize$Year)
@@ -403,16 +409,21 @@ s <- seq(1, length(l), by=2)
 breaks <- l[s] 
 labels <- l[s]
 
-x <- melt(populationSize, id.vars=c("Year","response"), variable.name="Variable")
-p <- ggplot(x, aes(Year, value, group=Variable, colour=Variable, fill=Variable)) + facet_wrap(~response, scales="free_y") +
-  geom_bar(subset=.(Variable=="Validation"), stat="identity") + geom_line(subset=.(Variable!="Validation"), size=2)  +
-  scale_colour_manual(values=c("steelblue","violetred1","darkgreen")) +
-  scale_fill_manual(values=c(NA,NA,"darkgreen")) +
+populationSize$Model <- prettyModelName(populationSize$model)
+y <- melt(populationSize, id.vars=c("Year","response","model","Model"), variable.name="Variable")
+y[!is.na(y$value) & y$response=="Rangifer tarandus fennicus" & y$value>20000,]$value <- NA
+#y <- rbind(subset(y, response!="Rangifer tarandus fennicus"), subset(y, response=="Rangifer tarandus fennicus" & value<10000))
+p <- ggplot(y, aes(Year, value, group=Model, colour=Model, fill=Variable)) +
+  facet_wrap(~response, scales="free_y") +
+  geom_bar(data=subset(y, Variable=="Validation" & Model=="I"), stat="identity", color="black", fill=NA) + # geom_bar(subset=.(Variable=="Validation"), stat="identity") +
+  geom_line(subset=.(Variable!="Validation"), size=2)  +
+  #scale_colour_manual(values=c("steelblue","violetred1","darkgreen")) +
+  #scale_fill_manual(values=c(NA,NA,"darkgreen")) +
   scale_x_discrete(breaks=breaks, labels=labels) +
   xlab("Year") + ylab("Population size") +
   theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1)) + theme(legend.position="bottom", strip.text.x=element_blank())
 print(p)
-saveFigure(p, filename="PopulationSize.svg", bg="transparent")
+saveFigure(p, filename="PopulationSize2.svg", bg="transparent")
 
 
 ######

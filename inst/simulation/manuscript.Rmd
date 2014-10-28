@@ -309,12 +309,12 @@ getLogMeanPopulationSizes <- function(populationSizes) {
 
 plotLogPopulationSize <- function(size, meanSize, modelName, xlim, ylim) {
   library(ggplot2)
-  library(scales)
+  library(scales)  
   p <- ggplot(size, aes(Observed, Estimated, colour=modelName)) +
     #geom_point(size=1) +
     #stat_smooth(method="lm", aes(colour=modelName), se=F) +
     geom_point(size=1, colour="darkgray") +
-    stat_smooth(method="lm", se=F, colour="black") +
+#stat_smooth(method="lm", se=F, colour="black") +
     #scale_colour_manual("Model", values=c("lightgray", "darkgray","black"), labels=c("I", "T", "ST")) +
     #scale_colour_manual("Model", values=c("darkgray","black")) +
     geom_abline(colour="black", linetype="longdash") + 
@@ -325,6 +325,9 @@ plotLogPopulationSize <- function(size, meanSize, modelName, xlim, ylim) {
     scale_x_log10() + scale_y_log10() +
     xlab("True population size") + ylab("Estimated population size") + ggtitle(paste("Model: ", prettyModelName(modelName[1]))) +
     theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"), legend.title=element_text(size=12))
+
+  if (!any(abs(size$Estimated) == Inf)) p <- p + stat_smooth(method="lm", se=F, colour="black")
+
   print(p)
   return(p)
 }
@@ -341,7 +344,7 @@ logMeanPopulationSizes  <- getLogMeanPopulationSizes(populationSizes)
 
 meanPopulationSizes2000  <- getMeanPopulationSizes(populationSizes2000)
 logPopulationSizes2000 <- getLogPopulationSizes(populationSizes2000)
-logMeanPopulationSize2000  <- getLogMeanPopulationSizes(populationSizes2000)
+logMeanPopulationSizes2000  <- getLogMeanPopulationSizes(populationSizes2000)
 
 meanPopulationSizes10Days  <- getMeanPopulationSizes(populationSizes10Days)
 logPopulationSizes10Days <- getLogPopulationSizes(populationSizes10Days)
@@ -378,8 +381,9 @@ saveFigure(p, "manuscript-figure-3c3.png", width=8, height=4)
 getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, full=F, file) {
   library(plyr)
   x <- ddply(populationSizes, .(Scenario, modelName), function(x) {
+    if (any(abs(x$Estimated) == Inf)) return(data.frame(Intercept=NA, Slope=NA, R2=NA))
     y <- lm(Estimated~Observed, x)
-    data.frame(Intercept=round(coef(y)[1], 0), Slope=round(coef(y)[2], 2), R2=round(summary(y)$r.squared, 2))
+    return(data.frame(Intercept=round(coef(y)[1], 0), Slope=round(coef(y)[2], 2), R2=round(summary(y)$r.squared, 2)))
   })
   y <- unique(meanPopulationSizes)
   y$Scenario <- y$scenario

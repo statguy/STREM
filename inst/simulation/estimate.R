@@ -31,7 +31,7 @@ estimateSpatioTemporal <- function(scenario, modelName, iteration, isTest=FALSE,
     populationSize$plotPopulationSize()
   }
   else {
-    model <- study$getModel(modelName=modelName)
+    #model <- study$getModel(modelName=modelName)
     #modelParams <- study$getModelParams(modelName=modelName)
     
     if (modelName == "SmoothModel-nbinomial-matern-ar1") {

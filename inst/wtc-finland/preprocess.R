@@ -1,5 +1,4 @@
 library(devtools)
-install_github("R-Cluster", user="statguy")
 install_github("R-Spatio-Temporal", user="statguy")
 install_github("Winter-Track-Counts", user="statguy")
 

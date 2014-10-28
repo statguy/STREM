@@ -52,5 +52,5 @@ if (test == "test") {
   
   responses <- c("canis.lupus", "lynx.lynx", "rangifer.tarandus.fennicus")
   response <- responses[task_id]
-  estimate(response=response, modelName)
+  estimate(response=response, modelName=modelName)
 }

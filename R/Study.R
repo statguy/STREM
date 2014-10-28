@@ -308,21 +308,17 @@ FinlandWTCStudy <- setRefClass(
       return(estimates)
     },
     
-    NEEDS_UPDATE_getPopulationDensity = function(model, withHabitatWeights=TRUE, saveDensityPlots=FALSE, getSD=FALSE) {
-      estimates <- collectEstimates(model)
+    getPopulationDensity = function(modelName, withHabitatWeights=TRUE, getSD=FALSE, saveDensityPlots) {
+      habitatWeightsRaster <- if (withHabitatWeights) loadHabitatWeightsRaster() else 1
+      model <- getModel(modelName=modelName)  
+      model$offsetScale <- 1000^2 # quickfix, remove when not needed anymore
+      model$loadEstimates()
+      model$collectEstimates()
+      populationDensity <- model$getPopulationDensity(templateRaster=habitatWeightsRaster, getSD=getSD)
       
-      habitatWeights <- if (withHabitatWeights) loadHabitatWeightsRaster() else HabitatWeights$new(study=study)$getWeightsRaster()
-      populationDensity <- estimates$getPopulationDensity(templateRaster=habitatWeights, getSD=getSD)
-
+      #habitatWeights <- if (withHabitatWeights) loadHabitatWeightsRaster() else HabitatWeights$new(study=study)$getWeightsRaster()
+      
       if (saveDensityPlots) {
-        populationDensity$mean$animate(name="PopulationDensity-mean")
-        if (getSD) populationDensity$sd$animate(name="PopulationDensity-sd")
-      }
-      
-      populationDensity$mean$weight(habitatWeights)
-      if (getSD) populationDensity$sd$weight(habitatWeights)
-      
-      if (saveDensityPlots & withHabitatWeights) {
         populationDensity$mean$animate(name="WeightedPopulationDensity-mean")
         if (getSD) populationDensity$sd$animate(name="WeightedPopulationDensity-sd")
       }
