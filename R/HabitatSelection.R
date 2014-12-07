@@ -164,3 +164,19 @@ HabitatSelection <- setRefClass(
     }
   )
 )
+
+# TODO: fix this
+SimulationHabitatSelection <- setRefClass(
+  "SimulationHabitatSelection",
+  contains = "HabitatSelection"
+)
+
+WTCHabitatSelection <- setRefClass(
+  "WTCHabitatSelection",
+  contains = "HabitatSelection",
+  methods = list(
+    getHabitatSelectionFileName = function() {
+      return(study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region))
+    }
+  )
+)

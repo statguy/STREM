@@ -228,7 +228,7 @@ FinlandWTCStudy <- setRefClass(
     },
     
     loadHabitatSelection = function() {
-      habitatSelection <- HabitatSelection$new(study=.self)$loadHabitatSelection()
+      habitatSelection <- WTCHabitatSelection$new(study=.self)$loadHabitatSelection()
       return(habitatSelection)
     },
     
