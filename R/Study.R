@@ -210,7 +210,7 @@ FinlandWTCStudy <- setRefClass(
     },
     
     loadSurveyRoutes = function(findLengths=TRUE) {
-      return(FinlandWTCSurveyRoutes$new(study=.self)$loadSurveyRoutes(findLengths=findLengths))
+      return(FinlandWTCSurveyRoutes$new(context=.self$context)$loadSurveyRoutes(findLengths=findLengths))
     },
     
     loadIntersections = function(predictDistances=TRUE) {
