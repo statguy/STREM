@@ -333,10 +333,14 @@ plotLogPopulationSize <- function(size, meanSize, modelName, xlim, ylim) {
 }
 ```
 
-```{r figure-3-init}
+```{r figure-3-init-2}
+registerDoMC(cores=10) # The nodes seem to run out of memory and fail with a bogus error message, so it's better to reduce the number of used cores.
+
 populationSizes <- getPopulationSizes(scenarios=scenarios, modelNames=modelNames)
 populationSizes2000 <- getPopulationSizes(scenarios=paste0(scenarios, "combined"), modelNames=modelNames)
 populationSizes10Days <- getPopulationSizes(scenarios=paste0(scenarios, "10days"), modelNames=modelNames)
+
+registerDoMC(cores=detectCores())
 
 meanPopulationSizes  <- getMeanPopulationSizes(populationSizes)
 logPopulationSizes <- getLogPopulationSizes(populationSizes)
@@ -444,7 +448,7 @@ getCIProportions <- function(scenarios, modelNames, panel, scenarioNames) {
   b <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames, probs=c(.25, .75), probsName="50%")
   credibilityIntervals <- rbind(a, b)
   credibilityIntervals$panel <- panel
-  credibilityIntervals$scenario <- scenarioNames
+  credibilityIntervals$scenario <- rep(scenarioNames, times=2, each=2)
   return(credibilityIntervals)  
 }
 
@@ -477,6 +481,18 @@ saveFigure(p, "manuscript-figure-5.png", width=6, height=2)
 #p3 <- plotCIProportions(cip3)
 #saveFigure(p3, "manuscript-figure-5c.png", width=4, height=2)
 ```
+
+
+  p <- ggplot(cip2, aes(scenario, Proportion, shape=Interval, colour=modelName)) +
+    geom_hline(aes(yintercept=.5), color="grey90") +
+    geom_hline(aes(yintercept=.95), color="grey90") +
+    geom_point() +
+    scale_shape_manual(values=c(16, 1)) + scale_colour_manual("Model", values=c("darkgray", "black"), labels=c("T", "ST")) +
+    theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent")) +
+    xlab("Scenario") + ylab("Proportion within CI") +
+    facet_wrap(~panel) + ylim(0, 1) +
+    theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank())
+saveFigure(p, "manuscript-figure-5.png", width=6, height=2)
 
 
 

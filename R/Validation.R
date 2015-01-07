@@ -33,24 +33,37 @@ Validation <- setRefClass(
       library(plyr)
       
       iterations <- getPopulationSizeFileIterations(modelName)
-
+      
       populationSize <- ldply(iterations, function(iteration) {
         message("Processing iteration ", iteration, " of ", length(iterations), " iterations for scenario ", study$response, "...")
-        
         populationSize <- study$loadPopulationSize(iteration=iteration, modelName=modelName)
-        if (any(populationSize$sizeData$Estimated > populationSizeOverEstimate)) {
+        x <- populationSize$sizeData
+        
+        if (is.null(x) || nrow(x) == 0 || any(x$Estimated > populationSizeOverEstimate)) {
           message("Estimation failed for iteration ", iteration, " scenario ", study$response)
           return(NULL)
         }
-        x <- populationSize$sizeData
         x$iteration <- iteration
         return(x)
-      }, .parallel=T)
-      
+      }, .parallel=TRUE)
+            
       if (is.null(populationSize)) return(NULL)
       populationSize$Scenario <- study$response
       populationSize$modelName <- modelName
       return(populationSize)
+    },
+        
+    getValidationTemporalPopulationSizes = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
+      x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
+        s <- getStudy(scenario=x$scenario, isTest=F)
+        validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
+        x <- validation$validateTemporalPopulationSize(x$modelName)
+        if (is.null(x) || nrow(x) == 0) return(NULL)
+        gc()
+        return(x)
+      })
+      
+      return(x)
     },
     
     summarizePopulationSize = function(populationSizes) {
@@ -66,19 +79,6 @@ Validation <- setRefClass(
         y$Observed.q2 <- q[2]
         return(y)
       }, probs=c(.0025, .975))
-    },
-    
-    getValidationTemporalPopulationSizes = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
-      x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
-        s <- getStudy(scenario=x$scenario, isTest=F)
-        validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
-        x <- validation$validateTemporalPopulationSize(x$modelName)
-        if (is.null(x) || nrow(x) == 0) return(NULL)
-        gc()
-        return(x)
-      })
-      
-      return(x)
     },
     
     validateSpatialPopulationSize = function(modelName) {
