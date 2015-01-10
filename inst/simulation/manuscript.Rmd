@@ -18,6 +18,7 @@ modelNames <- c(paste("SmoothModel", "nbinomial", "matern", "ar1", sep = "-"), p
 iterations <- as.integer(c(1,1,1,1,3,1))
 populationSizeOverEstimate <- 1e999
 
+prettyScenario <- function(scenario) substr(scenario, 1, 1)
 prettyModelName <- function(x) {
   lookup <- data.frame(x=c("SmoothModel-nbinomial-matern-ar1", "SmoothModel-nbinomial-ar1", "FMPModel") , y=c("ST", "T", "I"), stringsAsFactors=F)
   lookup$y[match(x, lookup$x)]
@@ -71,7 +72,9 @@ trackData$scenario <- factor(trackData$scenario)
 ```
 
 ```{r figure-1}
-habitatRaster <- crop(study$studyArea$habitat, extent(c(3.375, 3.4, 6.9, 6.925)*1e6))
+#window <- c(3.375, 3.4, 6.9, 6.925)*1e6
+window <- (c(3.375, 3.4, 6.9, 6.925)+c(-.01,.01,-.01,.01)*3)*1e6
+habitatRaster <- crop(study$studyArea$habitat, extent(window))
 z <- sampleRegular(habitatRaster, 10000, asRaster=TRUE)
 habitatData <- as.data.frame(rasterToPoints(z))
 #habitatData <- as.data.frame(rasterToPoints(habitatRaster))
@@ -85,17 +88,21 @@ habitatData$z <- factor(habitatData$z, levels=0:255)
 col <- study$studyArea$habitat@legend@colortable
 names(col) <- 0:255
 
-p <- ggplot(habitatData) + geom_raster(aes(x, y, fill=z)) + scale_fill_manual(values=col) +
-  geom_path(data=trackData, aes(long, lat, group=group, colour=observation)) +#, alpha=observation)) +
-  scale_colour_manual(values=c("gray40","black")) +# scale_alpha_manual(values=c(.5,1)) +
-  geom_path(data=surveyRoutesData, aes(long, lat, group=group)) +
-  coord_fixed(ratio=1, xlim=c(3.375,3.4)*1e6, ylim=c(6.9,6.925)*1e6) +
+p <- ggplot(habitatData) + geom_raster(aes(x, y, fill=z), alpha=.3) + scale_fill_manual(values=col) +
+  geom_path(data=trackData, aes(long, lat, group=group, colour=observation), alpha=1, size=.3) +#, alpha=observation)) +
+  scale_colour_manual(values=c("darkgray","black")) + # scale_alpha_manual(values=c(.5,1)) + # gray40
+  geom_path(data=surveyRoutesData, aes(long, lat, group=group), size=.3, colour="blue", alpha=.5) +
+  coord_fixed(ratio=1, xlim=window[1:2], ylim=window[3:4]) +
   facet_wrap(~scenario) + #coord_equal()
   theme_raster(base_size=10) + theme(panel.border=element_rect(fill="transparent"))
 #print(p)
 saveFigure(p, "manuscript-figure-1.png", width=8, height=4)
 
+# scale on the map in km
+c((window[2]-window[1]), (window[4]-window[3]))/1000
+```
 
+```{r figure-1-separate, eval=FALSE}
 getRaster <- function(habitatRaster, xlim, ylim, size=10000) {
   x <- crop(habitatRaster, extent(c(xlim, ylim)))
   y <- sampleRegular(x, size=size, asRaster=TRUE)
@@ -189,7 +196,7 @@ getAgentLocations = function(scenarios, modelName, iterations, years) {
   }, modelName=modelName, years=years)
 }
 
-getEstimatedDensity = function(scenarios, modelName, iterations, year, sd=FALSE) {
+getEstimatedDensity = function(scenarios, modelName, iterations, year, sd=FALSE, log=FALSE) {
   ddply(data.frame(scenario=scenarios, iteration=iterations, stringsAsFactors=FALSE), .(scenario, iteration), function(x, modelName, year0, sd) {
     message("Scenario = ", x$scenario, ", iteration = ", x$iteration)
     study <- getStudy(scenario=x$scenario)
@@ -198,8 +205,11 @@ getEstimatedDensity = function(scenarios, modelName, iterations, year, sd=FALSE)
     estimates <- study$loadEstimates(estimates)
     estimates$collectEstimates()
     
+    studyArea <- FinlandStudyArea$new(context=context)$setup(tolerance=0.001)
+    
     estimates$data <- subset(estimates$data, year == year0)
-    density <- estimates$getPopulationDensity(getSD=sd)
+    if (log) estimates$data$fittedMean <- log(estimates$data$fittedMean)
+    density <- estimates$getPopulationDensityInterpolate(getSD=sd, maskPolygon=studyArea$boundary)
     density <- if (sd) density$sd else density$mean
     if (is.null(density) || maxValue(density$rasterStack[[1]]) > 1) stop("Estimation failed.")
     density <- as.data.frame(density$rasterStack[[1]], xy=T)
@@ -214,6 +224,13 @@ getEstimatedDensity = function(scenarios, modelName, iterations, year, sd=FALSE)
 ```
 
 ```{r figure-2-test}
+iterations <- as.integer(c(1,1,3,2,5,6))
+year <- 2010
+densityST <- getEstimatedDensity(scenarios[1], modelNames[1], iterations[1], year=year, sd=FALSE)
+p <- ggplot(densityST) + geom_raster(aes_string(x="x", y="y", fill=paste0("X", year))) + scale_fill_gradientn(colours=terrain.colors(100), na.value="transparent") 
+saveFigure(p, "tmp_compare_densities_ST.png", width=8)
+###
+
 iterations <- as.integer(c(1,1,3,2,5,6))
 year <- 2010
 surveyRoutes <- getSurveyRouteLocations(scenarios=scenarios[1], modelName=modelNames[1], iterations=iterations[1], years=year)
@@ -243,27 +260,40 @@ saveFigure(p, "tmp_compare_densities_FMP.png", width=8)
 ```
 
 ```{r figure-2}
-iterations <- as.integer(c(1,1,3,2,5,6))
-#iterations <- as.integer(c(1,1,3,2,5,7))
+#iterations <- as.integer(c(1,1,3,2,5,6))
+##iterations <- as.integer(c(1,1,3,2,5,7))
+iterations <- as.integer(c(1,1,3,2,5,8))
 year <- 2010
 yearLayer <- paste0("X", year)
 surveyRoutes <- getSurveyRouteLocations(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, years=year)
 surveyRoutes <- rbind(surveyRoutes[surveyRoutes$Intersection == FALSE,], surveyRoutes[surveyRoutes$Intersection == TRUE,])
 agents <- getAgentLocations(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, years=year)
-densities <- getEstimatedDensity(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, year=year, sd=F)
+densities <- getEstimatedDensity(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, year=year, sd=F, log=T)
 # TODO: do not use scaling??
-densitiesScaled <- ddply(densities, .(scenario), function(x, yearLayer) { x[,yearLayer] <- scale(x[,yearLayer]); return(x) }, yearLayer=yearLayer)
+#densitiesScaled <- ddply(densities, .(scenario), function(x, yearLayer) { x[,yearLayer] <- scale(x[,yearLayer]); return(x) }, yearLayer=yearLayer)
+study <- getStudy(scenario="A")
 limits <- extent(study$studyArea$boundary)
 
+# Scale density to 1/km^2
+densitiesScaled <- ddply(densities, .(scenario), function(x, yearLayer, weight) {
+  x[,yearLayer] <- x[,yearLayer] * weight
+  return(x)
+}, yearLayer=yearLayer, weight=1 / (prod(res(study$getTemplateRaster())) / 1000^2))
+
 #p <- ggplot(boundaryDF) + geom_polygon(aes(long, lat, group=group), fill=terrain.colors(100)[1]) +
-p <- ggplot(densitiesScaled) + geom_raster(aes_string(x="x", y="y", fill=yearLayer)) + scale_fill_gradientn(colours=terrain.colors(100), na.value="transparent") +
+p <- ggplot(densitiesScaled) + geom_raster(aes_string(x="x", y="y", fill=yearLayer)) +
+  scale_fill_gradientn(colours=terrain.colors(100), na.value="transparent", guide=guide_legend(title=expression(paste("Density ", individuals/km^2)))) +
   geom_path(data=boundaryDF, aes(long, lat, group=group), colour="darkgreen") +
-  geom_point(data=agents, aes(x, y, colour=Observed), size=1) + scale_color_manual(values=c("darkgray", "black")) + 
+  geom_point(data=agents, aes(x, y, colour=Observed), size=1) + scale_color_manual(values=c("darkgray", "black"), guide=FALSE) + 
   scale_x_continuous(limits=c(limits@xmin, limits@xmax), expand=c(0,0)) +
   scale_y_continuous(limits=c(limits@ymin, limits@ymax), expand=c(0,0)) +
-  facet_grid(~scenario) + theme_raster(base_size=10) + coord_equal()
+  facet_grid(~scenario) + coord_equal() + theme_raster(base_size=10) + theme(legend.position="bottom")
 print(p)
 saveFigure(p, "manuscript-figure-2a.png", width=8)
+
+
+
+###
 
 gridTemplate <- raster(extent(study$studyArea$boundary), nrows=12, ncols=6, crs=study$studyArea$proj4string)
 gridTemplate@extent@xmax <- gridTemplate@extent@xmin + dim(gridTemplate)[2] * 100 * 1e3
@@ -288,49 +318,52 @@ getPopulationSizes <- function(scenarios, modelNames, populationSizeOverEstimate
 
 getMeanPopulationSizes <- function(populationSizes) {
   meanPopulationSizes <- ddply(populationSizes, .(scenario, modelName), function(x) {
-    data.frame(True=mean(x$Observed), Estimated=mean(x$Estimated), Scenario=x$scenario)
+    x <- data.frame(True=mean(x$Observed), Estimated=mean(x$Estimated), Scenario=x$scenario[1])
+    if (is.infinite(x$True)) x$True <- NA
+    if (is.infinite(x$Estimated)) x$Estimated <- NA
+    return(x)
   })
   return(meanPopulationSizes)
 }
 
 getLogPopulationSizes <- function(populationSizes) {
   logPopulationSizes <- populationSizes
-  logPopulationSizes$Observed <- logPopulationSizes$Observed + 1
-  logPopulationSizes$Estimated <- logPopulationSizes$Estimated + 1
+  logPopulationSizes$Observed <- log10(logPopulationSizes$Observed + 1)
+  logPopulationSizes$Estimated <- log10(logPopulationSizes$Estimated + 1)
   return(logPopulationSizes)
-}
-
-getLogMeanPopulationSizes <- function(populationSizes) {  
-  logMeanPopulationSizes <- ddply(populationSizes, .(scenario, modelName), function(x) {
-    data.frame(True=10^mean(log10(x$Observed+1)), Estimated=10^mean(log10(x$Estimated+1)), Scenario=x$scenario)
-  })
-  return(logMeanPopulationSizes)
 }
 
 plotLogPopulationSize <- function(size, meanSize, modelName, xlim, ylim) {
   library(ggplot2)
   library(scales)  
+  size$Scenario <- prettyScenario(size$Scenario)
+  meanSize$Scenario <- prettyScenario(meanSize$Scenario)
+  
   p <- ggplot(size, aes(Observed, Estimated, colour=modelName)) +
-    #geom_point(size=1) +
-    #stat_smooth(method="lm", aes(colour=modelName), se=F) +
-    geom_point(size=1, colour="darkgray") +
-#stat_smooth(method="lm", se=F, colour="black") +
-    #scale_colour_manual("Model", values=c("lightgray", "darkgray","black"), labels=c("I", "T", "ST")) +
-    #scale_colour_manual("Model", values=c("darkgray","black")) +
+    geom_point(size=1, colour="darkgray", alpha=.25) +
     geom_abline(colour="black", linetype="longdash") + 
-    #geom_point(data=meanSize, aes(True, Estimated, colour=modelName), size=2, shape=15) +
-    geom_point(data=meanSize, aes(True, Estimated), size=2, shape=15, colour="black") +
-    facet_wrap(~Scenario, scales="free") +
-    coord_cartesian(xlim=xlim, ylim=ylim) +
-    scale_x_log10() + scale_y_log10() +
+    geom_point(data=meanSize, aes(True, Estimated), size=2, shape=15, colour="black")
+
+  #if (!any(abs(size$Estimated) == Inf)) p <- p + geom_smooth(method="lm", se=F, fullrange=T, colour="black")
+  ls <- ddply(size, .(Scenario), function(x) if (!any(abs(x$Estimated) == Inf)) coef(lm(Estimated~Observed, x)) else c(NA,NA))
+  p <- p + geom_abline(data=ls, aes(intercept=`(Intercept)`, slope=Observed))
+  
+  p <- p + facet_wrap(~Scenario) +
+    scale_x_continuous(limits=xlim, labels=trans_format("identity", math_format(10^.x))) +
+    scale_y_continuous(limits=ylim, labels=trans_format("identity", math_format(10^.x))) +
     xlab("True population size") + ylab("Estimated population size") + ggtitle(paste("Model: ", prettyModelName(modelName[1]))) +
     theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"), legend.title=element_text(size=12))
-
-  if (!any(abs(size$Estimated) == Inf)) p <- p + stat_smooth(method="lm", se=F, colour="black")
 
   print(p)
   return(p)
 }
+
+#p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[1]), subset(logMeanPopulationSizes, modelName==modelNames[1]), modelName=modelNames[1], xlim=xlim, ylim=ylim)
+#saveFigure(p, "manuscript-figure-3a1.png", width=8, height=4)
+
+#xlim <- log10(10^c(0,6)); ylim <- xlim
+#p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[2]), subset(logMeanPopulationSizes10Days, modelName==modelNames[2]), modelName=modelNames[2], xlim=xlim, ylim=ylim)
+#saveFigure(p, "manuscript-figure-3c2.png", width=8, height=4)
 ```
 
 ```{r figure-3-init-2}
@@ -344,28 +377,27 @@ registerDoMC(cores=detectCores())
 
 meanPopulationSizes  <- getMeanPopulationSizes(populationSizes)
 logPopulationSizes <- getLogPopulationSizes(populationSizes)
-logMeanPopulationSizes  <- getLogMeanPopulationSizes(populationSizes)
+logMeanPopulationSizes  <- getMeanPopulationSizes(logPopulationSizes)
 
 meanPopulationSizes2000  <- getMeanPopulationSizes(populationSizes2000)
 logPopulationSizes2000 <- getLogPopulationSizes(populationSizes2000)
-logMeanPopulationSizes2000  <- getLogMeanPopulationSizes(populationSizes2000)
+logMeanPopulationSizes2000  <- getMeanPopulationSizes(logPopulationSizes2000)
 
 meanPopulationSizes10Days  <- getMeanPopulationSizes(populationSizes10Days)
 logPopulationSizes10Days <- getLogPopulationSizes(populationSizes10Days)
-logMeanPopulationSizes10Days  <- getLogMeanPopulationSizes(populationSizes10Days)
-#validation$summarizePopulationSize(populationSizes10Days)
+logMeanPopulationSizes10Days  <- getMeanPopulationSizes(logPopulationSizes10Days)
 ```
 
 ```{r figure-3abc}
-p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[1]), subset(logMeanPopulationSizes, modelName==modelNames[1]), modelName=modelNames[1], xlim=c(1,10000), ylim=c(1,10000))
+xlim <- log10(10^c(0,4)); ylim <- xlim
+p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[1]), subset(logMeanPopulationSizes, modelName==modelNames[1]), modelName=modelNames[1], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3a1.png", width=8, height=4)
-p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[2]), subset(logMeanPopulationSizes, modelName==modelNames[2]), modelName=modelNames[2], xlim=c(1,10000), ylim=c(1,10000))
+p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[2]), subset(logMeanPopulationSizes, modelName==modelNames[2]), modelName=modelNames[2], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3a2.png", width=8, height=4)
-p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[3]), subset(logMeanPopulationSizes, modelName==modelNames[3]), modelName=modelNames[3], xlim=c(1,10000), ylim=c(1,10000))
+p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[3]), subset(logMeanPopulationSizes, modelName==modelNames[3]), modelName=modelNames[3], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3a3.png", width=8, height=4)
 
-xlim <- c(100,10000)
-ylim <- xlim
+xlim <- log10(10^c(2,4)); ylim <- xlim
 p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[1]), subset(logMeanPopulationSizes2000, modelName==modelNames[1]), modelName=modelNames[1], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3b1.png", width=8, height=4)
 p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[2]), subset(logMeanPopulationSizes2000, modelName==modelNames[2]), modelName=modelNames[2], xlim=xlim, ylim=ylim)
@@ -373,11 +405,12 @@ saveFigure(p, "manuscript-figure-3b2.png", width=8, height=4)
 p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[3]), subset(logMeanPopulationSizes2000, modelName==modelNames[3]), modelName=modelNames[3], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3b3.png", width=8, height=4)
 
-p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[1]), subset(logMeanPopulationSizes10Days, modelName==modelNames[1]), modelName=modelNames[1], xlim=c(1,10000), ylim=c(1,10000))
+xlim <- log10(10^c(0,4)); ylim <- xlim
+p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[1]), subset(logMeanPopulationSizes10Days, modelName==modelNames[1]), modelName=modelNames[1], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3c1.png", width=8, height=4)
-p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[2]), subset(logMeanPopulationSizes10Days, modelName==modelNames[2]), modelName=modelNames[2], xlim=c(1,10000), ylim=c(1,10000))
+p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[2]), subset(logMeanPopulationSizes10Days, modelName==modelNames[2]), modelName=modelNames[2], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3c2.png", width=8, height=4)
-p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[3]), subset(logMeanPopulationSizes10Days, modelName==modelNames[3]), modelName=modelNames[3], xlim=c(1,10000), ylim=c(1,10000))
+p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[3]), subset(logMeanPopulationSizes10Days, modelName==modelNames[3]), modelName=modelNames[3], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3c3.png", width=8, height=4)
 ```
 
@@ -404,9 +437,9 @@ getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, full=F
 }
 
 dir <- normalizePath(context$figuresDirectory)
-getPopulationSizesTable(populationSizes, meanPopulationSizes, file=file.path(dir, "table-1a.csv"))
-getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, file=file.path(dir, "table-1b.csv"))
-getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, file=file.path(dir, "table-1c.csv"))
+getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, file=file.path(dir, "table-1a.csv"))
+getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, file=file.path(dir, "table-1b.csv"))
+getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, file=file.path(dir, "table-1c.csv"))
 ```
 
 
