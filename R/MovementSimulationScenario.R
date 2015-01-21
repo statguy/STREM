@@ -61,6 +61,10 @@ MovementSimulationScenario <- setRefClass(
     
     randomizeDistance = function(n) {
       rweibull(n, shape=2, scale=stepSpeedScale * stepIntervalHours * distanceScale)
+      
+      #shape = 2, scale = 2000, steps = 24/4=6
+      #mean = 2000 * gamma(1+1/2) * 6 = 10634.72
+      #sd = 2000 * sqrt((gamma(1+2/2) - gamma(1+1/2)^2)) * 6 = 5559.017
     },
     
     randomizeVector = function(locations) {
