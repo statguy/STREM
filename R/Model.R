@@ -623,9 +623,11 @@ SmoothModelSpatioTemporal <- setRefClass(
       library(raster)
       
       xyztMean <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedMean / offsetScale, t=data$year)
-      xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale, t=data$year)
       meanPopulationDensityRaster <- getPopulationDensityInterpolate.internal(xyztMean, templateRaster=templateRaster, maskPolygon=maskPolygon)
-      sdPopulationDensityRaster <- if (getSD) getPopulationDensityInterpolate.internal(xyztSD, templateRaster=templateRaster, maskPolygon=maskPolygon)
+      sdPopulationDensityRaster <- if (getSD) {
+        xyztSD <- data.frame(getUnscaledObservationCoordinates(), z=data$fittedSD / offsetScale, t=data$year)
+        getPopulationDensityInterpolate.internal(xyztSD, templateRaster=templateRaster, maskPolygon=maskPolygon)
+      }
       else SpatioTemporalRaster$new(study=study)
       
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))

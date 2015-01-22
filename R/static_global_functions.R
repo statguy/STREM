@@ -235,7 +235,6 @@ parseArguments <- function() {
   }
 }
 
-
 # Interpolates spatial points to a raster object using thin plate spline regression.
 rasterInterpolate <- function(xyz, templateRaster, transform=identity, inverseTransform=identity) {
   library(fields)
@@ -246,10 +245,12 @@ rasterInterpolate <- function(xyz, templateRaster, transform=identity, inverseTr
   
   message("Interpolating data, minmax = ", min(xyz[,3], na.rm=T), " ", max(xyz[,3], na.rm=T), ", sd = ", sd(xyz[,3], na.rm=T), "...")
   
-  z <- if (transform != identity) transform(xyz[,3]) else xyz[,3]
+  z <- transform (xyz[,3])
+  #z <- if (transform != identity) transform(xyz[,3]) else xyz[,3]
   fit <- Tps(xyz[,1:2], z)
   predicted <- raster::interpolate(templateRaster, fit)
-  final <- if (inverseTransform != identity) calc(predicted, inverseTransform) else predicted
+  #final <- if (inverseTransform != identity) calc(predicted, inverseTransform) else predicted
+  final <- calc(predicted, inverseTransform)
   
   message("Result raster, minmax = ", cellStats(final, min), " ", cellStats(final, max), ", sd = ", cellStats(final, sd))
   
@@ -267,6 +268,11 @@ multiRasterInterpolate <- function(xyzt, variables, templateRaster, transform=id
   
   message("Template raster:")
   print(raster::extent(templateRaster))
+
+  xyzt <- xyzt[complete.cases(xyzt),]
+  resultRaster <- rasterInterpolate(xyz=xyzt, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)
+  return(stack(resultRaster))
+  
   
   rasterList <- dlply(.data=xyzt, .variables=variables, .fun=function(xyz, templateRaster, transform, inverseTransform) {
     xyz <- xyz[complete.cases(xyz),]
