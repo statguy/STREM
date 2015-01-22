@@ -4,6 +4,7 @@ output: html_document
 ---
 
 ```{r initialize}
+#library(devtools); install_github("statguy/Winter-Track-Counts")
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores())
@@ -238,7 +239,7 @@ getEstimatedDensity = function(scenarios, modelName, iterations, year, sd=FALSE,
     studyArea <- FinlandStudyArea$new(context=context)$setup(tolerance=0.001)
     
     estimates$data <- subset(estimates$data, year == year0)
-    if (log) estimates$data$fittedMean <- log(estimates$data$fittedMean)
+    #if (log) estimates$data$fittedMean <- log(estimates$data$fittedMean)
     density <- estimates$getPopulationDensityInterpolate(getSD=sd, maskPolygon=studyArea$boundary)
     density <- if (sd) density$sd else density$mean
     if (is.null(density) || maxValue(density$rasterStack[[1]]) > 1) stop("Estimation failed.")
@@ -253,7 +254,21 @@ getEstimatedDensity = function(scenarios, modelName, iterations, year, sd=FALSE,
 }
 ```
 
-```{r figure-2-test}
+```{r figure-2-test, eval=FALSE}
+x <- data.frame(scenario=scenarios[1], iteration=as.integer(1), stringsAsFactors=F)
+modelName <- modelNames[1]
+year0 <- year <- 2001
+    study <- getStudy(scenario=x$scenario)
+    estimates <- study$getModel(modelName=modelName, iteration=x$iteration)
+    estimates$modelName <- modelName
+    estimates <- study$loadEstimates(estimates)
+    estimates$collectEstimates()
+    studyArea <- FinlandStudyArea$new(context=context)$setup(tolerance=0.001)
+    estimates$data <- subset(estimates$data, year == year0)
+    density <- estimates$getPopulationDensityInterpolate(getSD=F, maskPolygon=studyArea$boundary)
+
+
+
 iterations <- as.integer(c(1,1,3,2,5,6))
 year <- 2010
 densityST <- getEstimatedDensity(scenarios[1], modelNames[1], iterations[1], year=year, sd=FALSE)
