@@ -26,3 +26,4 @@ for scenario in A B C D E F; do
 done
 
 # ./simulate_tracks.sh ~/git/RParallelScreen/ 101:150 60
+# ./simulate_tracks.sh ~/git/RParallelScreen/ 151:161 11

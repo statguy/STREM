@@ -50,10 +50,15 @@ python "$exec_path"/parallel_r.py -t "$iterations" -n "$max_nodes" -l 10.0 -b ~/
 # ./estimate.sh ~/git/RParallelScreen/ A 1:50 60 SmoothModel-nbinomial-ar1
 # ./estimate.sh ~/git/RParallelScreen/ A 1:50 60 SmoothModel-nbinomial-matern-ar1
 
-# ./estimate.sh ~/git/RParallelScreen/ Acombined 1:10 11 FMPModel 1
-# ./estimate.sh ~/git/RParallelScreen/ Acombined 1:10 11 SmoothModel-nbinomial-ar1
-# ./estimate.sh ~/git/RParallelScreen/ Acombined 1:10 11 SmoothModel-nbinomial-matern-ar1
+# ./estimate.sh ~/git/RParallelScreen/ Acombined 1:50 60 FMPModel 1
+# ./estimate.sh ~/git/RParallelScreen/ Acombined 1:50 60 SmoothModel-nbinomial-ar1
+# ./estimate.sh ~/git/RParallelScreen/ Acombined 1:50 60 SmoothModel-nbinomial-matern-ar1
 
 # ./population_size.sh ~/git/RParallelScreen/ A10days 1:50 60 FMPModel 10
 # ./population_size.sh ~/git/RParallelScreen/ A10days 1:50 60 SmoothModel-nbinomial-ar1
 # ./population_size.sh ~/git/RParallelScreen/ A10days 1:50 60 SmoothModel-nbinomial-matern-ar1
+
+
+# ./estimate.sh ~/git/RParallelScreen/ Acombined 8:26 25 FMPModel 1
+# ./estimate.sh ~/git/RParallelScreen/ Acombined 8:26 25 SmoothModel-nbinomial-ar1
+# ./estimate.sh ~/git/RParallelScreen/ Acombined 8:26 25 SmoothModel-nbinomial-matern-ar1

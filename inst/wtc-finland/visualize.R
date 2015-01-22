@@ -22,7 +22,7 @@ p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_polygon(colour="blac
   geom_polygon(data=surveyRoutes$toGGDF(), aes(long, lat, group=group), colour="blue", fill=NA) +
   coord_equal() + theme_raster()
 print(p)
-saveFigure(p, filename="SurveyRoutes.svg", bg="transparent")
+saveFigure(p, filename="SurveyRoutes.pdf", bg="transparent")
 
 p <- ggplot(boundaryDF, aes(long, lat, group=group)) + geom_polygon(colour="black", fill=NA, size=1) +
   geom_polygon(data=surveyRoutesDF, aes(long, lat, group=group), colour="blue", fill=NA, size=1) +
@@ -66,13 +66,13 @@ getTracks <- function(responses, context) {
   return(x)
 }
 
-tracks <- getTracks(responses=responses, context=context)
+tracks <- getTracks(responses=responses[2], context=context)
 
 p <- ggplot(tracks, aes(long, lat, group=group, colour=response)) +
   geom_polygon(data=boundaryDF, colour="black", fill=NA) +
   geom_path(alpha=0.7, size=1) + facet_grid(~response) + theme_raster(20) + theme(strip.text.x=element_blank()) + coord_equal()
 print(p)
-saveFigure(p, filename="GPS.svg", bg="transparent")
+saveFigure(p, filename="GPS.pdf", bg="transparent")
 
 
 ######
@@ -96,7 +96,7 @@ intersectionsRate <- getIntersectionsRate(responses, context)
 p <- ggplot(intersectionsRate, aes(year, intersections)) + geom_line(size=1) + facet_grid(~response) +
   xlab("Year") + ylab("Intersections / km") + theme_presentation(16)
 print(p)
-saveFigure(p, filename="IntersectionsRate.svg", bg="transparent")
+saveFigure(p, filename="IntersectionsRate.pdf", bg="transparent")
 
 ######
 ### Crossing distributions (D > 1 removed)
@@ -135,13 +135,13 @@ saveFigure(p, filename="IntersectionsDistributionNoZero.svg", bg="transparent")
 ### CORINE habitat types
 ######
 
-#colortable <- study$studyArea$habitat@legend@colortable
-#colortable[colortable=="#000000"] <- "#FFFFFF"
-#p <- gplot(study$studyArea$habitat, maxpixels=50000*10) + geom_raster(aes(fill=as.factor(value))) +
-#  scale_fill_manual(values=colortable) +
-#  coord_equal() + theme_raster()
-#print(p)
-#saveFigure(p, filename="CORINE.svg", dimensions=dim(study$studyArea$habitat), bg="transparent")
+colortable <- study$studyArea$habitat@legend@colortable
+colortable[colortable=="#000000"] <- "#FFFFFF"
+p <- gplot(study$studyArea$habitat, maxpixels=50000*10) + geom_raster(aes(fill=as.factor(value))) +
+  scale_fill_manual(values=colortable) +
+  coord_equal() + theme_raster()
+print(p)
+saveFigure(p, filename="CORINE.pdf", dimensions=dim(study$studyArea$habitat), bg="transparent")
 
 ######
 ### Habitat weights
@@ -164,9 +164,12 @@ getHabitatWeights <- function(responses, context) {
 weights <- getHabitatWeights(responses=responses, context=context)
 p <- ggplot(weights, aes(habitat, weights, fill=habitat)) +
   geom_bar(stat="identity") + facet_grid(~response) + scale_fill_manual(values=c("#beaed4","#ffff99","#7fc97f","#fdc086","#386cb0")) +
-  xlab("") + ylab("Weight") + theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1)) + theme(strip.text.x=element_blank(), panel.margin=unit(3, "lines"))
+  xlab("") + ylab("Weight") + theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1)) +
+  #theme(strip.text.x=element_blank(), panel.margin=unit(3, "lines"))
+  theme(panel.margin=unit(1, "lines"))
+  #theme(panel.border=element_rect(size=10, fill="transparent", colour="black"))
 print(p)
-saveFigure(p, filename="HabitatWeights.svg", bg="transparent", height=4)
+saveFigure(p, filename="HabitatWeights.pdf", bg="transparent")#, height=4)
 
 
 ######
@@ -230,7 +233,7 @@ for (response in responses) {
     theme_presentation() #+ ggtitle(study$getPrettyResponse(response))
   
   plot(p)
-  saveFigure(p, filename=paste("DistanceCorrection-", response, ".svg", sep=""), bg="transparent")
+  saveFigure(p, filename=paste("DistanceCorrection-", response, ".pdf", sep=""), bg="transparent")
   # Fixed effects: populationDensity + rrday + snow + tday
   intervals$estimatedValuesSummary()  
 }
@@ -252,9 +255,9 @@ p <- gplot(x) + geom_raster(aes(fill=log(as.numeric(value))+1)) + coord_equal() 
                       breaks=round(seq(log(minValue(populationDensity)), log(maxValue(populationDensity)), length.out=7)),
                       guide=guide_legend(title=bquote(paste("Log density"~.(area)~km^-2)))) +
   geom_polygon(data=boundaryDF, aes(long, lat, group=group), color="black", fill=NA) +
-  theme_raster(20, legend.position="right") + ggtitle(paste("Homo erectus", year))
+  theme_raster(20, legend.position="right") + ggtitle(paste("Homo sapiens", year))
 print(p)
-saveFigure(p, filename="HumanPopulationDensity.svg", bg="transparent")
+saveFigure(p, filename="HumanPopulationDensity.pdf", bg="transparent")
 
 weather <- covariates$loadWeatherYear(year)
 weatherRaster <- SpatioTemporalRaster$new(study=study, ext="svg")
@@ -264,15 +267,15 @@ weatherRaster$addLayer(weather$month1tday, "temp")
 p <- weatherRaster$plotLayer("snowcover", boundary=boundaryDF, digits=0, plotTitle="January 2000", legendTitle="Snow depth (cm)") +
   theme_raster(20, legend.position="right")
 plot(p)
-saveFigure(p, filename="WeatherSnowCover.svg", bg="transparent")
+saveFigure(p, filename="WeatherSnowCover.pdf", bg="transparent")
 p <- weatherRaster$plotLayer("precip", boundary=boundaryDF, digits=0, plotTitle="January 2000", legendTitle="Precipitation (?)") +
   theme_raster(20, legend.position="right")
 plot(p)
-saveFigure(p, filename="WeatherPrecipitation.svg", bg="transparent")
+saveFigure(p, filename="WeatherPrecipitation.pdf", bg="transparent")
 p <- weatherRaster$plotLayer("temp", boundary=boundaryDF, digits=0, plotTitle="January 2000", legendTitle="Temperature (°C)") +
   theme_raster(20, legend.position="right")
 plot(p)
-saveFigure(p, filename="WeatherTemperature.svg", bg="transparent")
+saveFigure(p, filename="WeatherTemperature.pdf", bg="transparent")
 
 
 ######
@@ -286,13 +289,15 @@ for (response in responses) {
   intersections <- study$loadIntersections()
   intersections$predictDistances()
   predictedDistances <- intersections$intersections$distance / 1000
-    
-  #intervals <- study$loadSampleIntervals()
-  #estimates <- study$loadEstimates()
-  #estimates$saveMeshNodeCovariates()
-  #predictedDistances <- estimates$covariates$distance / 1000
-  #coords <- repeatMatrix(estimates$getUnscaledMeshCoordinates(), length(estimates$years))
-  
+
+  # TODO: FIX
+intervals <- study$loadSampleIntervals()
+estimates <- study$loadEstimates()
+estimates$saveMeshNodeCovariates()
+predictedDistances <- estimates$covariates$distance / 1000
+coords <- repeatMatrix(estimates$getUnscaledMeshCoordinates(), length(estimates$years))
+  # FIX  
+
   x <- data.frame(estimates$locations, distance=predictedDistances, logDistance=log(predictedDistances), response=study$getPrettyResponse(response))
   x$year <- intersections$intersections$year
   x$year <- rep(estimates$years, each=estimates$mesh$n)
@@ -309,7 +314,7 @@ for (response in responses) {
     p <- distanceRasters[[response]]$plotLayer(paste("X", year, sep=""), boundary=boundaryDF, digits=1, plotTitle=paste(study$getPrettyResponse(response), year), legendTitle="Distance (km/day)")
     p <- p + theme_raster(20, legend.position="right")
     plot(p)
-    saveFigure(p, filename=paste("DistanceRaster-", year, "-", response, ".svg", sep=""), bg="transparent")
+    saveFigure(p, filename=paste("DistanceRaster-", year, "-", response, ".pdf", sep=""), bg="transparent")
   }
 }
 
@@ -340,6 +345,7 @@ getPopulationDensity <- function(responses, modelName, context, withHabitatWeigh
     model <- study$getModel(modelName)
     model$offsetScale <- 1000^2 # TODO: quickfix
     
+    # TODO: fix "interpolated"
     populationDensity[[response]] <- if (interpolated)
       study$getPopulationDensityInterpolated(modelName=modelName, withHabitatWeights=withHabitatWeights, saveDensityPlots=FALSE, getSD=FALSE)
     else
@@ -351,21 +357,23 @@ getPopulationDensity <- function(responses, modelName, context, withHabitatWeigh
   return(populationDensity)
 }
 
+# TODO: fix fix fix...
 # TODO: legend
 # TODO: standard deviation, include all focal species when data available
-populationDensity <- getPopulationDensity(responses=responses, modelName=models[3], interpolated=TRUE, context=context, withHabitatWeights=FALSE)
+populationDensity <- getPopulationDensity(responses=responses, modelName=models[3], interpolated=F, context=context, withHabitatWeights=FALSE)
 for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)  
   popdens <- populationDensity[[response]]$mean
-  popdens$ext="svg"
+  popdens$ext="pdf"
   popdens$animate(name="PopulationDensity", delay=50, ggfun=function(i, params) theme_raster(20))
 }
 
-weightedPopulationDensity <- getPopulationDensity(responses=responses, modelName=models[3], interpolated=TRUE, context=context, withHabitatWeights=TRUE)
+# TODO: fix fix fix...
+weightedPopulationDensity <- getPopulationDensity(responses=responses, modelName=models[3], interpolated=F, context=context, withHabitatWeights=TRUE)
 for (response in responses) {
   study <- FinlandWTCStudy$new(context=context, response=response)
   wpopdens <- weightedPopulationDensity[[response]]$mean
-  wpopdens$ext="svg"
+  wpopdens$ext="pdf"
   wpopdens$animate(name="WeightedPopulationDensity", delay=50, ggfun=function(i, params) theme_raster(20))
 }
 
@@ -421,9 +429,11 @@ p <- ggplot(y, aes(Year, value, group=Model, colour=Model, fill=Variable)) +
   #scale_fill_manual(values=c(NA,NA,"darkgreen")) +
   scale_x_discrete(breaks=breaks, labels=labels) +
   xlab("Year") + ylab("Population size") +
-  theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1)) + theme(legend.position="bottom", strip.text.x=element_blank())
+  theme_presentation(16, axis.text.x=element_text(angle=90, hjust=1)) +
+  theme(legend.position="bottom")
+  #theme(legend.position="bottom", strip.text.x=element_blank())
 print(p)
-saveFigure(p, filename="PopulationSize2.svg", bg="transparent")
+saveFigure(p, filename="PopulationSize.pdf", bg="transparent")
 
 
 ######
@@ -455,11 +465,11 @@ p <- ggplot(plotTracks, mapping=segment) +
   #guides(colour=guide_legend(title=expression(paste(Delta, "t (min)")))) +
   guides(colour=guide_legend(title="Sampling interval (min)")) +
   scale_colour_manual(values=c("#4054de","#8094de","#b0c4de")) +
-  ggtitle("Straight-line distance error") +
+  #ggtitle("Straight-line distance error") +
   geom_path(size=2, arrow=ending) + geom_point(size=4)
   #geom_segment(size=2, arrow=ending) # doesn't work with grouping
 print(p)
-saveFigure(p, filename="StraightLineDistanceError.svg", bg="transparent")
+saveFigure(p, filename="StraightLineDistanceError.pdf", bg="transparent")
 
 
 ######

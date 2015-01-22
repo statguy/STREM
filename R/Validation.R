@@ -176,7 +176,7 @@ Validation <- setRefClass(
       return(study$context$getLongFileName(study$context$scratchDirectory, name="CIValidation", response=study$response, region=study$studyArea$region, tag=paste(modelName, iteration, sep="-")))
     },
     
-    validateCredibilityIntervals = function(modelName, iteration, nSamples=100, save=F) {      
+    validateCredibilityIntervals = function(modelName, iteration, nSamples=100, populationSizeOverEstimate=1e99, save=F) {      
       model <- study$getModel(modelName=modelName, iteration=iteration)
       model$modelName <- modelName
       model$loadEstimates()
@@ -199,7 +199,7 @@ Validation <- setRefClass(
         x <- model$getPopulationSize(populationDensity=populationDensity$mean, tracks=tracks, habitatWeights=habitatWeights)$sizeData
         if (any(x$Estimated > populationSizeOverEstimate)) {
           message("Estimation failed for iteration ", iteration, ".")
-          break
+          next
         }
         x$sample <- sample
         populationSize <- rbind(populationSize, x)

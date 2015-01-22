@@ -102,7 +102,7 @@ SpatioTemporalRaster <- setRefClass(
       library(raster)
       library(plyr)
       
-      rasterStack <<- ST::multiRasterInterpolate(xyzt, variables=timeVariable, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)
+      rasterStack <<- multiRasterInterpolate(xyzt, variables=timeVariable, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)
       if (!missing(boundary) & !is.null(boundary)) {
         rasterStack <<- stack(llply(1:nlayers(rasterStack),
                               function(i, rasterStack, boundary) {
