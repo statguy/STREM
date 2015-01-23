@@ -332,6 +332,13 @@ SimulatedTracks <- setRefClass(
       return(observationTracks)
     },
     
+    getObservationTracksFileName = function() {
+      if (inherits(study, "undefinedField") | length(iteration) == 0) 
+        stop("Provide study and iteration parameters.")
+      return(study$context$getLongFileName(dir=getTracksDirectory(), name="ObservationTracks",
+                                           response=study$response, region=study$studyArea$region, tag=iteration))
+    },
+    
     countIntersections = function(surveyRoutes, days=1, save=TRUE) {
       observationTracks <- randomizeObservationDayTracks(days=days)
       #surveyRoutes <- study$loadSurveyRoutes()
@@ -339,7 +346,7 @@ SimulatedTracks <- setRefClass(
       intersections$findIntersections(observationTracks, surveyRoutes, dimension=1)
       if (save) {
         intersections$saveIntersections()
-        #save(observationTracks, surveyRoutes, file=)
+        observationTracks$saveTracks(getObservationTracksFileName())
       }
       return(invisible(list(intersections=intersections, tracks=observationTracks, surveyRoutes=surveyRoutes)))
     },
