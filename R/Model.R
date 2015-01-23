@@ -79,7 +79,7 @@ Model <- setRefClass(
       
       setModelName(family=family, randomEffect=params$timeModel)
       data <<- intersections$getData()
-      #data$response <<- data$intersections
+      data$response <<- data$intersections
       locations <<- intersections$getCoordinates() * coordsScale
       years <<- as.integer(sort(unique(data$year)))
       model <<- if (hasMember(params, "model")) params$model
