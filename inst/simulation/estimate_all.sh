@@ -35,7 +35,9 @@ function population_size_scenario {
   do
     for scenario in "${scenarios[@]}"
     do
-      estimate_single $scenario $nodes $max_nodes $model $numdays 
+      #estimate_single $scenario $nodes $max_nodes $model $numdays
+      # Count intersections separately:
+      estimate_single $scenario $nodes $max_nodes $model
     done
   done
 }

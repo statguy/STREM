@@ -40,6 +40,7 @@ Model <- setRefClass(
     },
     
     loadEstimates = function(fileName=getEstimatesFileName()) {
+      message("Loading estimates from ", fileName)
       load(fileName, envir=as.environment(.self))
       return(invisible(.self))
     },
