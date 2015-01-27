@@ -112,6 +112,7 @@ SpatioTemporalRaster <- setRefClass(
                               rasterStack=rasterStack, boundary=boundary, .parallel=T))
       }
       weight(weights)
+      
       if (!missing(layerNames)) names(rasterStack) <<- layerNames
       return(invisible(.self))
     },

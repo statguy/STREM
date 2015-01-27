@@ -263,17 +263,12 @@ multiRasterInterpolate <- function(xyzt, variables, templateRaster, transform=id
   library(raster)
   
   if (missing(xyzt)) stop("xyzt missing")
-  if (missing(variables)) stop("variables missing")  
+  if (missing(variables)) stop("variables missing")
   if (missing(templateRaster)) stop("templateRaster missing")
   
   message("Template raster:")
   print(raster::extent(templateRaster))
 
-  xyzt <- xyzt[complete.cases(xyzt),]
-  resultRaster <- rasterInterpolate(xyz=xyzt, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)
-  return(stack(resultRaster))
-  
-  
   rasterList <- dlply(.data=xyzt, .variables=variables, .fun=function(xyz, templateRaster, transform, inverseTransform) {
     xyz <- xyz[complete.cases(xyz),]
     resultRaster <- rasterInterpolate(xyz=xyz, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)

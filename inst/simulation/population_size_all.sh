@@ -39,8 +39,8 @@ function population_size_scenario {
 }
 
 population_size_scenario scenarios models "${nodes[0]}" "${max_nodes[0]}"
-#population_size_scenario scenarios2000 models "${nodes[1]}" "${max_nodes[1]}"
-#population_size_scenario scenarios10days models "${nodes[2]}" "${max_nodes[2]}"
+population_size_scenario scenarios2000 models "${nodes[1]}" "${max_nodes[1]}"
+population_size_scenario scenarios10days models "${nodes[2]}" "${max_nodes[2]}"
 
 
 

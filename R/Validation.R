@@ -197,7 +197,7 @@ Validation <- setRefClass(
         populationDensity <- model$getPopulationDensity(getSD=FALSE)
         
         x <- model$getPopulationSize(populationDensity=populationDensity$mean, tracks=tracks, habitatWeights=habitatWeights)$sizeData
-        if (any(x$Estimated > populationSizeOverEstimate)) {
+        if (any(x$Estimated >= populationSizeOverEstimate)) {
           message("Estimation failed for iteration ", iteration, ".")
           next
         }
