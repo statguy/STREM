@@ -465,7 +465,7 @@ saveFigure(p, "manuscript-figure-3c3.png", width=8, height=4)
 ```
 
 ```{r table-1abc}
-getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEstimate, full=F, file) {
+getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEstimate, full=F, file, ...) {
   library(plyr)
   x <- ddply(populationSizes, .(Scenario, modelName), function(x, overEstimate) {
     failed <- round((sum(x$Estimated >= overEstimate) / nrow(x)) * 100)
@@ -489,9 +489,20 @@ getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEs
 }
 
 dir <- normalizePath(context$figuresDirectory)
-getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(2000+1), file=file.path(dir, "table-1a.csv"))
-getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(20000+1), file=file.path(dir, "table-1b.csv"))
-getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, overEstimate=log10(2000+1), file=file.path(dir, "table-1c.csv"))
+table1 <- getPopulationSizesTable(populationSizes, meanPopulationSizes, overEstimate=2000)
+logTable1 <- getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(2000+1), file=file.path(dir, "table-1a.csv"))
+logTable1$EstDev <- table1$EstDev
+write.csv(logTable1, file=file.path(dir, "table-1a.csv"))
+
+table2 <- getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, overEstimate=20000)
+logTable2 <- getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(20000+1), file=file.path(dir, "table-1b.csv"))
+logTable2$EstDev <- table2$EstDev
+write.csv(logTable2, file=file.path(dir, "table-2a.csv"))
+
+table3 <- getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, overEstimate=2000)
+logTable3 <- getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, overEstimate=log10(2000+1), file=file.path(dir, "table-1c.csv"))
+logTable3$EstDev <- table3$EstDev
+write.csv(logTable3, file=file.path(dir, "table-3a.csv"))
 ```
 
 ```{r figure-4-init}

@@ -14,9 +14,15 @@
 # echo 'library(devtools); install_github("statguy/Winter-Track-Counts")' | R --slave
 # args <- c("notest","A","1")
 
+if (F) {
+scenario<-"Ecombined"
+isTest<-F
+modelName<-"SmoothModel-nbinomial-ar1"
+iteration<-as.integer(1)
+}
 
 population_size <- function(scenario, modelName, iteration, isTest, otherTest=F) {
-  readHabitatIntoMemory <- if (scenario == "E" || scenario == "F") TRUE else FALSE
+  readHabitatIntoMemory <- if (substr(scenario, 1, 1) == "E" || substr(scenario, 1, 1) == "F") TRUE else FALSE
   mss <- getMSS(scenario=scenario, isTest=isTest, readHabitatIntoMemory=readHabitatIntoMemory)
   study <- mss$study
   
