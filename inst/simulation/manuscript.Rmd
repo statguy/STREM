@@ -315,7 +315,6 @@ getEstimatedDensity = function(scenarios, modelName, iterations, year, sd=FALSE,
 study <- getStudy(scenario="A")
 limits <- extent(study$studyArea$boundary)
 iterations <- as.integer(c(1,6,3,2,5,31))
-densities <- getEstimatedDensity(scenarios=scenarios[6], modelName=modelNames[1], iterations=iterations[6], year=year, sd=F, log=F)
 year <- 2010
 yearLayer <- paste0("X", year)
 surveyRoutes <- getSurveyRouteLocations(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, years=year)
@@ -469,21 +468,25 @@ getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEs
   library(plyr)
   x <- ddply(populationSizes, .(Scenario, modelName), function(x, overEstimate) {
     failed <- round((sum(x$Estimated >= overEstimate) / nrow(x)) * 100)
-    if (any(abs(x$Estimated) == Inf)) return(data.frame(Intercept=NA, Slope=NA, R2=NA, Failed=failed))
+    if (any(abs(x$Estimated) == Inf)) return(data.frame(Intercept=NA, Slope=NA, R2=NA, Failed=failed, MeanProp=NA, SDProp=NA))
     y <- lm(Estimated~Observed, x)
-    return(data.frame(Intercept=round(coef(y)[1], 0), Slope=round(coef(y)[2], 2), R2=round(summary(y)$r.squared, 2), Failed=failed))
+    prop.mean <- mean(x$Estimated/x$Observed)
+    prop.sd <- sd(x$Estimated/x$Observed)
+    return(data.frame(Intercept=round(coef(y)[1], 0), Slope=round(coef(y)[2], 2), R2=round(summary(y)$r.squared, 2), Failed=failed, MeanProp=prop.mean, SDProp=prop.sd))
   }, overEstimate=overEstimate)
   
   y <- unique(meanPopulationSizes)
   y$Scenario <- y$scenario
-  y$EstDev <- y$Estimated / y$True
+  #y$EstDev <- y$Estimated / y$True
   z <- plyr::join(x, y)
   z$Model <- prettyModelName(z$modelName)
   z$Scenario <- substr(z$Scenario, 1, 1)
   if (full) return(z)
-
-  z <- z[,c("Scenario","Model","Slope","R2","EstDev","Failed")]
-  z$EstDev <- round(z$EstDev, 2)
+  
+  z <- z[,c("Scenario","Model","Slope","R2","Failed","MeanProp","SDProp")]
+  #z$EstDev <- round(z$EstDev, 2)
+  z$MeanProp <- round(z$MeanProp, 2)
+  z$SDProp <- round(z$SDProp, 2)
   if (!missing(file)) write.csv(z, file=file)
   return(z)
 }
@@ -491,17 +494,17 @@ getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEs
 dir <- normalizePath(context$figuresDirectory)
 table1 <- getPopulationSizesTable(populationSizes, meanPopulationSizes, overEstimate=2000)
 logTable1 <- getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(2000+1), file=file.path(dir, "table-1a.csv"))
-logTable1$EstDev <- table1$EstDev
+logTable1$MeanProp <- table1$MeanProp; logTable1$SDProp <- table1$SDProp; 
 write.csv(logTable1, file=file.path(dir, "table-1a.csv"))
 
 table2 <- getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, overEstimate=20000)
 logTable2 <- getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(20000+1), file=file.path(dir, "table-1b.csv"))
-logTable2$EstDev <- table2$EstDev
+logTable2$MeanProp <- table2$MeanProp; logTable2$SDProp <- table2$SDProp; 
 write.csv(logTable2, file=file.path(dir, "table-2a.csv"))
 
 table3 <- getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, overEstimate=2000)
 logTable3 <- getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, overEstimate=log10(2000+1), file=file.path(dir, "table-1c.csv"))
-logTable3$EstDev <- table3$EstDev
+logTable3$MeanProp <- table3$MeanProp; logTable3$SDProp <- table3$SDProp; 
 write.csv(logTable3, file=file.path(dir, "table-3a.csv"))
 ```
 
