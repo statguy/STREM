@@ -16,13 +16,13 @@ library(plyr)
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
 scenarios <- c("A","B","C","D","E","F")
 allScenarios <- c(scenarios, paste0(scenarios, "combined"), paste0(scenarios, "10days"))
-modelNames <- c(paste("SmoothModel", "nbinomial", "matern", "ar1", sep = "-"), paste("SmoothModel", "nbinomial", "ar1", sep = "-"), "FMPModel")
+modelNames <- c("SmoothModel-nbinomial-matern-ar1", "SmoothModel-nbinomial-ar1", "SmoothModelMean-nbinomial-ar1", "FMPModel")
 iterations <- as.integer(c(1,1,1,1,3,1))
 populationSizeOverEstimate <- 1e999
 
 prettyScenario <- function(scenario) substr(scenario, 1, 1)
 prettyModelName <- function(x) {
-  lookup <- data.frame(x=c("SmoothModel-nbinomial-matern-ar1", "SmoothModel-nbinomial-ar1", "FMPModel") , y=c("ST", "T", "I"), stringsAsFactors=F)
+  lookup <- data.frame(x=modelNames, y=c("ST", "T", "T2", "I"), stringsAsFactors=F)
   lookup$y[match(x, lookup$x)]
 }
 

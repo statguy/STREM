@@ -30,7 +30,7 @@ function count_intersections_scenario {
 
   for scenario in "${scenarios[@]}"
   do
-    count_intersections_single $scenario $nodes $max_nodes $model
+    count_intersections_single $scenario $nodes $max_nodes $numdays
   done
 }
 
