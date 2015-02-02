@@ -33,7 +33,7 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
     estimates$collectEstimates()
     
     #estimates$collectHyperparameters()
-    populationSize <- estimates$getPopulationSize(withHabitatWeights=mss$hasHabitatWeights())
+    populationSize <- estimates$getPopulationSize()
     populationSize$loadValidationData()
     populationSize
     colSums(populationSize$sizeData[,-1])

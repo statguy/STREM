@@ -205,15 +205,6 @@ FMPModel <- setRefClass(
   )
 )
 
-SmoothModelMeanTemporal <- setRefClass(
-  Class = "SmoothModelMeanTemporal",
-  contains = "Model",
-  fields = list(
-  ),
-  methods = list(
-  )
-)
-
 SmoothModelTemporal <- setRefClass(
   Class = "SmoothModelTemporal",
   contains = "Model",
@@ -307,6 +298,31 @@ SmoothModelTemporal <- setRefClass(
         x <- rbind(x, rho=result$summary.hyperpar["PACF4 for year",])
       
       return(x)
+    }
+  )
+)
+
+SmoothModelMeanTemporal <- setRefClass(
+  Class = "SmoothModelMeanTemporal",
+  contains = "SmoothModelTemporal",
+  fields = list(
+  ),
+  methods = list(
+    setModelName = function(family, randomEffect) {
+      modelName <<- paste("SmoothModelMean", family, randomEffect, sep="-")
+      return(invisible(.self))
+    },
+    
+    setup = function(intersections, params) {
+      callSuper(intersections, params)
+      
+      library(plyr)
+      #data <- estimates$data
+      data <<- ddply(data, .(year), function(x) {
+        data.frame(response=sum(x$response), intersections=sum(x$intersections), duration=mean(x$duration), length=sum(x$length), distance=mean(x$distance))
+      })
+      
+      return(invisible(.self)) 
     }
   )
 )
@@ -684,6 +700,27 @@ SimulatedFMPModel <- setRefClass(
     
     samplePosterior = function(n, index) {
       stop("Unsupported.")
+    }
+  )
+)
+
+SimulatedSmoothModelMeanTemporal <- setRefClass(
+  Class = "SimulatedSmoothModelMeanTemporal",
+  contains = "SmoothModelMeanTemporal",
+  fields = list(
+    iteration = "integer"  
+  ),
+  methods = list(
+    getEstimatesFileIterations = function() {
+      if (inherits(study, "undefinedField") | length(modelName) == 0)
+        stop("Provide study and modelName parameters.")
+      return(study$context$getIterationIds(dir=study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag="(\\d+)"))
+    },
+    
+    getEstimatesFileName = function() {
+      if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
+        stop("Provide study, modelName and iteration parameters.")
+      return(study$context$getLongFileName(study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
     }
   )
 )

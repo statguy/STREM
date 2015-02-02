@@ -3,7 +3,7 @@
 scenarios=(A B C D E F)
 scenarios2000=(Acombined Bcombined Ccombined Dcombined Ecombined Fcombined)
 scenarios10days=(A10days B10days C10days D10days E10days F10days)
-models=(FMPModel SmoothModel-nbinomial-ar1 SmoothModel-nbinomial-matern-ar1)
+models=(FMPModel SmoothModelMean-nbinomial-ar1 SmoothModel-nbinomial-ar1 SmoothModel-nbinomial-matern-ar1)
 nodes=(1:50 1:50 1:50)
 max_nodes=(60 60 60)
 days=(1 1 10)
@@ -43,6 +43,6 @@ function population_size_scenario {
 }
 
 population_size_scenario scenarios models "${nodes[0]}" "${max_nodes[0]}" "${days[0]}"
-#population_size_scenario scenarios2000 models "${nodes[1]}" "${max_nodes[1]}" "${days[1]}"
-#population_size_scenario scenarios10days models "${nodes[2]}" "${max_nodes[2]}" "${days[2]}"
+population_size_scenario scenarios2000 models "${nodes[1]}" "${max_nodes[1]}" "${days[1]}"
+population_size_scenario scenarios10days models "${nodes[2]}" "${max_nodes[2]}" "${days[2]}"
 

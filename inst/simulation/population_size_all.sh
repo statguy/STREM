@@ -3,7 +3,7 @@
 scenarios=(A B C D E F)
 scenarios2000=(Acombined Bcombined Ccombined Dcombined Ecombined Fcombined)
 scenarios10days=(A10days B10days C10days D10days E10days F10days)
-models=(FMPModel SmoothModel-nbinomial-ar1 SmoothModel-nbinomial-matern-ar1)
+models=(FMPModel SmoothModelMean-nbinomial-ar1 SmoothModel-nbinomial-ar1 SmoothModel-nbinomial-matern-ar1)
 nodes=(1:50 1:50 1:50)
 max_nodes=(60 60 60)
 

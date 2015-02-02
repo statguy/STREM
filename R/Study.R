@@ -53,6 +53,7 @@ SimulationStudy <- setRefClass(
     getModel = function(modelName, iteration) {
       estimates <- if (modelName == "SmoothModel-nbinomial-matern-ar1") SimulatedSmoothModelSpatioTemporal(study=.self, iteration=iteration)
       else if (modelName == "SmoothModel-nbinomial-ar1") SimulatedSmoothModelTemporal(study=.self, iteration=iteration)
+      else if (modelName == "SmoothModelMean-nbinomial-ar1") SimulatedSmoothModelMeanTemporal(study=.self, iteration=iteration)
       else if (modelName == "FMPModel") SimulatedFMPModel(study=.self, iteration=iteration)
       else stop("Invalid model.")
       estimates$modelName <- modelName
@@ -149,6 +150,8 @@ FinlandWTCStudy <- setRefClass(
       estimates <- if (modelName == "SmoothModel-nbinomial-matern-ar1") FinlandSmoothModelSpatioTemporal(study=.self)
       else if (modelName == "SmoothModel-nbinomial-ar1") FinlandSmoothModelTemporal(study=.self)
       else if (modelName == "SmoothModel-nbinomial-rw2") FinlandSmoothModelTemporal(study=.self)
+      else if (modelName == "SmoothModelMean-nbinomial-ar1") FinlandSmoothModelMeanTemporal(study=.self)
+      else if (modelName == "SmoothModelMean-nbinomial-rw2") FinlandSmoothModelMeanTemporal(study=.self)
       else if (modelName == "FMPModel") FinlandFMPModel(study=.self)
       else stop("Invalid model.")
       estimates$modelName <- modelName
@@ -158,9 +161,9 @@ FinlandWTCStudy <- setRefClass(
     getModelParams = function(modelName) {
       modelParams <- if (modelName == "SmoothModel-nbinomial-matern-ar1")
         list(family="nbinomial", offsetScale=1000^2, meshParams=.self$studyArea$getMesh(), timeModel="ar1")
-      else if (modelName == "SmoothModel-nbinomial-ar1")
+      else if (modelName == "SmoothModel-nbinomial-ar1" || modelName == "SmoothModelMean-nbinomial-ar1")
         list(family="nbinomial", offsetScale=1000^2, timeModel="ar1")
-      else if (modelName == "SmoothModel-nbinomial-rw2")
+      else if (modelName == "SmoothModel-nbinomial-rw2" || modelName == "SmoothModelMean-nbinomial-rw2")
         list(family="nbinomial", offsetScale=1000^2, timeModel="rw2")
       else if (modelName == "FMPModel") NULL
       else stop("Invalid model.")
