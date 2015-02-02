@@ -35,5 +35,5 @@ function count_intersections_scenario {
 }
 
 count_intersections_scenario scenarios "${nodes[0]}" "${max_nodes[0]}" "${days[0]}"
-count_intersections_scenario scenarios2000 "${nodes[0]}" "${max_nodes[0]}" "${days[1]}"
-count_intersections_scenario scenarios10days "${nodes[0]}" "${max_nodes[0]}" "${days[2]}"
+count_intersections_scenario scenarios2000 "${nodes[1]}" "${max_nodes[1]}" "${days[1]}"
+count_intersections_scenario scenarios10days "${nodes[2]}" "${max_nodes[2]}" "${days[2]}"
