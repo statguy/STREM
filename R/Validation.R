@@ -32,7 +32,7 @@ Validation <- setRefClass(
 
     validateTemporalIntersection = function() {
       iterations <- getIntersectionFileIterations()
-      if (length(itrations) == 0) return(NULL)
+      if (length(iterations) == 0) return(NULL)
       
       intersections <- ldply(iterations, function(iteration) {
         message("Processing iteration ", iteration, " of ", length(iterations), " iterations for scenario ", study$response, "...")
