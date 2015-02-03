@@ -15,6 +15,11 @@ Validation <- setRefClass(
     #  tracks$ge
     #},
     
+    getIntersectionFileIterations = function() {
+      intersections <- SimulatedIntersections(study=study)
+      return(intersections$getIntersectionFileIterations())
+    },
+    
     getPopulationSizeFileIterations = function(modelName) {
       populationSize <- SimulationPopulationSize(study=study, modelName=modelName)
       return(populationSize$getPopulationSizeFileIterations())
@@ -24,15 +29,42 @@ Validation <- setRefClass(
       model <- SimulatedSmoothModelSpatioTemporal(study=study, modelName=modelName)
       return(model$getEstimatesFileIterations())
     },
+
+    validateTemporalIntersection = function() {
+      iterations <- getIntersectionFileIterations()
+      if (length(itrations) == 0) return(NULL)
+      
+      intersections <- ldply(iterations, function(iteration) {
+        message("Processing iteration ", iteration, " of ", length(iterations), " iterations for scenario ", study$response, "...")
+        intersections <- study$loadIntersections(iteration=iteration, predictDistances=FALSE)
+        x <- intersections$intersections@data
+        y <- ddply(x, .(year), function(x) data.frame(intersections=sum(x$intersections)))
+        y$iteration <- iteration
+        return(y)
+      }, .parallel=TRUE)
+      
+      intersections$Scenario <- study$response
+      
+      return(intersections)
+    },
     
-    getFailedEstimationRate = function(modelName) {
-      # TODO
+    getValidationTemporalIntersections = function(scenarios=c("A","B","C","D","E","F")) {
+      x <- ldply(scenarios, function(scenario) {
+        s <- getStudy(scenario=scenario, isTest=F)
+        validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
+        x <- validation$validateTemporalIntersection()
+        if (is.null(x) || nrow(x) == 0) return(NULL)
+        return(x)
+      })
+      
+      return(x)
     },
     
     validateTemporalPopulationSize = function(modelName) {
       library(plyr)
       
       iterations <- getPopulationSizeFileIterations(modelName)
+      if (length(itrations) == 0) return(NULL)
       
       populationSize <- ldply(iterations, function(iteration) {
         message("Processing iteration ", iteration, " of ", length(iterations), " iterations for scenario ", study$response, "...")

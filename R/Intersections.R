@@ -252,6 +252,12 @@ SimulatedIntersections <- setRefClass(
     saveIntersections = function(fileName=getIntersectionsFileName()) {
       message("Saving intersections to ", fileName)
       save(intersections, intersectionsMatrix, iteration, file=fileName)
+    },
+
+    getIntersectionFileIterations = function() {
+      if (inherits(study, "undefinedField"))
+        stop("Provide study parameter.")
+      return(study$context$getIterationIds(dir=study$context$resultDataDirectory, name="Intersections", response=study$response, region=study$studyArea$region, tag="(\\d+)"))
     }
   )
 )

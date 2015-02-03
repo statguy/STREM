@@ -22,7 +22,7 @@ populationSizeOverEstimate <- 1e999
 
 prettyScenario <- function(scenario) substr(scenario, 1, 1)
 prettyModelName <- function(x) {
-  lookup <- data.frame(x=modelNames, y=c("ST", "T", "T2", "I"), stringsAsFactors=F)
+  lookup <- data.frame(x=modelNames, y=c("ST", "T", "TA", "FMP"), stringsAsFactors=F)
   lookup$y[match(x, lookup$x)]
 }
 
@@ -406,18 +406,10 @@ plotLogPopulationSize <- function(size, meanSize, modelName, xlim, ylim) {
   print(p)
   return(p)
 }
-
-#p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[1]), subset(logMeanPopulationSizes, modelName==modelNames[1]), modelName=modelNames[1], xlim=xlim, ylim=ylim)
-#saveFigure(p, "manuscript-figure-3a1.png", width=8, height=4)
-
-#xlim <- log10(10^c(0,6)); ylim <- xlim
-#p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[2]), subset(logMeanPopulationSizes10Days, modelName==modelNames[2]), modelName=modelNames[2], xlim=xlim, ylim=ylim)
-#saveFigure(p, "manuscript-figure-3c2.png", width=8, height=4)
 ```
 
 ```{r figure-3-init-2}
 registerDoMC(cores=10) # The nodes seem to run out of memory and fail with a bogus error message, so it's better to reduce the number of used cores.
-
 populationSizes <- getPopulationSizes(scenarios=scenarios, modelNames=modelNames)
 populationSizes2000 <- getPopulationSizes(scenarios=paste0(scenarios, "combined"), modelNames=modelNames)
 populationSizes10Days <- getPopulationSizes(scenarios=paste0(scenarios, "10days"), modelNames=modelNames)
@@ -438,6 +430,8 @@ logMeanPopulationSizes10Days  <- getMeanPopulationSizes(logPopulationSizes10Days
 ```
 
 ```{r figure-3abc}
+#modelNames <- modelNames[c(2:4,1)]
+
 xlim <- log10(10^c(0,4)); ylim <- xlim
 p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[1]), subset(logMeanPopulationSizes, modelName==modelNames[1]), modelName=modelNames[1], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3a1.png", width=8, height=4)
@@ -495,16 +489,17 @@ dir <- normalizePath(context$figuresDirectory)
 table1 <- getPopulationSizesTable(populationSizes, meanPopulationSizes, overEstimate=2000)
 logTable1 <- getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(2000+1), file=file.path(dir, "table-1a.csv"))
 logTable1$MeanProp <- table1$MeanProp; logTable1$SDProp <- table1$SDProp; 
-write.csv(logTable1, file=file.path(dir, "table-1a.csv"))
 
 table2 <- getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, overEstimate=20000)
 logTable2 <- getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(20000+1), file=file.path(dir, "table-1b.csv"))
 logTable2$MeanProp <- table2$MeanProp; logTable2$SDProp <- table2$SDProp; 
-write.csv(logTable2, file=file.path(dir, "table-2a.csv"))
 
 table3 <- getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, overEstimate=2000)
 logTable3 <- getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, overEstimate=log10(2000+1), file=file.path(dir, "table-1c.csv"))
 logTable3$MeanProp <- table3$MeanProp; logTable3$SDProp <- table3$SDProp; 
+
+write.csv(logTable1, file=file.path(dir, "table-1a.csv"))
+write.csv(logTable2, file=file.path(dir, "table-2a.csv"))
 write.csv(logTable3, file=file.path(dir, "table-3a.csv"))
 ```
 

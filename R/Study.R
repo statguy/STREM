@@ -43,10 +43,12 @@ SimulationStudy <- setRefClass(
       return(tracks)
     },
     
-    loadIntersections = function(iteration) {
+    loadIntersections = function(iteration, predictDistances=TRUE) {
       intersections <- SimulatedIntersections(study=.self, iteration=iteration)$loadIntersections()
-      tracks <- loadTracks(iteration=iteration)
-      intersections$intersections$distance <- tracks$getMeanDistance()
+      if (predictDistances) {
+        tracks <- loadTracks(iteration=iteration)
+        intersections$intersections$distance <- tracks$getMeanDistance()
+      }
       return(intersections)
     },
     
@@ -379,7 +381,7 @@ RussiaWTCStudy <- setRefClass(
       return(invisible(.self))
     },
     
-    loadIntersections = function() {
+    loadIntersections = function(predictDistances=TRUE) {
       intersections <- RussiaWTCIntersections$new(study=.self)
       intersections$loadIntersections()
       #tracks <- loadTracks()
@@ -417,11 +419,13 @@ FinlandRussiaWTCStudy <- setRefClass(
       return(FinlandWTCTracks$new(study=finlandStudy)$loadTracks())
     },
     
-    loadIntersections = function() {
+    loadIntersections = function(predictDistances=TRUE) {
       intersections <- FinlandRussiaWTCIntersections$new(study=.self)
       intersections$loadIntersections()
-      tracks <- loadTracks()
-      intersections$intersections$distance <- tracks$getMeanDistance()
+      if (predictDistances) {
+        tracks <- loadTracks()
+        intersections$intersections$distance <- tracks$getMeanDistance()
+      }
       return(intersections)
     },
     
