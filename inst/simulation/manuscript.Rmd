@@ -22,7 +22,7 @@ populationSizeOverEstimate <- 1e999
 
 prettyScenario <- function(scenario) substr(scenario, 1, 1)
 prettyModelName <- function(x) {
-  lookup <- data.frame(x=modelNames, y=c("ST", "T", "TA", "FMP"), stringsAsFactors=F)
+  lookup <- data.frame(x=modelNames, y=c("ST", "TF", "T", "FMP"), stringsAsFactors=F)
   lookup$y[match(x, lookup$x)]
 }
 
@@ -358,6 +358,14 @@ saveFigure(p, "manuscript-figure-2b.png", width=6,height=3)
 ```
 
 ```{r figure-3-init}
+getIntersections <- function(scenarios) {
+  study <- getStudy(scenario="A")
+  validation <- Validation(study=study)
+  intersections <- validation$getValidationTemporalIntersections(scenarios=scenarios)
+  intersections$Year <- intersections$year
+  intersections
+}
+
 getPopulationSizes <- function(scenarios, modelNames, populationSizeOverEstimate=Inf) {
   study <- getStudy(scenario="A") # Get study object, scenario doesn't matter
   validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
@@ -413,7 +421,6 @@ registerDoMC(cores=10) # The nodes seem to run out of memory and fail with a bog
 populationSizes <- getPopulationSizes(scenarios=scenarios, modelNames=modelNames)
 populationSizes2000 <- getPopulationSizes(scenarios=paste0(scenarios, "combined"), modelNames=modelNames)
 populationSizes10Days <- getPopulationSizes(scenarios=paste0(scenarios, "10days"), modelNames=modelNames)
-
 registerDoMC(cores=detectCores())
 
 meanPopulationSizes  <- getMeanPopulationSizes(populationSizes)
@@ -501,6 +508,19 @@ logTable3$MeanProp <- table3$MeanProp; logTable3$SDProp <- table3$SDProp;
 write.csv(logTable1, file=file.path(dir, "table-1a.csv"))
 write.csv(logTable2, file=file.path(dir, "table-2a.csv"))
 write.csv(logTable3, file=file.path(dir, "table-3a.csv"))
+```
+
+```{r table-2}
+intersections <- getIntersections(scenarios)
+intersections2000 <- getIntersections(scenarios=paste0(scenarios, "combined"))
+intersections10days <- getIntersections(scenarios=paste0(scenarios, "10days"))
+intersections <- plyr::join(populationSizes, intersections)
+intersections2000 <- plyr::join(populationSizes2000, intersections2000)
+intersections10days <- plyr::join(populationSizes10Days, intersections10days)
+i.stat <- function(x) data.frame(i.mean=round(mean(x$intersections/x$Observed),2), i.sd=round(sd(x$intersections/x$Observed),2))
+ddply(intersections, .(Scenario), i.stat)
+ddply(intersections2000, .(Scenario), i.stat)
+ddply(intersections10days, .(Scenario), i.stat)
 ```
 
 ```{r figure-4-init}

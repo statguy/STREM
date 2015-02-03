@@ -141,26 +141,64 @@ Model <- setRefClass(
       if (missing(tracks)) populationSize$loadValidationData()
       else populationSize$loadValidationData(tracks=tracks)
       
-      return(invisible(populationSize))
+     return(invisible(populationSize))
+    }    
+  )
+)
+
+AggregatedModel <- setRefClass(
+  Class = "AggregatedModel",
+  contains = "Model",
+  fields = list(
+  ),
+  methods = list(
+    aggregate = function() {
+      library(plyr)
+      data <<- ddply(data, .(year), function(x) {
+        data.frame(response=sum(x$response), intersections=sum(x$intersections), duration=1, length=sum(x$duration*x$length*x$distance), distance=1)
+      })      
+    },
+        
+    getPopulationSize = function(populationDensity, tracks, habitatWeights) {
+      if (is.null(data$fittedMean))
+        stop("Did you forgot to run collectEstimates() first?")
+      if (length(unique(data$year)) != nrow(data))
+        stop("The data must be aggregated to determine population size")
+      
+      area <- if (missing(habitatWeights) | is.null(habitatWeights)) study$studyArea$boundary@polygons[[1]]@area
+      else cellStats(habitatWeights, sum) * prod(res(habitatWeights))
+      populationSize <- SimulationPopulationSize(study=study, modelName=modelName, iteration=iteration)
+      
+      for (y in sort(data$year)) {
+        size <- subset(data, year == y)$fittedMean * area
+        populationSize$addYearSize(y, size)
+      }        
+      
+      if (missing(tracks)) populationSize$loadValidationData()
+      else populationSize$loadValidationData(tracks=tracks)
+      
+      return(populationSize)
     }
   )
 )
 
 FMPModel <- setRefClass(
   Class = "FMPModel",
-  contains = "Model",
+  contains = "AggregatedModel",
   fields = list(
   ),
   methods = list(
     setup = function(intersections, params) {
       coordsScale <<- 1
-      offsetScale <<- 1
+      offsetScale <<- 1000^2
       modelName <<- "FMPModel"
       
       data <<- intersections$getData()
       data$response <<- data$intersections
       locations <<- intersections$getCoordinates() * coordsScale
       years <<- as.integer(sort(unique(data$year)))
+      
+      .self$aggregate()
       
       return(invisible(.self))      
     },
@@ -304,7 +342,7 @@ SmoothModelTemporal <- setRefClass(
 
 SmoothModelMeanTemporal <- setRefClass(
   Class = "SmoothModelMeanTemporal",
-  contains = "SmoothModelTemporal",
+  contains = c("SmoothModelTemporal", "AggregatedModel"),
   fields = list(
   ),
   methods = list(
@@ -315,13 +353,7 @@ SmoothModelMeanTemporal <- setRefClass(
     
     setup = function(intersections, params) {
       callSuper(intersections, params)
-      
-      library(plyr)
-      #data <- estimates$data
-      data <<- ddply(data, .(year), function(x) {
-        data.frame(response=sum(x$response), intersections=sum(x$intersections), duration=mean(x$duration), length=sum(x$length), distance=mean(x$distance))
-      })
-      
+      .self$aggregate()
       return(invisible(.self)) 
     }
   )

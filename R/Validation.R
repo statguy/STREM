@@ -41,7 +41,7 @@ Validation <- setRefClass(
         y <- ddply(x, .(year), function(x) data.frame(intersections=sum(x$intersections)))
         y$iteration <- iteration
         return(y)
-      }, .parallel=TRUE)
+      })
       
       intersections$Scenario <- study$response
       
@@ -55,7 +55,7 @@ Validation <- setRefClass(
         x <- validation$validateTemporalIntersection()
         if (is.null(x) || nrow(x) == 0) return(NULL)
         return(x)
-      })
+      }, .parallel=TRUE)
       
       return(x)
     },
