@@ -341,7 +341,7 @@ SmoothModelTemporal <- setRefClass(
 
 SmoothModelMeanTemporal <- setRefClass(
   Class = "SmoothModelMeanTemporal",
-  contains = c("SmoothModelTemporal", "AggregatedModel"),
+  contains = c("AggregatedModel","SmoothModelTemporal"),
   fields = list(
   ),
   methods = list(
