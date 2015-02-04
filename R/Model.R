@@ -159,6 +159,20 @@ AggregatedModel <- setRefClass(
       })      
     },
     
+    samplePosterior = function(n, index) {
+      library(INLA)
+      library(plyr)
+      posteriorSamples <- inla.posterior.sample(n=n, result=result)
+      if (missing(index)) index <- 1:nrow(data)
+      x <- llply(posteriorSamples,
+                 function(x, index, years) {
+                   predictorIndex <- grep("Predictor\\.", rownames(x$latent)[index])
+                   data.frame(z=exp(x$latent[predictorIndex]), t=years)
+                 },
+                 index=index, years=data$year, .parallel=F)
+      return(x)
+    },
+    
     getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=FALSE) {
       warning("Population density unavailable.")
       return(list(mean=NA, SD=NA))
