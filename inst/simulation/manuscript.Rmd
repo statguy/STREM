@@ -39,8 +39,8 @@ ddply(intersections$intersections@data, .(response, year), function(x) sum(x$len
 
 
 # Mean encounter rates
-aggrates <- data.frame()
-for (scenario in allScenarios) {
+#aggrates <- data.frame()
+aggrates <- ldply(allScenarios, function(scenario) {
   study <- getMSS(scenario=scenario)$study
 
   rates <- data.frame()
@@ -52,10 +52,11 @@ for (scenario in allScenarios) {
   }
   
   y <- ddply(rates, .(year), function(x, scenario) data.frame(scenario=scenario, rate.mean=mean(x$rate), rate.sd=sd(x$rate)), scenario=scenario)
-  aggrates <- rbind(aggrates, y)
-}
+  #aggrates <- rbind(aggrates, y)
+  return(y)
+}, .parallel=T)
 
-subset(aggrates, year==2001)
+subset(aggrates, year==2020)
 ```
 
 ```{r figure-1-init}
@@ -416,6 +417,12 @@ plotLogPopulationSize <- function(size, meanSize, modelName, xlim, ylim) {
 }
 ```
 
+```{r figure-3-init-2-test, eval=FALSE}
+populationSizes <- getPopulationSizes(scenarios=scenarios[1:4], modelNames=modelNames[3:4])
+populationSizes2000 <- getPopulationSizes(scenarios=paste0(scenarios[1:4], "combined"), modelNames=modelNames[3:4])
+populationSizes10Days <- getPopulationSizes(scenarios=paste0(scenarios[1:4], "10days"), modelNames=modelNames[3:4])
+```
+
 ```{r figure-3-init-2}
 registerDoMC(cores=10) # The nodes seem to run out of memory and fail with a bogus error message, so it's better to reduce the number of used cores.
 populationSizes <- getPopulationSizes(scenarios=scenarios, modelNames=modelNames)
@@ -492,19 +499,19 @@ getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEs
   return(z)
 }
 
-dir <- normalizePath(context$figuresDirectory)
 table1 <- getPopulationSizesTable(populationSizes, meanPopulationSizes, overEstimate=2000)
-logTable1 <- getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(2000+1), file=file.path(dir, "table-1a.csv"))
+logTable1 <- getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(2000+1))
 logTable1$MeanProp <- table1$MeanProp; logTable1$SDProp <- table1$SDProp; 
 
 table2 <- getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, overEstimate=20000)
-logTable2 <- getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(20000+1), file=file.path(dir, "table-1b.csv"))
+logTable2 <- getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(20000+1))
 logTable2$MeanProp <- table2$MeanProp; logTable2$SDProp <- table2$SDProp; 
 
 table3 <- getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, overEstimate=2000)
-logTable3 <- getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, overEstimate=log10(2000+1), file=file.path(dir, "table-1c.csv"))
+logTable3 <- getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, overEstimate=log10(2000+1))
 logTable3$MeanProp <- table3$MeanProp; logTable3$SDProp <- table3$SDProp; 
 
+dir <- normalizePath(context$figuresDirectory)
 write.csv(logTable1, file=file.path(dir, "table-1a.csv"))
 write.csv(logTable2, file=file.path(dir, "table-2a.csv"))
 write.csv(logTable3, file=file.path(dir, "table-3a.csv"))

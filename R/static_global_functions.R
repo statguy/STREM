@@ -278,3 +278,18 @@ multiRasterInterpolate <- function(xyzt, variables, templateRaster, transform=id
   return(stack(rasterList))
 }
 
+populationSizeToIntersections <- function(N=200, study, iteration=as.integer(1), area=study$studyArea$boundary@polygons[[1]]@area) {
+  intersections <- study$loadIntersections(iteration=iteration)
+  data <- subset(intersections$intersections@data, year == 2001)
+  e <- with(data, length*duration*distance) / 1000^2
+  X <- N/(area / 1000^2) * sum(e)
+  return(X)
+}
+
+intersectionsToPopulationSize <- function(X, study, iteration=as.integer(1), area=study$studyArea$boundary@polygons[[1]]@area) {
+  intersections <- study$loadIntersections(iteration=iteration)
+  data <- subset(intersections$intersections@data, year == 2001)
+  e <- with(data, length*duration*distance) / 1000^2
+  N <- pi/2 * X / sum(e) * area / 1000^2
+  return(N)
+}
