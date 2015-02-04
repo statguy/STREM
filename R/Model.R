@@ -164,8 +164,8 @@ AggregatedModel <- setRefClass(
         stop("Did you forgot to run collectEstimates() first?")
       if (length(unique(data$year)) != nrow(data))
         stop("The data must be aggregated to determine population size")
-      area <- if (missing(habitatWeights) || is.null(habitatWeights)) cellStats(habitatWeights, sum) * prod(res(habitatWeights))
-      else study$studyArea$boundary@polygons[[1]]@area
+      area <- if (missing(habitatWeights) || is.null(habitatWeights)) study$studyArea$boundary@polygons[[1]]@area
+      else cellStats(habitatWeights, sum) * prod(res(habitatWeights))
       populationSize <- SimulationPopulationSize(study=study, modelName=modelName, iteration=iteration)
       
       for (y in sort(data$year)) {
