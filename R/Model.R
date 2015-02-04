@@ -241,23 +241,8 @@ FMPModel <- setRefClass(
       message("Fitted values sums all years:")
       message("observed = ", sum(data$intersections))
       message("estimated = ", sum(data$fittedMean * observedOffset))
-      
-      stat <- data.frame()
-      for (year in years) {
-        yearWhich <- data$year == year
-        yearIndex <- year - min(years) + 1
-        x <- data.frame(
-          Year=years[yearIndex],
-          Observed=sum(data$intersections[yearWhich]),
-          EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich]),
-          ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich]),
-          EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
-          ObservedOffset=mean(observedOffset[yearWhich])
-        )
-        stat <- rbind(stat, x)
-      }
-      message("Year by year summary:")
-      print(stat)
+
+      return(invisible(.self))
     }
   )
 )
@@ -310,33 +295,7 @@ SmoothModelTemporal <- setRefClass(
       #mean(estimates$data$intersections)
       #estimates$data$fittedMean * estimates$getObservedOffset()
       
-      
-      stat <- data.frame()
-      for (year in years) {
-        yearWhich <- data$year == year
-        yearIndex <- year - min(years) + 1
-        x <- data.frame(
-          Year=years[yearIndex],
-          Observed=sum(data$intersections[yearWhich]),
-          EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich] / offsetScale),
-          ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich] / offsetScale),
-          EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
-          ObservedOffset=mean(observedOffset[yearWhich])
-        )
-        stat <- rbind(stat, x)
-      }
-      
-      message("Year by year summary:")
-      print(stat)
-      message("Column sums:")
-      x <- stat[!colnames(stat) %in% c("Year")]
-      print(colSums(x))
-      message("Column means:")
-      print(colMeans(x))
-      message("Correlations:")
-      print(cor(x))
-      
-      return(invisible(stat))
+      return(invisible(.self))
     },
     
     collectHyperparameters = function() {
@@ -585,55 +544,8 @@ SmoothModelSpatioTemporal <- setRefClass(
       node$spatialSd <<- inla.vector2matrix(result$summary.random$st$sd, nrow=mesh$n, ncol=length(years))
       if (predictAtNodesOnOriginalScale)
         predictedOffset <- inla.vector2matrix(getPredictedOffset(), nrow=mesh$n, ncol=length(years))
-      
-      stat <- data.frame()
-      for (year in years) {
-        yearWhich <- data$year == year
-        yearIndex <- year - min(years) + 1
-        x <- if (predictAtNodesOnOriginalScale) 
-          data.frame(
-            Year=years[yearIndex],
-            
-            Observed=sum(data$intersections[yearWhich]),
-            EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich] / offsetScale),
-            EstimatedAtNodes=sum(node$mean[,yearIndex] * predictedOffset[,yearIndex]),
-            
-            ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich] / offsetScale),
-            EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
-            EstimatedAtNodesScaled=sum(node$mean[,yearIndex]),
-            
-            ObservedOffset=mean(observedOffset[yearWhich]) / offsetScale,
-            predictedOffset=mean(predictedOffset[,yearIndex])
-          )
-        else
-          data.frame(
-            Year=years[yearIndex],
-            
-            Observed=sum(data$intersections[yearWhich]),
-            EstimatedAtObserved=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich]),
-            
-            ObservedScaled=sum(data$intersections[yearWhich] / observedOffset[yearWhich]),
-            EstimatedAtObservedScaled=sum(data$fittedMean[yearWhich]),
-            EstimatedAtNodesScaled=sum(node$mean[,yearIndex]),
-            EstimatedAtNodesScaledAdjusted=sum(node$mean[,yearIndex]) * nrow(locations[yearWhich,]) / mesh$n,
-            
-            ObservedOffset=mean(observedOffset[yearWhich])
-          )
-        
-        stat <- rbind(stat, x)
-      }
-      
-      message("Year by year summary:")
-      print(stat)
-      message("Column sums:")
-      x <- stat[!colnames(stat) %in% c("Year")]
-      print(colSums(x))
-      message("Column means:")
-      print(colMeans(x))
-      message("Correlations:")
-      print(cor(x))
-      
-      return(invisible(stat))
+
+      return(invisible(.self))
     },
     
     collectHyperparameters = function() {
