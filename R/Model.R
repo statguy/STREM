@@ -169,7 +169,7 @@ AggregatedModel <- setRefClass(
       populationSize <- SimulationPopulationSize(study=study, modelName=modelName, iteration=iteration)
       
       for (y in sort(data$year)) {
-        size <- subset(data, year == y)$fittedMean * area
+        size <- subset(data, year == y)$fittedMean * area / offsetScale
         populationSize$addYearSize(y, size)
       }        
       
