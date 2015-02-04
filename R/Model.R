@@ -158,7 +158,13 @@ AggregatedModel <- setRefClass(
         data.frame(response=sum(x$response), intersections=sum(x$intersections), duration=1, length=sum(x$duration*x$length*x$distance), distance=1)
       })      
     },
-        
+    
+    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=FALSE) {
+      warning("Population density unavailable.")
+      return(list(mean=NA, SD=NA))
+    },
+    
+    # TODO: Support for custom areas
     getPopulationSize = function(populationDensity, tracks, habitatWeights) {
       if (is.null(data$fittedMean))
         stop("Did you forgot to run collectEstimates() first?")
@@ -286,6 +292,10 @@ SmoothModelTemporal <- setRefClass(
       message("Fitted values sums all years:")
       message("observed = ", sum(data$intersections))
       message("estimated = ", sum(data$fittedMean * observedOffset))      
+      
+      #mean(estimates$data$intersections)
+      #estimates$data$fittedMean * estimates$getObservedOffset()
+      
       
       stat <- data.frame()
       for (year in years) {
