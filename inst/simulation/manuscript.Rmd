@@ -22,7 +22,7 @@ populationSizeOverEstimate <- 1e999
 
 prettyScenario <- function(scenario) substr(scenario, 1, 1)
 prettyModelName <- function(x) {
-  lookup <- data.frame(x=modelNames, y=c("ST", "TF", "T", "FMP"), stringsAsFactors=F)
+  lookup <- data.frame(x=modelNames, y=c("ST", "VT", "T", "FMP"), stringsAsFactors=F)
   lookup$y[match(x, lookup$x)]
 }
 
@@ -476,11 +476,12 @@ getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEs
   library(plyr)
   x <- ddply(populationSizes, .(Scenario, modelName), function(x, overEstimate) {
     failed <- round((sum(x$Estimated >= overEstimate) / nrow(x)) * 100)
+    if (x$modelName == "FMPModel") failed <- NA
     if (any(abs(x$Estimated) == Inf)) return(data.frame(Intercept=NA, Slope=NA, R2=NA, Failed=failed, MeanProp=NA, SDProp=NA))
     y <- lm(Estimated~Observed, x)
     prop.mean <- mean(x$Estimated/x$Observed)
     prop.sd <- sd(x$Estimated/x$Observed)
-    return(data.frame(Intercept=round(coef(y)[1], 0), Slope=round(coef(y)[2], 2), R2=round(summary(y)$r.squared, 2), Failed=failed, MeanProp=prop.mean, SDProp=prop.sd))
+    return(data.frame(Intercept=round(coef(y)[1], 0), Slope=round(coef(y)[2], 2), R2=round(summary(y)$r.squared, 2), MeanProp=prop.mean, SDProp=prop.sd, Failed=failed))
   }, overEstimate=overEstimate)
   
   y <- unique(meanPopulationSizes)
@@ -491,7 +492,7 @@ getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEs
   z$Scenario <- substr(z$Scenario, 1, 1)
   if (full) return(z)
   
-  z <- z[,c("Scenario","Model","Slope","R2","Failed","MeanProp","SDProp")]
+  z <- z[,c("Scenario","Model","Slope","R2","MeanProp","SDProp","Failed")]
   #z$EstDev <- round(z$EstDev, 2)
   z$MeanProp <- round(z$MeanProp, 2)
   z$SDProp <- round(z$SDProp, 2)
@@ -499,9 +500,19 @@ getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEs
   return(z)
 }
 
+writeTable <- function(df, filename, context) {
+  library(ReporteRs)
+  doc <- docx()
+  flextable <- FlexTable(df)
+  addFlexTable(doc, flextable)
+  dir <- normalizePath(context$figuresDirectory)
+  writeDoc(doc, file=file.path(dir, filename))
+}
+
 table1 <- getPopulationSizesTable(populationSizes, meanPopulationSizes, overEstimate=2000)
 logTable1 <- getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(2000+1))
 logTable1$MeanProp <- table1$MeanProp; logTable1$SDProp <- table1$SDProp; 
+logTable1
 
 table2 <- getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, overEstimate=20000)
 logTable2 <- getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(20000+1))
@@ -511,10 +522,18 @@ table3 <- getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Da
 logTable3 <- getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, overEstimate=log10(2000+1))
 logTable3$MeanProp <- table3$MeanProp; logTable3$SDProp <- table3$SDProp; 
 
-dir <- normalizePath(context$figuresDirectory)
-write.csv(logTable1, file=file.path(dir, "table-1a.csv"))
-write.csv(logTable2, file=file.path(dir, "table-2a.csv"))
-write.csv(logTable3, file=file.path(dir, "table-3a.csv"))
+subset(logTable1, Model != "VT")
+subset(logTable2, Model != "VT")
+subset(logTable3, Model != "VT")
+
+#dir <- normalizePath(context$figuresDirectory)
+#write.csv(logTable1, file=file.path(dir, "table-1a.csv"))
+#write.csv(logTable2, file=file.path(dir, "table-2a.csv"))
+#write.csv(logTable3, file=file.path(dir, "table-3a.csv"))
+
+writeTable(subset(logTable1, Model != "VT"), "table-1a.docx", context)
+writeTable(subset(logTable2, Model != "VT"), "table-1b.docx", context)
+writeTable(subset(logTable3, Model != "VT"), "table-1c.docx", context)
 ```
 
 ```{r table-2}
@@ -524,10 +543,12 @@ intersections10days <- getIntersections(scenarios=paste0(scenarios, "10days"))
 intersections <- plyr::join(populationSizes, intersections)
 intersections2000 <- plyr::join(populationSizes2000, intersections2000)
 intersections10days <- plyr::join(populationSizes10Days, intersections10days)
-i.stat <- function(x) data.frame(i.mean=round(mean(x$intersections/x$Observed),2), i.sd=round(sd(x$intersections/x$Observed),2))
-ddply(intersections, .(Scenario), i.stat)
-ddply(intersections2000, .(Scenario), i.stat)
-ddply(intersections10days, .(Scenario), i.stat)
+i.stat <- function(x) data.frame(o.mean=mean(x$Observed), o.sd=sd(x$Observed), e.mean=mean(x$Estimated), e.sd=sd(x$Estimated),
+                                 pp.mean=round(mean(x$Estimated/x$Observed), 2), pp.sd=round(sd(x$Estimated/x$Observed), 2),
+                                 i.mean=mean(x$intersections), i.sd=sd(x$intersections), ip.mean=round(mean(x$intersections/x$Observed),2), ip.sd=round(sd(x$intersections/x$Observed),2))
+ddply(intersections, .(Scenario, modelName), i.stat)
+ddply(intersections2000, .(Scenario, modelName), i.stat)
+ddply(intersections10days, .(Scenario, modelName), i.stat)
 ```
 
 ```{r figure-4-init}
