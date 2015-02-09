@@ -449,25 +449,25 @@ logMeanPopulationSizes10Days  <- getMeanPopulationSizes(logPopulationSizes10Days
 xlim <- log10(10^c(0,4)); ylim <- xlim
 p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[1]), subset(logMeanPopulationSizes, modelName==modelNames[1]), modelName=modelNames[1], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3a1.png", width=8, height=4)
-p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[2]), subset(logMeanPopulationSizes, modelName==modelNames[2]), modelName=modelNames[2], xlim=xlim, ylim=ylim)
-saveFigure(p, "manuscript-figure-3a2.png", width=8, height=4)
 p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[3]), subset(logMeanPopulationSizes, modelName==modelNames[3]), modelName=modelNames[3], xlim=xlim, ylim=ylim)
+saveFigure(p, "manuscript-figure-3a2.png", width=8, height=4)
+p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[4]), subset(logMeanPopulationSizes, modelName==modelNames[4]), modelName=modelNames[4], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3a3.png", width=8, height=4)
 
 xlim <- log10(10^c(2,4)); ylim <- xlim
 p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[1]), subset(logMeanPopulationSizes2000, modelName==modelNames[1]), modelName=modelNames[1], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3b1.png", width=8, height=4)
-p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[2]), subset(logMeanPopulationSizes2000, modelName==modelNames[2]), modelName=modelNames[2], xlim=xlim, ylim=ylim)
-saveFigure(p, "manuscript-figure-3b2.png", width=8, height=4)
 p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[3]), subset(logMeanPopulationSizes2000, modelName==modelNames[3]), modelName=modelNames[3], xlim=xlim, ylim=ylim)
+saveFigure(p, "manuscript-figure-3b2.png", width=8, height=4)
+p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[4]), subset(logMeanPopulationSizes2000, modelName==modelNames[4]), modelName=modelNames[4], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3b3.png", width=8, height=4)
 
 xlim <- log10(10^c(0,4)); ylim <- xlim
 p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[1]), subset(logMeanPopulationSizes10Days, modelName==modelNames[1]), modelName=modelNames[1], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3c1.png", width=8, height=4)
-p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[2]), subset(logMeanPopulationSizes10Days, modelName==modelNames[2]), modelName=modelNames[2], xlim=xlim, ylim=ylim)
-saveFigure(p, "manuscript-figure-3c2.png", width=8, height=4)
 p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[3]), subset(logMeanPopulationSizes10Days, modelName==modelNames[3]), modelName=modelNames[3], xlim=xlim, ylim=ylim)
+saveFigure(p, "manuscript-figure-3c2.png", width=8, height=4)
+p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[4]), subset(logMeanPopulationSizes10Days, modelName==modelNames[4]), modelName=modelNames[4], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3c3.png", width=8, height=4)
 ```
 
@@ -512,7 +512,6 @@ writeTable <- function(df, filename, context) {
 table1 <- getPopulationSizesTable(populationSizes, meanPopulationSizes, overEstimate=2000)
 logTable1 <- getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(2000+1))
 logTable1$MeanProp <- table1$MeanProp; logTable1$SDProp <- table1$SDProp; 
-logTable1
 
 table2 <- getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, overEstimate=20000)
 logTable2 <- getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(20000+1))
@@ -549,6 +548,7 @@ i.stat <- function(x) data.frame(o.mean=mean(x$Observed), o.sd=sd(x$Observed), e
 ddply(intersections, .(Scenario, modelName), i.stat)
 ddply(intersections2000, .(Scenario, modelName), i.stat)
 ddply(intersections10days, .(Scenario, modelName), i.stat)
+
 ```
 
 ```{r figure-4-init}
@@ -589,17 +589,18 @@ getCIProportions <- function(scenarios, modelNames, panel, scenarioNames) {
   b <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames, probs=c(.25, .75), probsName="50%")
   credibilityIntervals <- rbind(a, b)
   credibilityIntervals$panel <- panel
-  credibilityIntervals$scenario <- rep(scenarioNames, times=2, each=2)
+  credibilityIntervals$scenario <- rep(scenarioNames, times=2, each=length(modelNames))
   return(credibilityIntervals)  
 }
 
 plotCIProportions <- function(credibilityIntervals) {
+  modelLabels <- prettyModelName(unique(credibilityIntervals$modelName))
   credibilityIntervals$CI <- credibilityIntervals$Interval
   p <- ggplot(credibilityIntervals, aes(scenario, Proportion, shape=CI, colour=modelName)) +
     geom_hline(aes(yintercept=.5), color="grey90") +
     geom_hline(aes(yintercept=.95), color="grey90") +
     geom_point() +
-    scale_shape_manual(values=c(16, 1)) + scale_colour_manual("Model", values=c("darkgray", "black"), labels=c("T", "ST")) +
+    scale_shape_manual(values=c(16, 1)) + scale_colour_manual("Model", values=c("darkgray", "black"), labels=modelLabels) +
     theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent")) +
     xlab("Scenario") + ylab("Proportion within CI") +
     facet_wrap(~panel) + ylim(0, 1) +
@@ -609,10 +610,10 @@ plotCIProportions <- function(credibilityIntervals) {
 ```
 
 ```{r figure-5abc}
-cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames, panel="a", scenarioNames=scenarios)
-cip2 <- getCIProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames, panel="b", scenarioNames=scenarios)
-cip3 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames, panel="c", scenarioNames=scenarios)
-cip <- rbind(cip1, cip2, cip3)
+cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames[1:3], panel="a", scenarioNames=scenarios)
+cip2 <- getCIProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[1:3], panel="b", scenarioNames=scenarios)
+cip3 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[1:3], panel="c", scenarioNames=scenarios)
+cip <- subset(rbind(cip1, cip2, cip3), modelName != "SmoothModel-nbinomial-ar1")
 p <- plotCIProportions(cip)
 saveFigure(p, "manuscript-figure-5.png", width=6, height=2)
 
