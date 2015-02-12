@@ -59,6 +59,7 @@ PopulationSize <- setRefClass(
     
     loadPopulationSize = function(fileName=getPopulationSizeFileName()) {
       load(fileName, envir=as.environment(.self))
+      sizeData$Year <- as.integer(as.character(sizeData$Year))
       return(invisible(.self))
     },
     

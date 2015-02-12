@@ -293,3 +293,17 @@ intersectionsToPopulationSize <- function(X, study, iteration=as.integer(1), are
   N <- pi/2 * X / sum(e) * area / 1000^2
   return(N)
 }
+
+getEstimates <- function(scenario, model, iteration) {
+  study <- getStudy(scenario=scenario)
+  estimates <- study$getModel(modelName=model, iteration=as.integer(iteration))
+  estimates <- study$loadEstimates(estimates=estimates)
+  estimates$collectEstimates()
+  return(estimates)
+}
+
+getPopulationSize <- function(study, model, iteration) {
+  study <- getStudy(scenario=scenario)
+  populationSize <- study$loadPopulationSize(iteration=as.integer(iteration), modelName=model)
+  return(populationSize)
+}
