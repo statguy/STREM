@@ -374,7 +374,11 @@ getPopulationSizes <- function(scenarios, modelNames, populationSizeOverEstimate
   #validation$summarizePopulationSize(populationSizes)  
 }
 
+cutoff <- 1000
+cutoffPopulationSizes <- function(populationSizes, cutoff=Inf) subset(populationSizes, Estimated <= cutoff)
+
 getMeanPopulationSizes <- function(populationSizes) {
+  library(plyr)
   meanPopulationSizes <- ddply(populationSizes, .(scenario, modelName), function(x) {
     x <- data.frame(True=mean(x$Observed), Estimated=mean(x$Estimated), Scenario=x$scenario[1])
     if (is.infinite(x$True)) x$True <- NA
@@ -391,10 +395,11 @@ getLogPopulationSizes <- function(populationSizes) {
   return(logPopulationSizes)
 }
 
-plotLogPopulationSize <- function(size, meanSize, modelName, xlim, ylim) {
+plotLogPopulationSize <- function(size, modelName, xlim, ylim, cutoff) {
   library(ggplot2)
   library(scales)  
   size$Scenario <- prettyScenario(size$Scenario)
+  meanSize <- getMeanPopulationSizes(size)
   meanSize$Scenario <- prettyScenario(meanSize$Scenario)
   
   p <- ggplot(size, aes(Observed, Estimated, colour=modelName)) +
@@ -430,16 +435,16 @@ populationSizes2000 <- getPopulationSizes(scenarios=paste0(scenarios, "combined"
 populationSizes10Days <- getPopulationSizes(scenarios=paste0(scenarios, "10days"), modelNames=modelNames)
 registerDoMC(cores=detectCores())
 
-meanPopulationSizes  <- getMeanPopulationSizes(populationSizes)
-logPopulationSizes <- getLogPopulationSizes(populationSizes)
+meanPopulationSizes  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes, cutoff))
+logPopulationSizes <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes, cutoff))
 logMeanPopulationSizes  <- getMeanPopulationSizes(logPopulationSizes)
 
-meanPopulationSizes2000  <- getMeanPopulationSizes(populationSizes2000)
-logPopulationSizes2000 <- getLogPopulationSizes(populationSizes2000)
+meanPopulationSizes2000  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes2000, 10*cutoff))
+logPopulationSizes2000 <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes2000, 10*cutoff))
 logMeanPopulationSizes2000  <- getMeanPopulationSizes(logPopulationSizes2000)
 
-meanPopulationSizes10Days  <- getMeanPopulationSizes(populationSizes10Days)
-logPopulationSizes10Days <- getLogPopulationSizes(populationSizes10Days)
+meanPopulationSizes10Days  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes10Days, cutoff))
+logPopulationSizes10Days <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes10Days, cutoff))
 logMeanPopulationSizes10Days  <- getMeanPopulationSizes(logPopulationSizes10Days)
 ```
 
@@ -454,7 +459,8 @@ saveFigure(p, "manuscript-figure-3a2.png", width=8, height=4)
 p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[4]), subset(logMeanPopulationSizes, modelName==modelNames[4]), modelName=modelNames[4], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3a3.png", width=8, height=4)
 
-xlim <- log10(10^c(2,4)); ylim <- xlim
+#xlim <- log10(10^c(2,4)); ylim <- xlim
+xlim <- log10(10^c(0,4)); ylim <- xlim
 p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[1]), subset(logMeanPopulationSizes2000, modelName==modelNames[1]), modelName=modelNames[1], xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3b1.png", width=8, height=4)
 p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[3]), subset(logMeanPopulationSizes2000, modelName==modelNames[3]), modelName=modelNames[3], xlim=xlim, ylim=ylim)
@@ -475,8 +481,9 @@ saveFigure(p, "manuscript-figure-3c3.png", width=8, height=4)
 getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEstimate, full=F, file, ...) {
   library(plyr)
   x <- ddply(populationSizes, .(Scenario, modelName), function(x, overEstimate) {
-    failed <- round((sum(x$Estimated >= overEstimate) / nrow(x)) * 100)
-    if (x$modelName == "FMPModel") failed <- NA
+    failed <- round((sum(x$Estimated > overEstimate) / nrow(x)) * 100)
+    x <- subset(x, Estimated <= overEstimate)
+    if (x$modelName[1] == "FMPModel") failed <- NA
     if (any(abs(x$Estimated) == Inf)) return(data.frame(Intercept=NA, Slope=NA, R2=NA, Failed=failed, MeanProp=NA, SDProp=NA))
     y <- lm(Estimated~Observed, x)
     prop.mean <- mean(x$Estimated/x$Observed)
@@ -509,17 +516,17 @@ writeTable <- function(df, filename, context) {
   writeDoc(doc, file=file.path(dir, filename))
 }
 
-table1 <- getPopulationSizesTable(populationSizes, meanPopulationSizes, overEstimate=2000)
-logTable1 <- getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(2000+1))
-logTable1$MeanProp <- table1$MeanProp; logTable1$SDProp <- table1$SDProp; 
+table1 <- getPopulationSizesTable(populationSizes, meanPopulationSizes, overEstimate=cutoff)
+logTable1 <- getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(cutoff+1))
+logTable1$MeanProp <- table1$MeanProp; logTable1$SDProp <- table1$SDProp; logTable1$Failed <- table1$Failed
 
-table2 <- getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, overEstimate=20000)
-logTable2 <- getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(20000+1))
-logTable2$MeanProp <- table2$MeanProp; logTable2$SDProp <- table2$SDProp; 
+table2 <- getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, overEstimate=10*cutoff)
+logTable2 <- getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(10*cutoff+1))
+logTable2$MeanProp <- table2$MeanProp; logTable2$SDProp <- table2$SDProp; logTable2$Failed <- table2$Failed
 
-table3 <- getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, overEstimate=2000)
-logTable3 <- getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, overEstimate=log10(2000+1))
-logTable3$MeanProp <- table3$MeanProp; logTable3$SDProp <- table3$SDProp; 
+table3 <- getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, overEstimate=cutoff)
+logTable3 <- getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, overEstimate=log10(cutoff+1))
+logTable3$MeanProp <- table3$MeanProp; logTable3$SDProp <- table3$SDProp; logTable3$Failed <- table3$Failed
 
 subset(logTable1, Model != "VT")
 subset(logTable2, Model != "VT")
@@ -539,15 +546,21 @@ writeTable(subset(logTable3, Model != "VT"), "table-1c.docx", context)
 intersections <- getIntersections(scenarios)
 intersections2000 <- getIntersections(scenarios=paste0(scenarios, "combined"))
 intersections10days <- getIntersections(scenarios=paste0(scenarios, "10days"))
-intersections <- plyr::join(populationSizes, intersections)
-intersections2000 <- plyr::join(populationSizes2000, intersections2000)
-intersections10days <- plyr::join(populationSizes10Days, intersections10days)
+intersectionsx <- plyr::join(populationSizes, intersections)
+intersections2000x <- plyr::join(populationSizes2000, intersections2000)
+intersections10daysx <- plyr::join(populationSizes10Days, intersections10days)
 i.stat <- function(x) data.frame(o.mean=mean(x$Observed), o.sd=sd(x$Observed), e.mean=mean(x$Estimated), e.sd=sd(x$Estimated),
                                  pp.mean=round(mean(x$Estimated/x$Observed), 2), pp.sd=round(sd(x$Estimated/x$Observed), 2),
                                  i.mean=mean(x$intersections), i.sd=sd(x$intersections), ip.mean=round(mean(x$intersections/x$Observed),2), ip.sd=round(sd(x$intersections/x$Observed),2))
-ddply(intersections, .(Scenario, modelName), i.stat)
-ddply(intersections2000, .(Scenario, modelName), i.stat)
-ddply(intersections10days, .(Scenario, modelName), i.stat)
+ddply(intersectionsx, .(Scenario, modelName), i.stat)
+ddply(intersections2000x, .(Scenario, modelName), i.stat)
+ddply(intersections10daysx, .(Scenario, modelName), i.stat)
+
+rer.stat <- function(x) data.frame(RERMean=round(mean(x$intersections/x$Observed),2), RERSD=round(sd(x$intersections/x$Observed),2))
+ddply(intersectionsx, .(Scenario), rer.stat)
+ddply(intersections2000x, .(Scenario), rer.stat)
+ddply(intersections10daysx, .(Scenario), rer.stat)
+#writeTable(subset(logTable1, Model != "VT"), "table-1a.docx", context)
 
 ```
 

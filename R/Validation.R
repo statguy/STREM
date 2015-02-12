@@ -71,6 +71,9 @@ Validation <- setRefClass(
         populationSize <- study$loadPopulationSize(iteration=iteration, modelName=modelName)
         x <- populationSize$sizeData
         
+        if (any(x$Year < 2000))
+          stop("Invalid year for scenario = ", study$response, ", model = ", modelName, ", iteration = ", iteration)
+        
         if (is.null(x) || nrow(x) == 0 || any(x$Estimated > populationSizeOverEstimate)) {
           message("Estimation failed for iteration ", iteration, " scenario ", study$response)
           return(NULL)
