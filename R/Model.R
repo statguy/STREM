@@ -89,7 +89,7 @@ Model <- setRefClass(
     },
     
     estimate = function(save=FALSE, fileName=getEstimatesFileName()) {
-      stop("Unimplemented method.")
+      stop("Unimplemented method estimate.")
     },
     
     samplePosterior = function(n, index) {
@@ -337,6 +337,73 @@ SmoothModelMeanTemporal <- setRefClass(
       callSuper(intersections, params)
       .self$aggregate()
       return(invisible(.self)) 
+    },
+    
+    saveEstimates = function(fileName=getEstimatesFileName()) {
+      message("Saving result to ", fileName, "...")
+      save(locations, data, model, coordsScale, years, result, offsetScale, family, file=fileName)
+    },
+    
+    estimate = function(save=FALSE, fileName=getEstimatesFileName(), verbose=TRUE) {
+      library(INLA)
+      
+      message("Estimating population density...")
+      
+      result <<- inla(model,
+                      family=family,
+                      data=data,
+                      E=getObservedOffset(),
+                      verbose=verbose,
+                      control.predictor=list(compute=TRUE),
+                      control.compute=list(cpo=FALSE, dic=TRUE, config=TRUE))
+      
+      if (is.null(result$ok) | result$ok == FALSE) {
+        warning("INLA failed to run.")
+      }
+      else {
+        if (save) saveEstimates(fileName=fileName)
+      }
+    },
+    
+    collectEstimates = function(observationWeights=1, predictionWeights=1) {
+      library(INLA)
+      
+      index <- 1:nrow(data)
+      data$eta <<- result$summary.linear.predictor$mean[index] + log(observationWeights)
+      data$fittedMean <<- result$summary.fitted.values$mean[index] * observationWeights
+      data$fittedSD <<- result$summary.fitted.values$sd[index] * observationWeights
+      observedOffset <- getObservedOffset()
+      
+      message("Fitted values sums all years:")
+      message("observed = ", sum(data$intersections))
+      message("estimated = ", sum(data$fittedMean * observedOffset))      
+      
+      #mean(estimates$data$intersections)
+      #estimates$data$fittedMean * estimates$getObservedOffset()
+      
+      return(invisible(.self))
+    },
+    
+    collectHyperparameters = function() {
+      library(INLA)
+      
+      message("Processing hyperparameters...")
+      
+      x <- data.frame()
+      if (any(rownames(result$summary.hyperpar)=="Precision for year")) # RW1, RW2, AR1, ARp, seasonal
+        x <- rbind(x, random_effect_precision=result$summary.hyperpar["Precision for year",])
+      if (any(rownames(result$summary.hyperpar)=="Rho for year")) # AR1
+        x <- rbind(x, rho=result$summary.hyperpar["Rho for year",])
+      if (any(rownames(result$summary.hyperpar)=="PACF1 for year")) # ARp
+        x <- rbind(x, rho=result$summary.hyperpar["PACF1 for year",])
+      if (any(rownames(result$summary.hyperpar)=="PACF2 for year")) # ARp
+        x <- rbind(x, rho=result$summary.hyperpar["PACF2 for year",])
+      if (any(rownames(result$summary.hyperpar)=="PACF3 for year")) # ARp
+        x <- rbind(x, rho=result$summary.hyperpar["PACF3 for year",])
+      if (any(rownames(result$summary.hyperpar)=="PACF4 for year")) # ARp
+        x <- rbind(x, rho=result$summary.hyperpar["PACF4 for year",])
+      
+      return(x)
     }
   )
 )
