@@ -1,5 +1,3 @@
-library(sp)
-
 SurveyRoutes <- setRefClass(
   Class = "SurveyRoutes",
   fields = list(
@@ -26,14 +24,15 @@ SurveyRoutes <- setRefClass(
       return(context$getFileName(dir=context$resultDataDirectory, name="SurveyRoutes", response=study$response, region=study$studyArea$region))
     },
     
-    loadSurveyRoutes = function(fileName=getSurveyRoutesFileName(), findLengths) {
-      load(fileName, env=as.environment(.self))      
+    loadSurveyRoutes = function(fileName=getSurveyRoutesFileName(), findLengths=FALSE) {
+      load(fileName, env=as.environment(.self))
+      if (findLengths) getLengths()
       return(invisible(.self))
     },
 
     saveSurveyRoutes = function(fileName=getSurveyRoutesFileName(), findLengths=TRUE) {
-      save(surveyRoutes, centroids, lengths, file=fileName)
       if (findLengths) getLengths()
+      save(surveyRoutes, centroids, lengths, file=fileName)
       return(invisible(.self))
     },
     

@@ -549,19 +549,21 @@ intersections10days <- getIntersections(scenarios=paste0(scenarios, "10days"))
 intersectionsx <- plyr::join(populationSizes, intersections)
 intersections2000x <- plyr::join(populationSizes2000, intersections2000)
 intersections10daysx <- plyr::join(populationSizes10Days, intersections10days)
-i.stat <- function(x) data.frame(o.mean=mean(x$Observed), o.sd=sd(x$Observed), e.mean=mean(x$Estimated), e.sd=sd(x$Estimated),
-                                 pp.mean=round(mean(x$Estimated/x$Observed), 2), pp.sd=round(sd(x$Estimated/x$Observed), 2),
-                                 i.mean=mean(x$intersections), i.sd=sd(x$intersections), ip.mean=round(mean(x$intersections/x$Observed),2), ip.sd=round(sd(x$intersections/x$Observed),2))
-ddply(intersectionsx, .(Scenario, modelName), i.stat)
-ddply(intersections2000x, .(Scenario, modelName), i.stat)
-ddply(intersections10daysx, .(Scenario, modelName), i.stat)
+#i.stat <- function(x) data.frame(o.mean=mean(x$Observed), o.sd=sd(x$Observed), e.mean=mean(x$Estimated), e.sd=sd(x$Estimated),
+#                                 pp.mean=round(mean(x$Estimated/x$Observed), 2), pp.sd=round(sd(x$Estimated/x$Observed), 2),
+#                                 i.mean=mean(x$intersections), i.sd=sd(x$intersections), ip.mean=round(mean(x$intersections/x$Observed),2), ip.sd=round(sd(x$intersections/x$Observed),2))
+#ddply(intersectionsx, .(Scenario, modelName), i.stat)
+#ddply(intersections2000x, .(Scenario, modelName), i.stat)
+#ddply(intersections10daysx, .(Scenario, modelName), i.stat)
 
 rer.stat <- function(x) data.frame(RERMean=round(mean(x$intersections/x$Observed),2), RERSD=round(sd(x$intersections/x$Observed),2))
-ddply(intersectionsx, .(Scenario), rer.stat)
-ddply(intersections2000x, .(Scenario), rer.stat)
-ddply(intersections10daysx, .(Scenario), rer.stat)
-#writeTable(subset(logTable1, Model != "VT"), "table-1a.docx", context)
+i <- ddply(intersectionsx, .(Scenario), rer.stat); i$Scenario=prettyScenario(i$Scenario)
+i2000 <- ddply(intersections2000x, .(Scenario), rer.stat); i2000$Scenario=prettyScenario(i2000$Scenario)
+i10days <- ddply(intersections10daysx, .(Scenario), rer.stat); i10days$Scenario=prettyScenario(i10days$Scenario)
 
+writeTable(i, "table-2a.docx", context)
+writeTable(i2000, "table-2b.docx", context)
+writeTable(i10days, "table-2c.docx", context)
 ```
 
 ```{r figure-4-init}
@@ -573,8 +575,10 @@ getPopulationCorrelations <- function(scenarios, modelNames) {
 }
 
 plotPopulationCorrelations <- function(populationCorrelations) {
+  populationCorrelations$Scenario <- prettyScenario(populationCorrelations$Scenario)
   p <- ggplot(populationCorrelations, aes(True, Correlation)) + geom_point(size=1, colour="black") +
   facet_wrap(~Scenario, ncol=2) + xlab("True population size") +
+  scale_y_continuous(limits=c(-1,1)) +
   theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"))#, axis.text.x=element_text(angle=45, hjust=.5, vjust=1))
   return(p)
 }
@@ -595,9 +599,9 @@ saveFigure(p3, "manuscript-figure-4c.png", width=4, height=4)
 
 
 ```{r figure-5-init}
-getCIProportions <- function(scenarios, modelNames, panel, scenarioNames) {
+getCIProportions <- function(scenarios, modelNames, panel, scenarioNames, cutoff=Inf) {
   study <- getStudy(scenario="A")
-  validation <- Validation(study=study, populationSizeOverEstimate=Inf)
+  validation <- Validation(study=study, populationSizeOverEstimate=cutoff)
   a <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames)
   b <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames, probs=c(.25, .75), probsName="50%")
   credibilityIntervals <- rbind(a, b)
@@ -613,7 +617,7 @@ plotCIProportions <- function(credibilityIntervals) {
     geom_hline(aes(yintercept=.5), color="grey90") +
     geom_hline(aes(yintercept=.95), color="grey90") +
     geom_point() +
-    scale_shape_manual(values=c(16, 1)) + scale_colour_manual("Model", values=c("darkgray", "black"), labels=modelLabels) +
+    scale_shape_manual(values=c(16, 1)) + scale_colour_manual("Model", values=c("black", "darkgray"), labels=modelLabels) +
     theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent")) +
     xlab("Scenario") + ylab("Proportion within CI") +
     facet_wrap(~panel) + ylim(0, 1) +
@@ -623,9 +627,14 @@ plotCIProportions <- function(credibilityIntervals) {
 ```
 
 ```{r figure-5abc}
-cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames[1:3], panel="a", scenarioNames=scenarios)
-cip2 <- getCIProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[1:3], panel="b", scenarioNames=scenarios)
-cip3 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[1:3], panel="c", scenarioNames=scenarios)
+cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames[1:3], panel="a", scenarioNames=scenarios, cutoff=cutoff)
+cip2 <- getCIProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[1:3], panel="b", scenarioNames=scenarios, cutoff=10*cutoff)
+cip3 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[1:3], panel="c", scenarioNames=scenarios, cutoff=cutoff)
+
+#cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames[1:3], panel="a", scenarioNames=scenarios)
+#cip2 <- getCIProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[1:3], panel="b", scenarioNames=scenarios)
+#cip3 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[1:3], panel="c", scenarioNames=scenarios)
+
 cip <- subset(rbind(cip1, cip2, cip3), modelName != "SmoothModel-nbinomial-ar1")
 p <- plotCIProportions(cip)
 saveFigure(p, "manuscript-figure-5.png", width=6, height=2)
