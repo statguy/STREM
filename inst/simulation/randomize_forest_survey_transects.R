@@ -1,3 +1,9 @@
+library(parallel)
+library(doMC)
+registerDoMC(cores=detectCores())
+library(WTC)
+source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+
 study <- getStudy("A")
 transects <- FinlandRandomForestWTCSurveyRoutes$new(study=study)
 transects$randomizeSurveyRoutes(500)

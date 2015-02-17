@@ -21,7 +21,7 @@ SurveyRoutes <- setRefClass(
     },
     
     getSurveyRoutesFileName = function() {
-      return(context$getFileName(dir=context$resultDataDirectory, name="SurveyRoutes", response=study$response, region=study$studyArea$region))
+      return(context$getFileName(dir=study$context$resultDataDirectory, name="SurveyRoutes", response=study$response, region=study$studyArea$region))
     },
     
     loadSurveyRoutes = function(fileName=getSurveyRoutesFileName(), findLengths=FALSE) {
@@ -109,7 +109,7 @@ FinlandRandomWTCSurveyRoutes <- setRefClass(
     },
     
     getSurveyRoutesFileName = function() {
-      return(context$getFileName(dir=context$resultDataDirectory, name="SurveyRoutes", response="FinlandRandomWTC", region=study$studyArea$region))
+      return(context$getFileName(dir=study$context$resultDataDirectory, name="SurveyRoutes", response="FinlandRandomWTC", region=study$studyArea$region))
     }
   )
 )
@@ -161,7 +161,7 @@ FinlandRandomForestWTCSurveyRoutes <- setRefClass(
     },
     
     getSurveyRoutesFileName = function() {
-      return(context$getFileName(dir=context$resultDataDirectory, name="SurveyRoutes", response="FinlandRandomForestWTC", region=study$studyArea$region))
+      return(context$getFileName(dir=study$context$resultDataDirectory, name="SurveyRoutes", response="FinlandRandomForestWTC", region=study$studyArea$region))
     }
   )
 )
