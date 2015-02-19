@@ -38,11 +38,13 @@ max_nodes=$4
 model=$5
 free_mem=$6
 
-python "$exec_path"/parallel_r.py -t "$iterations" -n "$max_nodes" -m "$free_mem" -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R notest "$scenario" "$model"
+python "$exec_path"/parallel_r.py -t "$iterations" -n "$max_nodes" -m "$free_mem" -l 20.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R notest "$scenario" "$model"
 if [ "$model" != "FMPModel" ]
 then
-  python "$exec_path"/parallel_r.py -t "$iterations" -n "$max_nodes" -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/validate.R notest "$scenario" "$model"
+  python "$exec_path"/parallel_r.py -t "$iterations" -n "$max_nodes" -l 20.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/validate.R notest "$scenario" "$model"
 fi
+
+# ./population_size.sh ~/git/RParallelScreen/ E 1:50 60 FMPModel 20000
 
 # ./population_size.sh ~/git/RParallelScreen/ A 1:50 60 FMPModel 0
 # ./population_size.sh ~/git/RParallelScreen/ A 1:50 60 SmoothModel-nbinomial-ar1 0
