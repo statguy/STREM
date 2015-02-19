@@ -20,7 +20,7 @@ scenario<-"E"
 isTest<-F
 modelName<-"FMPModel"
 #modelName<-"SmoothModelMean-nbinomial-ar1"
-iteration<-as.integer(36)
+iteration<-as.integer(40)
 }
 
 population_size <- function(scenario, modelName, iteration, isTest, otherTest=F) {
