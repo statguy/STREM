@@ -15,10 +15,10 @@ then
 fi
 
 function population_size_single {
-  echo $test $1 $2 $3 $4
+  echo $test $1 $2 $3 $4 $5
   if [ "$test" != "test" ]
   then
-    ./population_size.sh ~/git/RParallelScreen/ $1 $2 $3 $4
+    ./population_size.sh ~/git/RParallelScreen/ $1 $2 $3 $4 $5
   fi
 }
 
