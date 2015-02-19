@@ -25,7 +25,8 @@ iteration<-as.integer(36)
 
 population_size <- function(scenario, modelName, iteration, isTest, otherTest=F) {
   readHabitatIntoMemory <- if (substr(scenario, 1, 1) == "E" || substr(scenario, 1, 1) == "F") TRUE else FALSE
-  mss <- getMSS(scenario=scenario, isTest=isTest, readHabitatIntoMemory=readHabitatIntoMemory)
+  #mss <- getMSS(scenario=scenario, isTest=isTest, readHabitatIntoMemory=readHabitatIntoMemory)
+  mss <- getMSS(scenario=scenario, isTest=isTest, readHabitatIntoMemory=FALSE)
   study <- mss$study
   
   if (otherTest) {
@@ -48,7 +49,7 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
   }
   else {
     estimates <- study$getModel(modelName=modelName, iteration=iteration)
-    habitatWeights <- study$getHabitatWeights(iteration=iteration)
+    habitatWeights <- study$getHabitatWeights(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
     populationSize <- study$getPopulationSize(estimates=estimates, habitatWeights=habitatWeights)
     return(invisible(populationSize))
   }
