@@ -25,23 +25,28 @@ then
   echo "Missing parameter 'model'".
   exit
 fi
+if [ -z "$6" ]
+then
+  echo "Missing parameter 'free_mem'".
+  exit
+fi
 
 exec_path=$1
 scenario=$2
 iterations=$3
 max_nodes=$4
 model=$5
+free_mem=$6
 
-python "$exec_path"/parallel_r.py -t "$iterations" -n "$max_nodes" -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R notest "$scenario" "$model"
-
+python "$exec_path"/parallel_r.py -t "$iterations" -n "$max_nodes" -m "$free_mem" -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/population_size.R notest "$scenario" "$model"
 if [ "$model" != "FMPModel" ]
 then
   python "$exec_path"/parallel_r.py -t "$iterations" -n "$max_nodes" -l 10.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/validate.R notest "$scenario" "$model"
 fi
 
-# ./population_size.sh ~/git/RParallelScreen/ A 1:50 60 FMPModel
-# ./population_size.sh ~/git/RParallelScreen/ A 1:50 60 SmoothModel-nbinomial-ar1
-# ./population_size.sh ~/git/RParallelScreen/ A 1:50 60 SmoothModel-nbinomial-matern-ar1
+# ./population_size.sh ~/git/RParallelScreen/ A 1:50 60 FMPModel 0
+# ./population_size.sh ~/git/RParallelScreen/ A 1:50 60 SmoothModel-nbinomial-ar1 0
+# ./population_size.sh ~/git/RParallelScreen/ A 1:50 60 SmoothModel-nbinomial-matern-ar1 0
 
 # ./population_size.sh ~/git/RParallelScreen/ Acombined 1:10 11 FMPModel
 # ./population_size.sh ~/git/RParallelScreen/ Acombined 1:10 11 SmoothModel-nbinomial-ar1
