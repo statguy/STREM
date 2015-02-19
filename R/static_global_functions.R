@@ -109,7 +109,8 @@ theme_presentation <- function(base_size=20, base_family="", ...) {
   )
 }
 
-saveFigure <- function(p, filename, width=8, height=6, dimensions, ...) {
+# full width = 2*7.87+1.25
+saveFigure <- function(p, filename, width=7.87, height=7.87, units="cm", dpi=200, dimensions, ...) {
   library(ggplot2)
   if (missing(p) | missing(filename))
     stop("Argument p or filename missing.")
@@ -119,7 +120,7 @@ saveFigure <- function(p, filename, width=8, height=6, dimensions, ...) {
     aspectRatio <- dimensions[1] / dimensions[2]
     height <- width * aspectRatio
   }
-  ggsave(p, filename=filename, width=width, height=height, ...)
+  ggsave(p, filename=filename, width=width, height=height, units=units, ...)
 }
 
 addDtDist <- function(tracksDF) {

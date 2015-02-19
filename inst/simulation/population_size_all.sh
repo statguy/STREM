@@ -6,6 +6,7 @@ scenarios10days=(A10days B10days C10days D10days E10days F10days)
 models=(FMPModel SmoothModelMean-nbinomial-ar1 SmoothModel-nbinomial-ar1 SmoothModel-nbinomial-matern-ar1)
 nodes=(1:50 1:50 1:50)
 max_nodes=(60 60 60)
+free_mem=(0 0 0 0 20000 20000)
 
 test="no-test"
 if [ "$1" == "test" ]
@@ -23,24 +24,31 @@ function population_size_single {
 
 function population_size_scenario {
   _scenarios=$1[@]
-  scenarios=("${!_scenarios}")
+  scenarios=(${!_scenarios})
   _models=$2[@]
-  models=("${!_models}")
+  models=(${!_models})
   nodes=$3
   max_nodes=$4
+  _free_mem=$5[@]
+  free_mem=(${!_free_mem})
 
-  for model in "${models[@]}"
+  for model in ${models[@]}
   do
-    for scenario in "${scenarios[@]}"
+    for i in ${!scenarios[@]}
     do
-      population_size_single $scenario $nodes $max_nodes $model
+      echo population_size_single ${scenarios[$i]} $nodes $max_nodes $model ${free_mem[$i]}
+      population_size_single ${scenarios[$i]} $nodes $max_nodes $model ${free_mem[$i]}
     done
+    #for scenario in "${scenarios[@]}"
+    #do
+    #  population_size_single $scenario $nodes $max_nodes $model
+    #done
   done
 }
 
-population_size_scenario scenarios models "${nodes[0]}" "${max_nodes[0]}"
-population_size_scenario scenarios2000 models "${nodes[1]}" "${max_nodes[1]}"
-population_size_scenario scenarios10days models "${nodes[2]}" "${max_nodes[2]}"
+population_size_scenario scenarios models ${nodes[0]} ${max_nodes[0]} free_mem
+population_size_scenario scenarios2000 models ${nodes[1]} ${max_nodes[1]} free_mem
+population_size_scenario scenarios10days models ${nodes[2]} ${max_nodes[2]} free_mem
 
 
 

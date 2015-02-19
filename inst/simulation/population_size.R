@@ -15,10 +15,12 @@
 # args <- c("notest","A","1")
 
 if (F) {
-scenario<-"Ecombined"
+scenario<-"E"
+#scenario<-"Ecombined"
 isTest<-F
-modelName<-"SmoothModel-nbinomial-ar1"
-iteration<-as.integer(1)
+modelName<-"FMPModel"
+#modelName<-"SmoothModelMean-nbinomial-ar1"
+iteration<-as.integer(36)
 }
 
 population_size <- function(scenario, modelName, iteration, isTest, otherTest=F) {
@@ -27,7 +29,9 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
   study <- mss$study
   
   if (otherTest) {
-    #iteration <- as.integer(50)
+    study <- getMSS(scenario="Acombined")$study
+    iteration <- as.integer(1)
+    
     estimates <- study$getModel(modelName=modelName, iteration=iteration)
     estimates <- study$loadEstimates(estimates=estimates)
     estimates$collectEstimates()
@@ -40,7 +44,7 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
     colMeans(populationSize$sizeData[,-1])
     populationSize$plotPopulationSize()
     
-    #study$loadPopulationSize(iteration=iteration, modelName="SmoothModel-nbinomial-ar1")
+    #study$loadPopulationSize(iteration=iteration, modelName=modelName)
   }
   else {
     estimates <- study$getModel(modelName=modelName, iteration=iteration)
