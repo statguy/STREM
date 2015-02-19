@@ -6,7 +6,7 @@ scenarios10days=(A10days B10days C10days D10days E10days F10days)
 models=(FMPModel SmoothModelMean-nbinomial-ar1 SmoothModel-nbinomial-ar1 SmoothModel-nbinomial-matern-ar1)
 nodes=(1:50 1:50 1:50)
 max_nodes=(60 60 60)
-free_mem=(0 0 0 0 20000 20000)
+free_mem=(0 0 0 0 28000 28000)
 
 test="no-test"
 if [ "$1" == "test" ]
