@@ -109,7 +109,7 @@ theme_presentation <- function(base_size=20, base_family="", ...) {
   )
 }
 
-# full width = 2*7.87+1.25
+# full width = 2*7.87+1.25=17
 saveFigure <- function(p, filename, width=7.87, height=7.87, units="cm", dpi=200, dimensions, ...) {
   library(ggplot2)
   if (missing(p) | missing(filename))
