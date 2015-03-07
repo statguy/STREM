@@ -91,7 +91,6 @@ HabitatSelection <- setRefClass(
       return(tracksDF)
     },
     
-    # TODO: Remove the movements when the individuals are not moving
     getHabitatPreferences = function(tracks, habitatWeightsTemplate, nSamples=10, save=FALSE) {
       message("Finding tracks with highest number of samples and constant frequency...")
       tracksDF <- getMovements(tracks)

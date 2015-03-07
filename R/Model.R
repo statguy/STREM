@@ -333,8 +333,22 @@ SmoothModelMeanTemporal <- setRefClass(
       return(invisible(.self))
     },
     
+    setupPrecisionPrior = function(priorParams) {
+      precPrior <- list(param=c(priorParams$shape, priorParams$rate), initial=priorParams$initial)
+      z <- qgamma(c(0.025, 0.5, 0.975), priorParams$shape, priorParams$rate, log.p=TRUE)
+      message("Precision prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
+      return(precPrior)
+    },
+    
+    setupTemporalPrior = function(priorParams) {
+      rhoPrior <- list(param=c(priorParams$mean, priorParams$sd), initial=priorParams$initial)
+      z <- qnorm(c(0.025, 0.5, 0.975), priorParams$mean, priorParams$sd)
+      message("Rho prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
+      return(rhoPrior)
+    },
+    
     setup = function(intersections, params) {
-      callSuper(intersections, params)
+      callSuper(intersections, params)      
       .self$aggregate()
       return(invisible(.self)) 
     },
@@ -902,179 +916,3 @@ FinlandRussiaSmoothModelSpatioTemporal <- setRefClass(
   methods = list(
   )
 )
-
-##################################################################################
-# OLD STUFF
-if (F) {
-  
-  
-  TODO_getPopulationSize = function(populationDensity, tracks, habitatWeights) {
-    if (is.null(data$fittedMean))
-      stop("Did you forgot to run collectEstimates() first?")
-    
-    if (!missing(habitatWeights)) if (!is.null(habitatWeights)) populationDensity$weight(habitatWeights)
-    
-    # TODO: this can be done faster without the rasters, but need the area of the study area
-    #area <- maskPolygon@polygons[[1]]@area
-    #if (!missing(habitatWeights)) if (!is.null(habitatWeights)) area <- cellStats(habitatWeights, sum)      
-    #meanPopulationSize <- ddply(data, .(year), function(x, area)
-    #  data.frame(z=mean(x$fittedMean / offsetScale) * area, year=x$year[1], area))
-    #populationSize <- SimulationPopulationSize(study=study, iteration=iteration, modelName=modelName)
-    
-    populationSize <- populationDensity$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration, modelName=modelName))
-    if (missing(tracks)) populationSize$loadValidationData()
-    else populationSize$loadValidationData(tracks=tracks)
-    
-    return(invisible(populationSize))
-  }
-  
-  
-  #getPopulationSize = function(tracks, withHabitatWeights=FALSE) {
-  #  if (length(node) == 0)
-  #    stop("Run collectEstimates() first.")
-  #  populationDensity <- getPopulationDensity(getSD=FALSE)
-  #  
-  #  if (withHabitatWeights) {
-  #    habitatWeights <- CORINEHabitatWeights$new(study=study)
-  #    if (missing(tracks)) tracks <- study$loadTracks(iteration=iteration)
-  #    habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=FALSE) # TODO: save
-  #    habitatWeights$setHabitatSelectionWeights(habitatSelection)
-  #    habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=FALSE)
-  #    populationDensity$mean$weight(habitatWeightsRaster)
-  #  }
-  #  
-  #  populationSize <- populationDensity$mean$integrate(volume=SimulationPopulationSize$new(study=study, iteration=iteration, modelName=modelName))
-  #  if (missing(tracks)) populationSize$loadValidationData()
-  #  else populationSize$loadValidationData(tracks=tracks)
-  # 
-  #  return(invisible(populationSize))
-  #}
-  
-  
-  
-  #if (withHabitatWeights) {
-  #  habitatWeights <- CORINEHabitatWeights$new(study=study)
-  #  if (missing(tracks)) tracks <- study$loadTracks(iteration=iteration)
-  #  habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=FALSE) # TODO: save
-  #  habitatWeights$setHabitatSelectionWeights(habitatSelection)
-  #  habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=FALSE)
-  #  populationDensity$mean$weight(habitatWeightsRaster)
-  #}
-  
-  
-  switchToMesh = function() {
-    assign("getPopulationDensityAtObserved", .self$getPopulationDensity, envir=as.environment(.self))
-    assign("getPopulationDensity", .self$getPopulationDensityAtMesh, envir=as.environment(.self))
-  }
-  
-  switchToObservations = function() {
-    assign("getPopulationDensityAtMesh", .self$getPopulationDensity, envir=as.environment(.self))
-    assign("getPopulationDensity", .self$getPopulationDensityAtObserved, envir=as.environment(.self))
-  }
-  
-  associateMeshLocationsWithDate = function() {
-    library(plyr)
-    library(fields)
-    
-    #if (!inherits(xyt, "SpatialPointsDataFrame"))
-    #  stop("Argument xyt must be of class SpatialPointsDataFrame.")
-    #if (any(!c("year","date") %in% names(xyt)))
-    #  stop("Argument xyt must have data columns names year, date.")
-    #if (inherits(mesh, "uninitializedField"))
-    #  stop("Run setupMesh() first.")
-    
-    nYears <- length(years)
-    meshLocations <- getUnscaledMesh()$loc[,1:2]
-    nMeshLocations <- nrow(meshLocations)
-    #predictLocations <- repeatMatrix(meshLocations, nYears)      
-    #id <- rep(1:nMeshLocations, nYears)
-    #year <- rep(years, each=nMeshLocations)
-    
-    xyt <- ddply(data, .(year), function(x) {
-      message("Finding the closest observations for mesh nodes for year ", x$year[1], "...")
-      xyt <- data.frame()
-      for (i in 1:nMeshLocations) {
-        xy <- meshLocations[i,,drop=F]
-        d <- rdist(xy, x[,1:2] / coordsScale)
-        xyt <- rbind(xyt, data.frame(x=xy[,1], y=xy[,2], date=x[which.min(d),"date"], id=i))
-      }
-      return(xyt)
-    })
-    
-    xyt <- SpatialPointsDataFrame(xyt[,c("x","y")],
-                                  data.frame(id=xyt$id, year=xyt$year, date=xyt$date),
-                                  proj4string=study$studyArea$proj4string)
-    return(xyt)
-  }
-  
-  saveMeshNodeCovariates = function(save=FALSE) {
-    stop("Method saveMeshNodeCovariates unimplemented.")
-  }
-  
-  plotMesh = function(surveyRoutes) {
-    library(INLA)
-    library(sp)
-    meshUnscaled <- mesh
-    meshUnscaled$loc <- mesh$loc / coordsScale
-    plot(meshUnscaled, asp=1, main="", col="gray")
-    plot(study$studyArea$boundary, border="black", add=T)
-    
-    if (missing(surveyRoutes)) {}
-    # TODO: plot intersection coordinates
-    else plot(surveyRoutes$surveyRoutes, col="blue", add=T)
-    
-    return(invisible(.self))
-  }
-  
-  plotProjection = function(projectionRaster=study$getTemplateRaster(), variable, weights=1) {
-    meanRaster <- project(projectValues=variable, projectionRaster=projectionRaster, weights=weights)
-    op <- par(mar=rep(0, 4))
-    plot(meanRaster)
-    plot(study$studyArea$boundary, add=T)
-    points(locations / coordsScale, col=data$intersections)
-    par(op)
-  }
-  
-  plotSpatialEstimatedMean = function(yearIndex=1) {
-    plotProjection(variable=node$mean[,yearIndex], weights=prod(res(study$getTemplateRaster())))
-  }
-  
-  plotSpatialEstimatedSD = function(yearIndex=1) {
-    plotProjection(variable=node$sd[,yearIndex], weights=prod(res(study$getTemplateRaster()))^2)
-  }
-  
-  plotSpatialRandomEffectMean = function(yearIndex=1) {
-    plotProjection(variable=node$spatialMean[,yearIndex])
-  }
-  
-  plotSpatialRandomEffectSD = function(yearIndex=1) {
-    plotProjection(variable=node$spatialSd[,yearIndex])
-  }
-  
-  plotTemporal = function(observationWeights=getObservedOffset()) {
-    library(ggplot2)
-    library(reshape2)
-    
-    indexObserved <- inla.stack.index(fullStack, "observed")$data
-    stackData <- inla.stack.data(fullStack, tag="observed")
-    observedOffset <- stackData$E[indexObserved] * observationWeights
-    
-    stat <- data.frame()
-    for (year in years) {
-      yearWhich <- data$year == year
-      yearIndex <- year - min(years) + 1
-      x <- data.frame(
-        Year=years[yearIndex],
-        Observed=sum(data$intersections[yearWhich]),
-        Estimated=sum(data$fittedMean[yearWhich] * observedOffset[yearWhich])
-      )
-      stat <- rbind(x, stat)
-    }
-    
-    x <- melt(stat, id="Year")
-    p <- ggplot(x, aes(Year, value, group=variable, color=variable)) + geom_line()
-    print(p)
-    
-    return(invisible(p))
-  }
-}
