@@ -95,7 +95,7 @@ SurveyRoutes <- setRefClass(
       innercellLenghts <- findInnercellLengths(study$studyArea$habitat, surveyRoutes)      
       #innercellLenghts <- findInnercellLengths(study$studyArea$habitat, surveyRoutes$surveyRoutes[1:2])
       
-      lenghtsByHabitat <- lapply(innercellLenghts, function(x, habitatWeights) {
+      lenghtsByHabitat <<- lapply(innercellLenghts, function(x, habitatWeights) {
         classes <- habitatWeights$classify(x[,2])
         cd <- cbind(classes, x[,3])
         hl <- aggregate(cd[,2], sum, by=list(cd[,1]))
