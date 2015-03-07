@@ -308,3 +308,40 @@ getPopulationSize <- function(study, model, iteration) {
   populationSize <- study$loadPopulationSize(iteration=as.integer(iteration), modelName=model)
   return(populationSize)
 }
+
+findInnercellLengths <- function(r, l) {
+  if (missing(r) | missing(l))
+    stop("Required argument 'r' or 'l' is missing.")
+  if (!inherits(r, "RasterLayer"))
+    stop("Argument 'r' must be of class 'RasterLayer'.")
+  if (!inherits(l, "SpatialLines"))
+    stop("Argument 'l' must be of class 'SpatialLines'.")
+  
+  # extract cell numbers for cells which lines pass through
+  x <- extract(r, l, cellnumbers=TRUE)
+  # get centre coordinates of the cells
+  xy <- lapply(x, function(x) xyFromCell(r, x[,1]))
+  lineLengths <- lapply(xy, function(x, r, l) {
+    # find extent coordinates around the cells
+    xhalf <- res(r)[1]/2
+    yhalf <- res(r)[2]/2
+    extentCoords <- cbind(x[,1]-xhalf, x[,1]+xhalf, x[,2]-yhalf, x[,2]+yhalf)
+    
+    # crop lines with the cell extents and find innercell distances
+    lineLengths <- rep(0, nrow(x))
+    for (row in 1:nrow(x)) {
+      cellExtent <- extent(extentCoords[row,])
+      cellLine <- crop(l, cellExtent)
+      # SpatialPoints is returned when line touches corner and thus has no length
+      if (inherits(cellLine, "SpatialLines"))
+        lineLengths[row] <- SpatialLinesLengths(cellLine)
+    }
+    
+    # innercell line segment lenghts should add up to the whole line lenght, i.e.
+    # sum(lineLenghts) == SpatialLinesLengths(l)
+    
+    lineLengths
+  }, r=r, l=l)
+  
+  Reduce(function(x, y) Map(cbind, x, length=y), list(x, lineLengths))
+}

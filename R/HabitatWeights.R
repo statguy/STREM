@@ -16,11 +16,11 @@ HabitatWeights <- setRefClass(
     getWeights = function(habitatValues) {
       return(rep(1, times=length(habitatValues)))
     },
-
+    
     getWeightsRasterFileName = function() {
       study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeightsRaster", response=study$response, region=study$studyArea$region, ext="")
     },
-
+    
     getWeightsRaster = function(habitat=study$getTemplateRaster(), aggregationScale=100, save=FALSE) { # TODO: determine aggregation scale automatically
       if (save) stop("Saving unsupported.")
       library(raster)
@@ -28,7 +28,7 @@ HabitatWeights <- setRefClass(
       weightsRaster[] <- 1
       return(weightsRaster)
     },
-
+    
     loadWeightsRaster = function() {
       return(raster(getWeightsRasterFileName()))
     },

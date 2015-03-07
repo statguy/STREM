@@ -7,6 +7,8 @@ source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 study <- getStudy("A")
 transects <- FinlandRandomForestWTCSurveyRoutes$new(study=study)
 transects$randomizeSurveyRoutes(500)
+#transects$loadSurveyRoutes()
+transects$getLenghtsByHabitatType()
 transects$saveSurveyRoutes()
 
 transects$getSurveyRoutesFileName()
