@@ -90,7 +90,7 @@ SurveyRoutes <- setRefClass(
       if (!inherits(habitatWeights, "HabitatWeights"))
         stop("Parameter habitatClassification must be class of HabitatWeights")
       
-      if (readHabitatRasterIntoMemory) study$studyArea$readHabitatIntoMemory()
+      if (readHabitatIntoMemory) study$studyArea$readHabitatIntoMemory()
       
       innercellLenghts <- findInnercellLengths(study$studyArea$habitat, surveyRoutes)      
       #innercellLenghts <- findInnercellLengths(study$studyArea$habitat, surveyRoutes$surveyRoutes[1:2])
