@@ -5,7 +5,8 @@ SurveyRoutes <- setRefClass(
     surveyRoutes = "SpatialLines",
     centroids = "SpatialPoints",
     lengths = "numeric",
-    lenghtsByHabitat = "list"
+    lengthsByHabitat = "list",
+    DEBUGinnercellLengths = "list"
   ),
   methods = list(    
     plotSurveyRoutes = function() {
@@ -33,7 +34,7 @@ SurveyRoutes <- setRefClass(
 
     saveSurveyRoutes = function(fileName=getSurveyRoutesFileName(), findLengths=TRUE) {
       if (findLengths) getLengths()
-      save(surveyRoutes, centroids, lengths, lenghtsByHabitat, file=fileName)
+      save(surveyRoutes, centroids, lengths, lengthsByHabitat, file=fileName)
       return(invisible(.self))
     },
     
@@ -86,16 +87,16 @@ SurveyRoutes <- setRefClass(
       return(invisible(.self))
     },
     
-    getLenghtsByHabitatType = function(habitatWeights, readHabitatIntoMemory=TRUE) {
+    getlengthsByHabitatType = function(habitatWeights, readHabitatIntoMemory=TRUE, debug=FALSE) {
       if (!inherits(habitatWeights, "HabitatWeights"))
         stop("Parameter habitatClassification must be class of HabitatWeights")
       
       if (readHabitatIntoMemory) study$studyArea$readRasterIntoMemory()
       
-      innercellLenghts <- findInnercellLengths(study$studyArea$habitat, surveyRoutes)      
-      #innercellLenghts <- findInnercellLengths(study$studyArea$habitat, surveyRoutes$surveyRoutes[1:2])
+      innercellLengths <- findInnercellLengths(study$studyArea$habitat, surveyRoutes)
+      if (debug==TRUE) DEBUGinnercellLengths <<- innercellLengths
       
-      lenghtsByHabitat <<- lapply(innercellLenghts, function(x, habitatWeights) {
+      lengthsByHabitat <<- lapply(innercellLengths, function(x, habitatWeights) {
         classes <- habitatWeights$classify(x[,2])
         cd <- cbind(classes, x[,3])
         hl <- aggregate(cd[,2], sum, by=list(cd[,1]))
@@ -113,11 +114,11 @@ SurveyRoutes <- setRefClass(
         hl.final[,2]
       }, habitatWeights=habitatWeights)
       
-      fullLenghts <- sapply(lenghtsByHabitat, function(x) sum(x))
-      if (fullLenghts != lengths)
+      fullLengths <- sapply(lengthsByHabitat, function(x) sum(x))
+      if (any(fullLengths != lengths))
         warning("Lengths mismatch.")
       
-      #weightedEffort <- sapply(lenghtsByHabitat, function(x) sum(x * habitatWeights$getHabitatSelectionWeights()))
+      #weightedEffort <- sapply(lengthsByHabitat, function(x) sum(x * habitatWeights$getHabitatSelectionWeights()))
       return(invisible(.self))
     }
   )

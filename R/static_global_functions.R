@@ -345,3 +345,5 @@ findInnercellLengths <- function(r, l) {
   
   Reduce(function(x, y) Map(cbind, x, length=y), list(x, lineLengths))
 }
+
+startsWith <- function(x, y) substr(x, start=1, stop=nchar(y)) == y
