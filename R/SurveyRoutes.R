@@ -49,41 +49,14 @@ SurveyRoutes <- setRefClass(
       return(intersection)
     },
     
+    cutSurveyRoutesByBoundary = function() {
+      cutSurveyRoutes <- gIntersection(study$studyArea$boundary, surveyRoutes, byid=T, id=names(surveyRoutes))
+      return(cutSurveyRoutes)
+    },
+    
     getLengths = function() {
-      library(rgeos)
-      library(plyr)
-      message("Finding survey route lengths...")
-      
-      contains <- gContains(study$studyArea$boundary, surveyRoutes, byid=T)
-      crosses <- gCrosses(study$studyArea$boundary, surveyRoutes, byid=T)
-      index <- c(which(contains), which(crosses))
-      intersection <- gIntersection(study$studyArea$boundary, surveyRoutes[index], byid=T, id=names(surveyRoutes[index]))
-      
-      #lengths <<- laply(seq(along=intersection), function(i, intersection) {
-      #  coords <- intersection[i]@lines[[1]]@Lines[[1]]@coords
-      #  n <- nrow(coords)
-      #  return(sum(euclidean(coords[1:(n-1),,drop=F], coords[2:n,,drop=F])))
-      #}, intersection=intersection)
-        
-      lengths <<- laply(seq(along=intersection), function(i, intersection) {
-        length <- laply(seq(along=intersection[i]@lines[[1]]@Lines), function(j, lines) {
-          #coords <- intersection[i]@lines[[1]]@Lines[[j]]@coords
-          coords <- lines[[j]]@coords
-          n <- nrow(coords)
-          length <- sum(euclidean(coords[1:(n - 1),, drop=F], coords[2:n,, drop=F]))
-          return(length)
-        }, lines=intersection[i]@lines[[1]]@Lines)
-        return(sum(length))
-      }, intersection=intersection)
-      
-      names(lengths) <<- names(intersection)
-      
-      outsideNames <- which(!contains & !crosses)
-      outsideLengths <- rep(0, length(outsideNames))
-      names(outsideLengths) <- outsideNames
-      lengths <<- c(lengths, outsideLengths)
-      lengths <<- lengths[order(as.numeric(names(lengths)))]
-      
+      cutSurveyRoutes <- cutSurveyRoutesByBoundary()
+      lengths <<- SpatialLinesLengths(cutSurveyRoutes)
       return(invisible(.self))
     },
     
@@ -93,7 +66,8 @@ SurveyRoutes <- setRefClass(
       
       if (readHabitatIntoMemory) study$studyArea$readRasterIntoMemory()
       
-      innercellLengths <- findInnercellLengths(study$studyArea$habitat, surveyRoutes)
+      cutSurveyRoutes <- cutSurveyRoutesByBoundary()
+      innercellLengths <- findInnercellLengths(study$studyArea$habitat, cutSurveyRoutes)
       if (debug==TRUE) DEBUGinnercellLengths <<- innercellLengths
       
       lengthsByHabitat <<- lapply(innercellLengths, function(x, habitatWeights) {
