@@ -68,7 +68,7 @@ SurveyRoutes <- setRefClass(
       
       cutSurveyRoutes <- cutSurveyRoutesByBoundary()
       innercellLengths <- llply(cutSurveyRoutes@lines,
-                                function(x) findInnercellLengths(study$studyArea$habitat, SpatialLines(list(x))),
+                                function(x) findInnercellLengths(study$studyArea$habitat, SpatialLines(list(x)))[[1]],
                                 .parallel=T)
       #innercellLengths <- findInnercellLengths(study$studyArea$habitat, cutSurveyRoutes)
       if (debug==TRUE) DEBUGinnercellLengths <<- innercellLengths
