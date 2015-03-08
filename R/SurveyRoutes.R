@@ -118,7 +118,7 @@ SurveyRoutes <- setRefClass(
         warning("Lengths mismatch.")
       
       #weightedEffort <- sapply(lenghtsByHabitat, function(x) sum(x * habitatWeights$getHabitatSelectionWeights()))
-      return(lenghtsByHabitat)
+      return(invisible(.self))
     }
   )
 )

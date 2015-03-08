@@ -30,5 +30,8 @@ Collate:
   InitialPopulation.R
   MovementSimulationScenario.R
   Model.R
+  ModelFMP.R
+  ModelSpatioTemporal.R
+  ModelTemporal.R
   Validation.R
 
