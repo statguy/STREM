@@ -99,7 +99,7 @@ SurveyRoutes <- setRefClass(
       return(invisible(.self))
     },
     
-    getWeightedLengths <- function(habitatWeights) {
+    getWeightedLengths = function(habitatWeights) {
       if (length(lengthsByHabitat) == 0) return(lengths)
       weightedLengths <- sapply(lengthsByHabitat, function(x) sum(x * habitatWeights$getHabitatSelectionWeights()))
       return(weightedLengths)
