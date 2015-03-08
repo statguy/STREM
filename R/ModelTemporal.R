@@ -86,16 +86,12 @@ SmoothModelMeanTemporal <- setRefClass(
     },
     
     setupPrecisionPrior = function(priorParams) {
-      precPrior <- list(param=c(priorParams$shape, priorParams$rate), initial=priorParams$initial)
-      #z <- qgamma(c(0.025, 0.5, 0.975), shape=priorParams$shape, rate=priorParams$rate, log.p=TRUE)
-      #message("Precision prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
+      precPrior <- list(param=c(priorParams$mean, priorParams$sd), initial=priorParams$initial)
       return(precPrior)
     },
     
     setupTemporalPrior = function(priorParams) {
-      rhoPrior <- list(param=c(priorParams$mean, priorParams$sd), initial=priorParams$initial)
-      z <- qnorm(c(0.025, 0.5, 0.975), mean=priorParams$mean, sd=priorParams$sd)
-      message("Rho prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
+      rhoPrior <- list(param=c(priorParams$shape, priorParams$rate), initial=priorParams$initial)
       return(rhoPrior)
     },
     

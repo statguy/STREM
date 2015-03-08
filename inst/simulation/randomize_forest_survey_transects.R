@@ -9,7 +9,7 @@ transects <- FinlandRandomForestWTCSurveyRoutes$new(study=study)
 transects$randomizeSurveyRoutes(500)
 #transects$loadSurveyRoutes()
 habitatWeights <- CORINEHabitatWeights$new(study=study)
-transects$getLengthsByHabitatType(habitatWeights)
+transects$getLengthsByHabitatType(habitatWeights, debug=TRUE)
 transects$saveSurveyRoutes()
 
 transects$getSurveyRoutesFileName()
