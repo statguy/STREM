@@ -5,7 +5,7 @@ SurveyRoutes <- setRefClass(
     surveyRoutes = "SpatialLines",
     centroids = "SpatialPoints",
     lengths = "numeric",
-    lenghtsByHabitat = "numeric"
+    lenghtsByHabitat = "list"
   ),
   methods = list(    
     plotSurveyRoutes = function() {
