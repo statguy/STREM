@@ -79,27 +79,28 @@ SmoothModelMeanTemporal <- setRefClass(
   fields = list(
   ),
   methods = list(
-    setModelName = function(family, randomEffect) {
-      modelName <<- paste("SmoothModelMean", family, randomEffect, sep="-")
+    setModelName = function(family, randomEffect, tag) {
+      modelName <<- if (missing(tag)) paste("SmoothModelMean", family, randomEffect, sep="-")
+      else paste("SmoothModelMean", family, randomEffect, tag, sep="-")
       return(invisible(.self))
     },
     
     setupPrecisionPrior = function(priorParams) {
       precPrior <- list(param=c(priorParams$shape, priorParams$rate), initial=priorParams$initial)
-      z <- qgamma(c(0.025, 0.5, 0.975), priorParams$shape, priorParams$rate, log.p=TRUE)
-      message("Precision prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
+      #z <- qgamma(c(0.025, 0.5, 0.975), shape=priorParams$shape, rate=priorParams$rate, log.p=TRUE)
+      #message("Precision prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
       return(precPrior)
     },
     
     setupTemporalPrior = function(priorParams) {
       rhoPrior <- list(param=c(priorParams$mean, priorParams$sd), initial=priorParams$initial)
-      z <- qnorm(c(0.025, 0.5, 0.975), priorParams$mean, priorParams$sd)
+      z <- qnorm(c(0.025, 0.5, 0.975), mean=priorParams$mean, sd=priorParams$sd)
       message("Rho prior 0.025 0.5 0.975 quantiles = ", signif(z[1],2), " ", signif(z[2],2), " ", signif(z[3],2))
       return(rhoPrior)
     },
     
-    setup = function(intersections, params) {
-      callSuper(intersections, params)      
+    setup = function(intersections, params, tag) {
+      callSuper(intersections, params, tag)
       .self$aggregate()
       return(invisible(.self)) 
     },

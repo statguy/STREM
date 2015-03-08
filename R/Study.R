@@ -53,10 +53,10 @@ SimulationStudy <- setRefClass(
     },
     
     getModel = function(modelName, iteration) {
-      estimates <- if (modelName == "SmoothModel-nbinomial-matern-ar1") SimulatedSmoothModelSpatioTemporal(study=.self, iteration=iteration)
-      else if (modelName == "SmoothModel-nbinomial-ar1") SimulatedSmoothModelTemporal(study=.self, iteration=iteration)
-      else if (modelName == "SmoothModelMean-nbinomial-ar1") SimulatedSmoothModelMeanTemporal(study=.self, iteration=iteration)
-      else if (modelName == "FMPModel") SimulatedFMPModel(study=.self, iteration=iteration)
+      estimates <- if (startsWith(modelName, "SmoothModel-nbinomial-matern-ar1")) SimulatedSmoothModelSpatioTemporal(study=.self, iteration=iteration)
+      else if (startsWith(modelName, "SmoothModel-nbinomial-ar1")) SimulatedSmoothModelTemporal(study=.self, iteration=iteration)
+      else if (startsWith(modelName, "SmoothModelMean-nbinomial-ar1")) SimulatedSmoothModelMeanTemporal(study=.self, iteration=iteration)
+      else if (startsWith(modelName, "FMPModel")) SimulatedFMPModel(study=.self, iteration=iteration)
       else stop("Invalid model.")
       estimates$modelName <- modelName
       return(estimates)
@@ -93,15 +93,47 @@ SimulationStudy <- setRefClass(
       return(invisible(intersections))
     },
     
-    estimate = function(model, params, save=TRUE) {
+    estimate = function(model, params, tag=NULL, save=TRUE) {
       if (missing(model)) stop("Missing model argument.")
       if (missing(params)) stop("Missing params argument.")
       
       intersections <- loadIntersections(iteration=model$iteration)
-      model$setup(intersections=intersections, params=params)
+      if (is.null(tag)) model$setup(intersections=intersections, params=params)
+      else model$setup(intersections=intersections, params=params, tag=tag)
       model$estimate()
       if (save) model$saveEstimates()
       return(invisible(model))
+    },
+    
+    getHabitatWeights2 = function(tracks, iteration, save=TRUE, readHabitatIntoMemory=TRUE) {
+      if (withHabitatWeights == FALSE) return(NULL)
+      
+      habitatWeights <- CORINEHabitatWeights$new(study=.self)
+      
+      habitatPreferences <- HabitatSelection$new(study=.self, iteration=iteration)
+      fileName <- habitatPreferences$getHabitatSelectionFileName()
+      habitatSelection <- if (file.exists(fileName)) habitatPreferences$loadHabitatSelection()
+      else {      
+        if (missing(tracks)) tracks <- loadTracks(iteration=iteration)
+        if (readHabitatIntoMemory)
+          study$studyArea$readRasterIntoMemory()
+        tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=save)
+      }
+      
+      message("Processing habitat weights raster...")
+      habitatWeights$setHabitatSelectionWeights(habitatSelection)
+      #habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=FALSE)
+      
+      return(habitatWeights)
+    },
+
+    getPopulationSize2_XXXXXXXX = function(estimates, habitatWeights, save=TRUE) {
+      estimates <- loadEstimates(estimates)
+      estimates$collectEstimates()
+      mss$getSurveyRoutes()
+      
+      ################################################################################
+      
     },
     
     getPopulationSize = function(estimates, habitatWeights, save=TRUE) {      

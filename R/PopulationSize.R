@@ -73,12 +73,24 @@ PopulationSize <- setRefClass(
       return(invisible(.self))
     },
     
-    getPopulationSize = function(populationDensity, habitatWeights=1, loadHabitatWeights=TRUE, loadValidationData=TRUE) {
-      if (loadHabitatWeights) habitatWeights <- study$loadHabitatWeightsRaster()
-      populationDensity$integrate(volume=.self, weights=habitatWeights)      
+    getPopulationSize = function(density, year, location, habitatWeights, loadValidationData=TRUE) {
+      x <- data.frame(density=density, year=year)
+      if (missing(location)) {
+        x <- ddply(x, .(year), function(x) data.frame(density=mean(x$density), year=x$year[1]))
+      }
+      x$size <- x$density * study$studyArea$boundary@polygons[[1]]@area
+      sizeData <<- data.frame(Year=x$year, Estimated=x$size)
       if (loadValidationData) .self$loadValidationData()
       return(invisible(.self))
     }
+    
+    
+    #getPopulationSize = function(populationDensity, habitatWeights=1, loadHabitatWeights=TRUE, loadValidationData=TRUE) {
+    #  if (loadHabitatWeights) habitatWeights <- study$loadHabitatWeightsRaster()
+    #  populationDensity$integrate(volume=.self, weights=habitatWeights)      
+    #  if (loadValidationData) .self$loadValidationData()
+    #  return(invisible(.self))
+    #}
   )
 )
 

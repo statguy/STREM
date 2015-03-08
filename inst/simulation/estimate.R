@@ -33,6 +33,7 @@ estimateSpatioTemporal <- function(scenario, modelName, iteration, isTest=FALSE,
   else {
     #model <- study$getModel(modelName=modelName)
     #modelParams <- study$getModelParams(modelName=modelName)
+    tag <- NULL
     
     if (modelName == "SmoothModel-nbinomial-matern-ar1") {
       model <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)
@@ -48,17 +49,18 @@ estimateSpatioTemporal <- function(scenario, modelName, iteration, isTest=FALSE,
     }
     else if (modelName == "SmoothModelMean-nbinomial-ar1-priors1") {
       model <- SimulatedSmoothModelMeanTemporal(study=study, iteration=iteration)
-      precPrior <- model$setPrecisionPrior(priorParams=list(shape=1, rate=5e-5, initial=4))
+      precPrior <- model$setupPrecisionPrior(priorParams=list(shape=1, scale=5e-5, initial=4))
       rhoPrior <- model$setupTemporalPrior(priorParams=list(mean=0, sd=0.15, initial=2))
-      formula <- response ~ 1 + f(year, model="ar1", hyper=list(theta1=precPrior, theta2=rhoPrior)
-      modelParams <- list(family="nbinomial", offsetScale=1000^2, model=formula)
+      formula <- response ~ 1 + f(year, model="ar1", hyper=list(theta1=precPrior, theta2=rhoPrior))
+      modelParams <- list(family="nbinomial", timeModel="ar1", offsetScale=1000^2, model=formula)
+      tag <- "priors1"
     }
     else if (modelName == "FMPModel") {
       model <- SimulatedFMPModel(study=study, iteration=iteration)
       modelParams <- NULL
     }
     else stop("Unknown model.")
-    study$estimate(model=model, params=modelParams)
+    study$estimate(model=model, params=modelParams, tag=tag)
   }
 }
 

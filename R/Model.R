@@ -24,8 +24,9 @@ Model <- setRefClass(
       return(invisible(.self))
     },
     
-    setModelName = function(family, randomEffect) {
-      modelName <<- paste("SmoothModel", family, randomEffect, sep="-")
+    setModelName = function(family, randomEffect, tag) {
+      modelName <<- if (missing(tag)) paste("SmoothModel", family, randomEffect, sep="-")
+      else paste("SmoothModel", family, randomEffect, tag, sep="-")
       return(invisible(.self))
     },
     
@@ -63,7 +64,7 @@ Model <- setRefClass(
       return(2/pi * data$length * data$duration * distance / offsetScale)
     },
     
-    setup = function(intersections, params) {
+    setup = function(intersections, params, tag) {
       library(INLA)
       library(plyr)
       
@@ -77,7 +78,7 @@ Model <- setRefClass(
       offsetScale <<- if (!hasMember(params, "offsetScale")) 1000^2 else params$offsetScale
       family <<- if (!hasMember(params, "family")) "nbinomial" else params$family
       
-      setModelName(family=family, randomEffect=params$timeModel)
+      setModelName(family=family, randomEffect=params$timeModel, tag=tag)
       data <<- intersections$getData()
       data$response <<- data$intersections
       locations <<- intersections$getCoordinates() * coordsScale

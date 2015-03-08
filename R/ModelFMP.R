@@ -4,10 +4,10 @@ FMPModel <- setRefClass(
   fields = list(
   ),
   methods = list(
-    setup = function(intersections, params) {
+    setup = function(intersections, params, tag) {
       coordsScale <<- 1
       offsetScale <<- 1000^2
-      modelName <<- "FMPModel"
+      modelName <<- if (missing(tag)) "FMPModel" else paste("FMPModel", tag, sep="-")
       
       data <<- intersections$getData()
       data$response <<- data$intersections

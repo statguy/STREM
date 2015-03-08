@@ -1,4 +1,3 @@
-
 SmoothModelSpatioTemporal <- setRefClass(
   Class = "SmoothModelSpatioTemporal",
   contains = "Model",
@@ -76,12 +75,12 @@ SmoothModelSpatioTemporal <- setRefClass(
       return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years)) / offsetScale)
     },
     
-    setup = function(intersections, params) {
+    setup = function(intersections, params, tag) {
       library(INLA)
       library(R.utils)
       
       callSuper(intersections=intersections, params=params)
-      setModelName(family=params$family, randomEffect=paste("matern", params$timeModel, sep="-"))
+      setModelName(family=params$family, randomEffect=paste("matern", params$timeModel, sep="-"), tag=tag)
       
       if (!hasMember(params, "meshParams"))
         stop("Missing meshParams parameter.")
