@@ -60,7 +60,7 @@ SurveyRoutes <- setRefClass(
       return(invisible(.self))
     },
     
-    getlengthsByHabitatType = function(habitatWeights, readHabitatIntoMemory=TRUE, debug=FALSE) {
+    getLengthsByHabitatType = function(habitatWeights, readHabitatIntoMemory=TRUE, debug=FALSE) {
       if (!inherits(habitatWeights, "HabitatWeights"))
         stop("Parameter habitatClassification must be class of HabitatWeights")
       
