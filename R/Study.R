@@ -119,14 +119,11 @@ SimulationStudy <- setRefClass(
           study$studyArea$readRasterIntoMemory()
         tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=save)
       }
-      
-      message("Processing habitat weights raster...")
+            
       habitatWeights$setHabitatSelectionWeights(habitatSelection)
-      #habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=FALSE)
-      
       return(habitatWeights)
     },
-
+    
     getPopulationSize2_XXXXXXXX = function(estimates, habitatWeights, save=TRUE) {
       estimates <- loadEstimates(estimates)
       estimates$collectEstimates()
