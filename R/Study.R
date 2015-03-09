@@ -20,7 +20,7 @@ SimulationStudy <- setRefClass(
   Class = "SimulationStudy",
   contains = "Study",
   fields = list(
-    surveyRoutes = "ANY",
+    #surveyRoutes = "ANY",
     withHabitatWeights = "logical"
   ),
   methods = list(
@@ -83,8 +83,14 @@ SimulationStudy <- setRefClass(
     #  }
     #},
     
+    #loadSurveyRoutes = function() {
+    #  return(surveyRoutes)
+    #},
+    
     loadSurveyRoutes = function() {
-      return(surveyRoutes)
+      transects <- FinlandRandomForestWTCSurveyRoutes$new(study=study)
+      transects$loadSurveyRoutes()
+      return(invisible(transects))
     },
     
     countIntersections = function(surveyRoutes, iteration, days=1, save=TRUE) {
@@ -109,7 +115,6 @@ SimulationStudy <- setRefClass(
       if (withHabitatWeights == FALSE) return(NULL)
       
       habitatWeights <- CORINEHabitatWeights$new(study=.self)
-      
       habitatPreferences <- HabitatSelection$new(study=.self, iteration=iteration)
       fileName <- habitatPreferences$getHabitatSelectionFileName()
       habitatSelection <- if (file.exists(fileName)) habitatPreferences$loadHabitatSelection()
@@ -125,15 +130,16 @@ SimulationStudy <- setRefClass(
     },
     
     getPopulationSize2 = function(modelName, iteration, readHabitatIntoMemory=TRUE, save=TRUE) {
-      surveyRoutes <- getSurveyRoutes()
-      weightedLengths <- if (!inherits(surveyRoutes, "uninitializedField")) {
-        habitatWeights <- getHabitatWeights2(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
-        surveyRoutes$getWeightedLengths(habitatWeights)  
-      } else 1
-      
       estimates <- getModel(modelName=modelName, iteration=iteration)
       estimates$loadEstimates()
-      lengthWeights <- estimates$getLengthWeights(weightedLengths, surveyRoutes$lengths)
+      
+      surveyRoutes <- loadSurveyRoutes()
+      lengthWeights <- if (!inherits(surveyRoutes, "uninitializedField")) {
+        habitatWeights <- getHabitatWeights2(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
+        weightedLengths <- surveyRoutes$getWeightedLengths(habitatWeights)
+        estimates$getLengthWeights(weightedLengths, surveyRoutes$lengths)
+      } else 1
+      
       estimates$collectEstimates(lengthWeights)
       
       populationSize <- SimulationPopulationSize$new(study=.self, iteration=iteration)
