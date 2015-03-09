@@ -133,7 +133,7 @@ Model <- setRefClass(
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
     },
     
-    getLengthWeights(weightedLengths, lengths) {
+    getLengthWeights = function(weightedLengths, lengths) {
       lengthWeights <- weightedLengths / lengths
       lengthWeights <- rep(lengthWeights, length(years))
       return(lengthWeights)
@@ -185,7 +185,7 @@ AggregatedModel <- setRefClass(
       return(list(mean=NA, SD=NA))
     },
     
-    getLengthWeights(weightedLengths, lengths) {
+    getLengthWeights = function(weightedLengths, lengths) {
       lengthWeights <- sum(weightedLengths) / sum(lengths)
       lengthWeights <- rep(lengthWeights, length(years))
       return(lengthWeights)
