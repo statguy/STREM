@@ -124,15 +124,27 @@ SimulationStudy <- setRefClass(
       return(habitatWeights)
     },
     
-    getPopulationSize2_XXXXXXXX = function(estimates, habitatWeights, save=TRUE) {
-      estimates <- loadEstimates(estimates)
-      estimates$collectEstimates()
-      mss$getSurveyRoutes()
+    getPopulationSize2 = function(modelName, iteration, readHabitatIntoMemory=TRUE, save=TRUE) {
+      surveyRoutes <- getSurveyRoutes()
+      weightedLengths <- if (!inherits(surveyRoutes, "uninitializedField")) {
+        habitatWeights <- getHabitatWeights2(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
+        surveyRoutes$getWeightedLengths(habitatWeights)  
+      } else 1
       
-      ################################################################################
+      estimates <- getModel(modelName=modelName, iteration=iteration)
+      estimates$loadEstimates()
+      lengthWeights <- estimates$getLengthWeights(weightedLengths, surveyRoutes$lengths)
+      estimates$collectEstimates(lengthWeights)
       
+      populationSize <- SimulationPopulationSize$new(study=.self, iteration=iteration)
+      density <- estimates$data$fittedMean / estimates$offsetScale
+      populationSize$getPopulationSize(density, estimates$data$year, loadValidationData=TRUE)
+      if (save) populationSize$savePopulationSize()
+      
+      return(invisible(populationSize))
     },
     
+    ### DEPRECATED
     getPopulationSize = function(estimates, habitatWeights, save=TRUE) {      
       estimates <- loadEstimates(estimates)
       estimates$collectEstimates()
