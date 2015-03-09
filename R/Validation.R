@@ -223,7 +223,7 @@ Validation <- setRefClass(
         message("Processing posterior sample ", index, "...")
         
         lengthWeights <- if (!inherits(study$surveyRoutes, "uninitializedField"))
-          model$getLengthWeights(study$getSurveyRouteWeightedLengths(), study$surveyRoutes$lengths) else 1
+          model$getLengthWeights(study$getSurveyRouteWeightedLengths(iteration=iteration), study$surveyRoutes$lengths) else 1
         
         model$data <- posteriorSamples[[index]]
         model$data$fittedMean <- model$data$z * lengthWeights

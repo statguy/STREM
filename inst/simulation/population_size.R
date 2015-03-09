@@ -20,7 +20,7 @@ library(doMC)
 registerDoMC(cores=detectCores())
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
-  
+
 parseArguments()
   
 scenario <- "E"
@@ -28,7 +28,8 @@ scenario <- "E"
 #scenario<-"Ecombined"
 isTest<-F
 #modelName<-"FMPModel"
-modelName<-"SmoothModelMean-nbinomial-ar1"
+#modelName<-"SmoothModelMean-nbinomial-ar1"
+modelName<-"SmoothModelMean-nbinomial-ar1-priors1"
 #modelName<-"SmoothModel-nbinomial-matern-ar1"
 iteration<-as.integer(3)
 readHabitatIntoMemory <- F

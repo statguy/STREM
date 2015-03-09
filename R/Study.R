@@ -119,7 +119,7 @@ SimulationStudy <- setRefClass(
       return(habitatWeights)
     },
     
-    getSurveyRouteWeightedLengths = function() {
+    getSurveyRouteWeightedLengths = function(iteration, readHabitatIntoMemory=TRUE) {
       weightedLengths <- if (!inherits(surveyRoutes, "uninitializedField")) {
         habitatWeights <- getHabitatWeights2(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
         surveyRoutes$getWeightedLengths(habitatWeights)
@@ -132,7 +132,7 @@ SimulationStudy <- setRefClass(
       estimates$loadEstimates()
       
       lengthWeights <- if (!inherits(surveyRoutes, "uninitializedField"))
-        estimates$getLengthWeights(getSurveyRouteWeightedLengths(), surveyRoutes$lengths)
+        estimates$getLengthWeights(getSurveyRouteWeightedLengths(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory), surveyRoutes$lengths)
       else 1
       
       estimates$collectEstimates(lengthWeights)
