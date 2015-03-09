@@ -9,6 +9,7 @@ library(plyr)
 
 scenarios <- c("A","B","C","D","E","F")
 allScenarios <- c(scenarios, paste0(scenarios, "combined"), paste0(scenarios, "10days"))
+maxIterations <- 50
 
 l_ply(allScenarios, function(scenario) {
 
@@ -17,6 +18,8 @@ l_ply(allScenarios, function(scenario) {
   
   tracks <- SimulatedTracks(study=study)
   iterations <- tracks$getTracksFileIterations()
+  iterations <- iterations[iterations<=maxIterations]
+  
   for (iteration in iterations) {
     tracks <- study$loadTracks(iteration=iteration, addColumns=FALSE)
     truePopulationSize <- tracks$truePopulationSize

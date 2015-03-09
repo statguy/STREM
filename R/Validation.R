@@ -231,7 +231,7 @@ Validation <- setRefClass(
         
         x <- SimulationPopulationSize$new(study=study, iteration=iteration)
         density <- model$data$fittedMean / model$offsetScale
-        x$getPopulationSize(density, model$data$year, loadValidationData=FALSE)
+        x$getPopulationSize(density, model$data$year, loadValidationData=TRUE)
         x <- x$sizeData  
         
         if (any(x$Estimated <= populationSizeCutoff[1] | x$Estimated >= populationSizeCutoff[2])) {
@@ -241,34 +241,7 @@ Validation <- setRefClass(
         x$sample <- index
         return(x)
       }, model=model, posteriorSamples=posteriorSamples, .parallel=T)
-      
-      if (F) {
-      populationSize <- data.frame()  
-        
-      for (sample in 1:nSamples) {
-        message("Processing sample ", sample, " / ", nSamples, " of iteration ", iteration, "...")
-        
-        lengthWeights <- if (!inherits(study$surveyRoutes, "uninitializedField"))
-          model$getLengthWeights(study$getSurveyRouteWeightedLengths(), study$surveyRoutes$lengths) else 1
-        
-        model$data <- posteriorSamples[[sample]]
-        model$data$fittedMean <- model$data$z * lengthWeights
-        model$data$year <- model$data$t
-        
-        x <- SimulationPopulationSize$new(study=study, iteration=iteration)
-        density <- model$data$fittedMean / model$offsetScale
-        x$getPopulationSize(density, model$data$year, loadValidationData=FALSE)
-        x <- x$sizeData  
-
-        if (any(x$Estimated <= populationSizeCutoff[1] | x$Estimated >= populationSizeCutoff[2])) {
-          message("Estimation failed for iteration ", iteration, ".")
-          next
-        }
-        x$sample <- sample
-        populationSize <- rbind(populationSize, x)
-      }
-      }
-      
+ 
       populationSize$scenario <- study$response
       populationSize$modelName <- modelName
       populationSize$iteration <- iteration
@@ -308,15 +281,16 @@ Validation <- setRefClass(
     getValidatedCredibilityIntervalsProportion = function(modelName, probs=c(.025, .975)) {
       library(plyr)
       
-      iterations <- getCredibilityIntervalsValidationIterations(modelName=modelName)
+      iterations <- .self$getCredibilityIntervalsValidationIterations(modelName=modelName)
       if (length(iterations) == 0) return(data.frame())
       populationSizeCI <- ldply(iterations, function(iteration) {
-        loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
+        .self$loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
       })
       
-      x <- summarizePopulationSizeCI(populationSizeCI, variables=.(scenario, Year, iteration), probs=probs)
+      x <- .self$summarizePopulationSizeCI(populationSizeCI, variables=.(scenario, Year, iteration), probs=probs)
       validationProportion <- ddply(x, .(scenario), function(x) {
         y <- with(x, Observed >= Estimated.q1 & Observed <= Estimated.q2)
+        y <- y[x$Observed > populationSizeCutoff[1] & x$Observed < populationSizeCutoff[2]]
         data.frame(Proportion=mean(y), n=length(y), True=mean(x$Observed), Estimated=mean(x$Estimated), Estimated.q1=mean(x$Estimated.q1), Estimated.q2=mean(x$Estimated.q2))
       })
       validationProportion$modelName <- modelName
