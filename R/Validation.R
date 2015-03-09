@@ -217,32 +217,28 @@ Validation <- setRefClass(
       model$loadEstimates()
       model$collectEstimates()
       
-      #tracks <- study$loadTracks(iteration=iteration)
-      #habitatWeights <- study$getHabitatWeights(tracks=tracks, iteration=iteration, save=F)
-      
       posteriorSamples <- model$samplePosterior(n=nSamples)
       populationSize <- data.frame()
       
       for (sample in 1:nSamples) {
         message("Processing sample ", sample, " / ", nSamples, " of iteration ", iteration, "...")
         
+        lengthWeights <- if (!inherits(study$surveyRoutes, "uninitializedField"))
+          model$getLengthWeights(study$getSurveyRouteWeightedLengths(), study$surveyRoutes$lengths) else 1
+        
         model$data <- posteriorSamples[[sample]]
-        model$data$fittedMean <- model$data$z
+        model$data$fittedMean <- model$data$z * lengthWeights
         model$data$year <- model$data$t
         
-        ###
-        model$modelName <- "temp"
-        model$iteration <- as.integer(1)
+        x <- SimulationPopulationSize$new(study=study, iteration=iteration)
+        density <- model$data$fittedMean / model$offsetScale
+        x$getPopulationSize(density, model$data$year, loadValidationData=FALSE)
+        x <- x$sizeData  
 
-        
-        ###
-        
-        #populationDensity <- model$getPopulationDensity(getSD=FALSE)
-        #x <- model$getPopulationSize(populationDensity=populationDensity$mean, tracks=tracks, habitatWeights=habitatWeights)$sizeData
-        #if (any(x$Estimated >= populationSizeOverEstimate)) {
-        #  message("Estimation failed for iteration ", iteration, ".")
-        #  next
-        #}
+        if (any(x$Estimated <= populationSizeCutoff[1] | x$Estimated >= populationSizeCutoff[2])) {
+          message("Estimation failed for iteration ", iteration, ".")
+          next
+        }
         x$sample <- sample
         populationSize <- rbind(populationSize, x)
       }
