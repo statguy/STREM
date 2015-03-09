@@ -137,7 +137,7 @@ SimulationStudy <- setRefClass(
       
       estimates$collectEstimates(lengthWeights)
       
-      populationSize <- SimulationPopulationSize$new(study=.self, iteration=iteration)
+      populationSize <- SimulationPopulationSize$new(study=.self, modelName=modelName, iteration=iteration)
       density <- estimates$data$fittedMean / estimates$offsetScale
       populationSize$getPopulationSize(density, estimates$data$year, loadValidationData=TRUE)
       if (save) populationSize$savePopulationSize()
