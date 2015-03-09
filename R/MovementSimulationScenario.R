@@ -438,6 +438,7 @@ MovementSimulationScenarioE <- setRefClass(
       transects <- FinlandRandomForestWTCSurveyRoutes$new(study=study)
       transects$loadSurveyRoutes()
       surveyRoutes <<- transects
+      study$surveyRoutes <- surveyRoutes
       
       return(invisible(.self))
     }
@@ -462,6 +463,7 @@ MovementSimulationScenarioF <- setRefClass(
       transects <- FinlandRandomForestWTCSurveyRoutes$new(study=study)
       transects$loadSurveyRoutes()
       surveyRoutes <<- transects
+      study$surveyRoutes <- surveyRoutes
       
       return(invisible(.self))
     },

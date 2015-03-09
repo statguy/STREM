@@ -20,7 +20,7 @@ SimulationStudy <- setRefClass(
   Class = "SimulationStudy",
   contains = "Study",
   fields = list(
-    #surveyRoutes = "ANY",
+    surveyRoutes = "ANY",
     withHabitatWeights = "logical"
   ),
   methods = list(
@@ -32,7 +32,7 @@ SimulationStudy <- setRefClass(
     setup = function(context, surveyRoutes, withHabitatWeights=F, isTest=F) {
       context <<- context
       withHabitatWeights <<- withHabitatWeights
-      #if (!missing(surveyRoutes)) surveyRoutes <<- surveyRoutes # WARNING: this can give us recursion for study object references! TODO: better design
+      if (!missing(surveyRoutes)) surveyRoutes <<- surveyRoutes # WARNING: this can give us recursion for study object references! TODO: better design
       studyArea <<- if (isTest) TestStudyArea$new(context=context)$setup()
       else FinlandStudyArea$new(context=context)$setup()
       return(invisible(.self))
@@ -83,17 +83,7 @@ SimulationStudy <- setRefClass(
     #  }
     #},
     
-    #loadSurveyRoutes = function() {
-    #  return(surveyRoutes)
-    #},
-    
-    loadSurveyRoutes = function() {
-      transects <- FinlandRandomForestWTCSurveyRoutes$new(study=.self)
-      transects$loadSurveyRoutes()
-      return(invisible(transects))
-    },
-    
-    countIntersections = function(surveyRoutes, iteration, days=1, save=TRUE) {
+    countIntersections = function(iteration, days=1, save=TRUE) {
       tracks <- .self$loadTracks(iteration=iteration)
       intersections <- tracks$countIntersections(surveyRoutes=surveyRoutes, days=days, save=save)
       return(invisible(intersections))
@@ -133,7 +123,6 @@ SimulationStudy <- setRefClass(
       estimates <- getModel(modelName=modelName, iteration=iteration)
       estimates$loadEstimates()
       
-      surveyRoutes <- loadSurveyRoutes()
       lengthWeights <- if (!inherits(surveyRoutes, "uninitializedField")) {
         habitatWeights <- getHabitatWeights2(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
         weightedLengths <- surveyRoutes$getWeightedLengths(habitatWeights)
