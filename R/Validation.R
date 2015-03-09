@@ -218,8 +218,33 @@ Validation <- setRefClass(
       model$collectEstimates()
       
       posteriorSamples <- model$samplePosterior(n=nSamples)
-      populationSize <- data.frame()
       
+      populationSize <- ldply(1:nSamples, function(index, model, posteriorSamples) {
+        message("Processing posterior sample ", index, "...")
+        
+        lengthWeights <- if (!inherits(study$surveyRoutes, "uninitializedField"))
+          model$getLengthWeights(study$getSurveyRouteWeightedLengths(), study$surveyRoutes$lengths) else 1
+        
+        model$data <- posteriorSamples[[index]]
+        model$data$fittedMean <- model$data$z * lengthWeights
+        model$data$year <- model$data$t
+        
+        x <- SimulationPopulationSize$new(study=study, iteration=iteration)
+        density <- model$data$fittedMean / model$offsetScale
+        x$getPopulationSize(density, model$data$year, loadValidationData=FALSE)
+        x <- x$sizeData  
+        
+        if (any(x$Estimated <= populationSizeCutoff[1] | x$Estimated >= populationSizeCutoff[2])) {
+          message("Estimation failed for iteration ", iteration, ".")
+          next
+        }
+        x$sample <- index
+        return(x)
+      }, model=model, posteriorSamples=posteriorSamples, .parallel=T)
+      
+      if (F) {
+      populationSize <- data.frame()  
+        
       for (sample in 1:nSamples) {
         message("Processing sample ", sample, " / ", nSamples, " of iteration ", iteration, "...")
         
@@ -242,7 +267,8 @@ Validation <- setRefClass(
         x$sample <- sample
         populationSize <- rbind(populationSize, x)
       }
-
+      }
+      
       populationSize$scenario <- study$response
       populationSize$modelName <- modelName
       populationSize$iteration <- iteration
