@@ -133,17 +133,23 @@ Model <- setRefClass(
       return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
     },
     
+    getLengthWeights(weightedLengths, lengths) {
+      lengthWeights <- weightedLengths / lengths
+      lengthWeights <- rep(lengthWeights, length(years))
+      return(lengthWeights)
+    }
+    
     # Remove this and use *PopulationSize class instead
-    getPopulationSize = function(populationDensity, tracks, habitatWeights) {
-      if (missing(populationDensity)) populationDensity <- getPopulationDensity(getSD=FALSE)$mean
-      if (!missing(habitatWeights)) if (!is.null(habitatWeights)) populationDensity$weight(habitatWeights)
-      
-      populationSize <- populationDensity$integrate(volume=SimulationPopulationSize(study=study, iteration=iteration, modelName=modelName))
-      if (missing(tracks)) populationSize$loadValidationData()
-      else populationSize$loadValidationData(tracks=tracks)
-      
-     return(invisible(populationSize))
-    }    
+    #getPopulationSize = function(populationDensity, tracks, habitatWeights) {
+    #  if (missing(populationDensity)) populationDensity <- getPopulationDensity(getSD=FALSE)$mean
+    #  if (!missing(habitatWeights)) if (!is.null(habitatWeights)) populationDensity$weight(habitatWeights)
+    #  
+    #  populationSize <- populationDensity$integrate(volume=SimulationPopulationSize(study=study, iteration=iteration, modelName=modelName))
+    #  if (missing(tracks)) populationSize$loadValidationData()
+    #  else populationSize$loadValidationData(tracks=tracks)
+    #  
+    # return(invisible(populationSize))
+    #}    
   )
 )
 
@@ -179,26 +185,33 @@ AggregatedModel <- setRefClass(
       return(list(mean=NA, SD=NA))
     },
     
-    # TODO: Support for custom areas
-    getPopulationSize = function(populationDensity, tracks, habitatWeights) {
-      if (is.null(data$fittedMean))
-        stop("Did you forgot to run collectEstimates() first?")
-      if (length(unique(data$year)) != nrow(data))
-        stop("The data must be aggregated to determine population size")
-      area <- if (missing(habitatWeights) || is.null(habitatWeights)) study$studyArea$boundary@polygons[[1]]@area
-      else cellStats(habitatWeights, sum) * prod(res(habitatWeights))
-      populationSize <- SimulationPopulationSize(study=study, modelName=modelName, iteration=iteration)
-      
-      for (y in sort(data$year)) {
-        size <- subset(data, year == y)$fittedMean * area / offsetScale
-        populationSize$addYearSize(y, size)
-      }        
-      
-      if (missing(tracks)) populationSize$loadValidationData()
-      else populationSize$loadValidationData(tracks=tracks)
-      
-      return(populationSize)
+    getLengthWeights(weightedLengths, lengths) {
+      lengthWeights <- sum(weightedLengths) / sum(lengths)
+      lengthWeights <- rep(lengthWeights, length(years))
+      return(lengthWeights)
     }
+    
+    
+    # TODO: Support for custom areas
+    #getPopulationSize = function(populationDensity, tracks, habitatWeights) {
+    #  if (is.null(data$fittedMean))
+    #    stop("Did you forgot to run collectEstimates() first?")
+    #  if (length(unique(data$year)) != nrow(data))
+    #    stop("The data must be aggregated to determine population size")
+    #  area <- if (missing(habitatWeights) || is.null(habitatWeights)) study$studyArea$boundary@polygons[[1]]@area
+    #  else cellStats(habitatWeights, sum) * prod(res(habitatWeights))
+    #  populationSize <- SimulationPopulationSize(study=study, modelName=modelName, iteration=iteration)
+    #  
+    #  for (y in sort(data$year)) {
+    #    size <- subset(data, year == y)$fittedMean * area / offsetScale
+    #    populationSize$addYearSize(y, size)
+    #  }        
+    #  
+    #  if (missing(tracks)) populationSize$loadValidationData()
+    #  else populationSize$loadValidationData(tracks=tracks)
+    #  
+    #  return(populationSize)
+    #}
   )
 )
 
