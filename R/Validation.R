@@ -87,7 +87,7 @@ Validation <- setRefClass(
       populationSize$modelName <- modelName
       return(populationSize)
     },
-        
+    
     getValidationTemporalPopulationSizes = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
       x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
         s <- getStudy(scenario=x$scenario, isTest=F)

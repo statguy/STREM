@@ -24,9 +24,9 @@ Context <- setRefClass(
       return(fileName)
     },
     
-    listFiles = function(dir, name, response=NULL, region, tag=NULL, ext=".RData") {
+    listFiles = function(dir, name, response=NULL, region, tag=NULL, ext="\\.RData") {
       if (is.na(dir)) stop("Directory has not been specified.")
-      pattern <- concat(concat(name, response, region, tag, sep="-"), ext, sep="")
+      pattern <- concat("^", concat(name, response, region, tag, sep="-"), ext, "$", sep="")
       message("Listing files ", file.path(dir, pattern))
       return(list.files(dir, pattern, full.names=TRUE))
     },
