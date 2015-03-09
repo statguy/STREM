@@ -301,7 +301,7 @@ FinlandWTCStudy <- setRefClass(
       
       return(model)      
     },
-        
+    
     loadEstimates = function(estimates) {
       if (missing(estimates)) stop("Missing estimates argument.")
       estimates$loadEstimates()$loadCovariates()   

@@ -76,6 +76,7 @@ PopulationSize <- setRefClass(
     getPopulationSize = function(density, year, location, habitatWeights, loadValidationData=TRUE) {
       x <- data.frame(density=density, year=year)
       if (missing(location)) {
+        library(plyr)
         x <- ddply(x, .(year), function(x) data.frame(density=mean(x$density), year=x$year[1]))
       }
       x$size <- x$density * study$studyArea$boundary@polygons[[1]]@area
