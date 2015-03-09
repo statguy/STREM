@@ -13,10 +13,12 @@ parseArguments()
 modelName <- extraArgs[1]
 
 nSamples <- 50
-populationSizeOverEstimate <- Inf
 mss <- getMSS(scenario=scenario, isTest=isTest)
 study <- mss$study
-validation <- Validation(study=study, populationSizeOverEstimate=populationSizeOverEstimate)
+cutoff <- c(1,2000)
+if (substr(scenario, 2, nchar(scenario)) == "combined") cutoff <- 10 * cutoff
+validation <- Validation(study=study, populationSizeCutoff=cutoff)
+iteration <- as.integer(task_id)
 
 if (isTest) {
   populationSize <- validation$validateTemporalPopulationSize(modelName=modelName)
@@ -45,5 +47,5 @@ if (isTest) {
   summary(lm(Estimated.y~Estimated.x, xy)) # OK !
   
 } else {
-  populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=as.integer(task_id), nSamples=nSamples, save=T)
+  populationSizeCI <- validation$validateCredibilityIntervals(modelName=modelName, iteration=iteration, nSamples=nSamples, save=T)
 }
