@@ -133,10 +133,17 @@ SimulationPopulationSize <- setRefClass(
       return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="PopulationSize", response=study$response, region=study$studyArea$region, tag=paste(iteration, modelName, sep="-")))
     },
     
-    loadValidationData = function(tracks, fileName) {
-      if (missing(tracks)) tracks <- study$loadTracks(iteration=iteration, addColumns=FALSE)
-      truePopulationSize <- tracks$getTruePopulationSize()
+    loadValidationData = function(fileName) {
+      if (inherits(study, "undefinedField") | length(iteration) == 0)
+        stop("Provide study and iteration parameters.")
+      if (missing(fileName)) {
+        fileName <- study$context$getLongFileName(dir=study$context$scratchDirectory, name="TruePopulationSize", response=study$response, region=study$studyArea$region, tag=iteration)
+      }
+      load(fileName)
       setValidationSizeData(truePopulationSize)
+      #if (missing(tracks)) tracks <- study$loadTracks(iteration=iteration, addColumns=FALSE)
+      #truePopulationSize <- tracks$getTruePopulationSize()
+      #setValidationSizeData(truePopulationSize)
       return(invisible(.self))
     }
   )
