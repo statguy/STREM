@@ -15,12 +15,27 @@
 # args <- c("notest","A","1")
 
 if (F) {
-scenario<-"E"
+library(parallel)
+library(doMC)
+registerDoMC(cores=detectCores())
+library(WTC)
+source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+  
+parseArguments()
+  
+scenario <- "E"
+#scenario <- "A"
 #scenario<-"Ecombined"
 isTest<-F
-modelName<-"FMPModel"
-#modelName<-"SmoothModelMean-nbinomial-ar1"
-iteration<-as.integer(40)
+#modelName<-"FMPModel"
+modelName<-"SmoothModelMean-nbinomial-ar1"
+#modelName<-"SmoothModel-nbinomial-matern-ar1"
+iteration<-as.integer(3)
+readHabitatIntoMemory <- F
+mss <- getMSS(scenario=scenario, isTest=isTest, readHabitatIntoMemory=FALSE)
+study <- mss$study
+#surveyRoutes <- mss$getSurveyRoutes()
+#populationSize <- study$getPopulationSize2(modelName=modelName, iteration=iteration, save=F)
 }
 
 population_size <- function(scenario, modelName, iteration, isTest, otherTest=F) {
@@ -28,6 +43,7 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
   #mss <- getMSS(scenario=scenario, isTest=isTest, readHabitatIntoMemory=readHabitatIntoMemory)
   mss <- getMSS(scenario=scenario, isTest=isTest, readHabitatIntoMemory=FALSE)
   study <- mss$study
+  surveyRoutes <- mss$getSurveyRoutes()
   
   if (otherTest) {
     study <- getMSS(scenario="Acombined")$study
@@ -48,10 +64,13 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
     #study$loadPopulationSize(iteration=iteration, modelName=modelName)
   }
   else {
-    estimates <- study$getModel(modelName=modelName, iteration=iteration)
-    habitatWeights <- study$getHabitatWeights(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
-    populationSize <- study$getPopulationSize(estimates=estimates, habitatWeights=habitatWeights)
+    #iteration<-as.integer(6)
+    
+    populationSize <- study$getPopulationSize2(modelName=modelName, iteration=iteration, save=T)
     return(invisible(populationSize))
+    
+    #populationSize <- study$getPopulationSize(estimates=estimates, habitatWeights=habitatWeights)
+    #return(invisible(populationSize))
   }
 }
 

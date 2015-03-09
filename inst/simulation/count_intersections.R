@@ -9,7 +9,7 @@
 countIntersections <- function(scenario, iteration, nSurveyRoutes=as.integer(500), countDays=as.integer(1), isTest=F) {
   mss <- getMSS(scenario=scenario, nSurveyRoutes=nSurveyRoutes, isTest=isTest)
   study <- mss$study
-  study$countIntersections(surveyRoutes=mss$getSurveyRoutes(), iteration=iteration, days=countDays)
+  study$countIntersections(iteration=iteration, days=countDays)
 }
 
 library(parallel)
