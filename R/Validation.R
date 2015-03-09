@@ -2,12 +2,12 @@ Validation <- setRefClass(
   "Validation",
   fields = list(
     study = "Study",
-    populationSizeOverEstimate = "numeric"
+    populationSizeCutoff = "numeric"
   ),
   methods = list(
-    initialize = function(..., populationSizeOverEstimate=2000) {
+    initialize = function(..., populationSizeCutoff=c(1,2000)) {
       callSuper(...)
-      populationSizeOverEstimate <<- populationSizeOverEstimate
+      populationSizeCutoff <<- populationSizeCutoff
     },
     
     #getTracksFileIterations = function() {
@@ -51,7 +51,7 @@ Validation <- setRefClass(
     getValidationTemporalIntersections = function(scenarios=c("A","B","C","D","E","F")) {
       x <- ldply(scenarios, function(scenario) {
         s <- getStudy(scenario=scenario, isTest=F)
-        validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
+        validation <- Validation(study=s, populationSizeCutoff=populationSizeCutoff)
         x <- validation$validateTemporalIntersection()
         if (is.null(x) || nrow(x) == 0) return(NULL)
         return(x)
@@ -74,7 +74,7 @@ Validation <- setRefClass(
         if (any(x$Year < 2000))
           stop("Invalid year for scenario = ", study$response, ", model = ", modelName, ", iteration = ", iteration)
         
-        if (is.null(x) || nrow(x) == 0 || any(x$Estimated > populationSizeOverEstimate)) {
+        if (is.null(x) || nrow(x) == 0 || any(x$Estimated <= populationSizeCutoff[0] | x$Estimated >= populationSizeCutoff[2])) {
           message("Estimation failed for iteration ", iteration, " scenario ", study$response)
           return(NULL)
         }
@@ -91,7 +91,7 @@ Validation <- setRefClass(
     getValidationTemporalPopulationSizes = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
       x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
         s <- getStudy(scenario=x$scenario, isTest=F)
-        validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
+        validation <- Validation(study=s, populationSizeCutoff=populationSizeCutoff)
         x <- validation$validateTemporalPopulationSize(x$modelName)
         if (is.null(x) || nrow(x) == 0) return(NULL)
         gc()
@@ -167,7 +167,7 @@ Validation <- setRefClass(
           x <- rbind(x, data.frame(Year=year0, Correlation=correlation, True=truepop, Estimated=estpop, TrueError=realtrue-truepop))
         }
         
-        if (any(x$Estimated > populationSizeOverEstimate)) {
+        if (any(x$Estimated <= populationSizeCutoff[1] | x$Estimated >= populationSizeCutoff[2])) {
           message("Estimation failed for iteration ", iteration, " scenario ", study$response, ".")
           next
         }
@@ -188,7 +188,7 @@ Validation <- setRefClass(
       for (i in 1:nrow(y)) {
         x <- y[i,]
         s <- getStudy(scenario=x$scenario, isTest=F)
-        validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
+        validation <- Validation(study=s, populationSizeCutoff=populationSizeCutoff)
         z <- validation$validateSpatialPopulationSize(x$modelName)
         if (nrow(z) == 0) next
         spatialCorrelations <- rbind(spatialCorrelations, z)
@@ -211,14 +211,14 @@ Validation <- setRefClass(
       return(study$context$getLongFileName(study$context$scratchDirectory, name="CIValidation", response=study$response, region=study$studyArea$region, tag=paste(modelName, iteration, sep="-")))
     },
     
-    validateCredibilityIntervals = function(modelName, iteration, nSamples=100, populationSizeOverEstimate=1e99, save=F) {      
+    validateCredibilityIntervals = function(modelName, iteration, nSamples=100, save=F) {      
       model <- study$getModel(modelName=modelName, iteration=iteration)
       model$modelName <- modelName
       model$loadEstimates()
       model$collectEstimates()
       
-      tracks <- study$loadTracks(iteration=iteration)
-      habitatWeights <- study$getHabitatWeights(tracks=tracks, iteration=iteration, save=F)
+      #tracks <- study$loadTracks(iteration=iteration)
+      #habitatWeights <- study$getHabitatWeights(tracks=tracks, iteration=iteration, save=F)
       
       posteriorSamples <- model$samplePosterior(n=nSamples)
       populationSize <- data.frame()
@@ -229,13 +229,20 @@ Validation <- setRefClass(
         model$data <- posteriorSamples[[sample]]
         model$data$fittedMean <- model$data$z
         model$data$year <- model$data$t
-        populationDensity <- model$getPopulationDensity(getSD=FALSE)
         
-        x <- model$getPopulationSize(populationDensity=populationDensity$mean, tracks=tracks, habitatWeights=habitatWeights)$sizeData
-        if (any(x$Estimated >= populationSizeOverEstimate)) {
-          message("Estimation failed for iteration ", iteration, ".")
-          next
-        }
+        ###
+        model$modelName <- "temp"
+        model$iteration <- as.integer(1)
+
+        
+        ###
+        
+        #populationDensity <- model$getPopulationDensity(getSD=FALSE)
+        #x <- model$getPopulationSize(populationDensity=populationDensity$mean, tracks=tracks, habitatWeights=habitatWeights)$sizeData
+        #if (any(x$Estimated >= populationSizeOverEstimate)) {
+        #  message("Estimation failed for iteration ", iteration, ".")
+        #  next
+        #}
         x$sample <- sample
         populationSize <- rbind(populationSize, x)
       }
@@ -298,7 +305,7 @@ Validation <- setRefClass(
     getValidatedCredibilityIntervalsProportions = function(scenarios=c("A","B","C","D","E","F"), modelNames, probs=c(.025, .975), probsName="95%") {
       x <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x, probs, probsName) {
         s <- getStudy(scenario=x$scenario, isTest=F)
-        validation <- Validation(study=s, populationSizeOverEstimate=populationSizeOverEstimate)
+        validation <- Validation(study=s, populationSizeCutoff=populationSizeCutoff)
         x <- validation$getValidatedCredibilityIntervalsProportion(x$modelName, probs=probs)
         if (nrow(x) == 0) return(NULL)
         x$Interval <- probsName
@@ -317,7 +324,7 @@ Validation <- setRefClass(
         x <- laply(iterations, function(iteration, modelName, study) {
           message("scenario = ", x$scenario, ", iteration = ", iteration, ", model = ", modelName)
           populationSize <- study$loadPopulationSize(iteration=iteration, modelName=modelName)
-          if (any(populationSize$sizeData$Estimated > populationSizeOverEstimate)) return(NA)
+          if (any(populationSize$sizeData$Estimated <= populationSizeCutoff[1] | populationSize$sizeData$Estimated >= populationSizeCutoff[1])) return(NA)
           return(iteration)
         }, modelName=x$modelName, study=s, .parallel=T)
         data.frame(nEstimated=length(x[!is.na(x)]))
