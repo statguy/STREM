@@ -70,8 +70,8 @@ Validation <- setRefClass(
           estimates <- s$getModel(modelName=x$modelName, iteration=iteration)
           estimates$loadEstimates()
           estimates$collectEstimates()
-          a <- sum(estimates$data$intersections)
-          b <- sum(estimates$data$fittedMean * estimates$observedOffset)
+          a <- mean(estimates$data$intersections)
+          b <- mean(estimates$data$fittedMean * estimates$getObservedOffset())
           counts <- rbind(counts, data.frame(Model=x$modelName, Scenario=x$Scenario, iteration=iteration, True=a, Estimated=b))
         }
         

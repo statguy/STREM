@@ -28,7 +28,8 @@ prettyModelName <- function(x) {
   lookup$y[match(x, lookup$x)]
 }
 
-boundaryDF <- ggplot2::fortify(FinlandWTCStudy(context=context, response="canis.lupus")$studyArea$boundary)    
+boundaryDF <- ggplot2::fortify(FinlandWTCStudy(context=context, response="canis.lupus")$studyArea$boundary)
+
 ```
 
 ```{r figures}
@@ -777,7 +778,7 @@ saveFigure(p, "manuscript-figure-4x.pdf", height=7.87/2.5, dpi=300)
 ```{r figure-x-debug}
 getTrueAndEstimatedCounts <- function(scenarios, modelNames, cutoff=c(-Inf,Inf)) {
   study <- getStudy(scenario="A")
-  validation <- Validation(study=study, populationSizeOverEstimate=cutoff)
+  validation <- Validation(study=study, populationSizeCutoff=cutoff)
   counts <- validation$getCounts(scenarios=scenarios, modelNames=modelNames)
   counts <- ddply(counts, .(iteration), function(x) data.frame(Scenario=x$Scenario[1], Model=x$Model[1], True=mean(x$True), TrueSD=sd(x$True), Estimated=mean(x$Estimated), EstimatedSD=sd(x$Estimated)))
   return(counts)
@@ -793,7 +794,7 @@ c3 <- getTrueAndEstimatedCounts(scenarios=paste0(scenarios, "10days"), modelName
 ```{r figure-4-init}
 getPopulationCorrelations <- function(scenarios, modelNames, cutoff=c(-Inf,Inf)) {
   study <- getStudy(scenario="A")
-  validation <- Validation(study=study, populationSizeOverEstimate=cutoff)
+  validation <- Validation(study=study, populationSizeCutoff=cutoff)
   populationCorrelations <- validation$getValidationSpatialPopulationSizes(scenarios=scenarios, modelNames=modelNames)
   return(populationCorrelations)
 }
