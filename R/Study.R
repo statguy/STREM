@@ -157,6 +157,7 @@ SimulationStudy <- setRefClass(
     getPopulationSize2 = function(modelName, iteration, readHabitatIntoMemory=TRUE, save=TRUE) {
       estimates <- getModel(modelName=modelName, iteration=iteration)
       estimates$loadEstimates()
+      estimates$collectEstimates()
       populationSize <- getPopulationSize(estimates, readHabitatIntoMemory=readHabitatIntoMemory, save=save)
       return(invisible(populationSize))
     },
