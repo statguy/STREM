@@ -60,24 +60,29 @@ Validation <- setRefClass(
       return(x)
     },
     
-    getMeanCounts = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
+    getMeanCountsSingle = function(scenario, modelName) {
+      iterations <- getEstimatesFileIterations(modelName)
+      
+      counts <- data.frame()
+      for (iteration in iterations) {
+        estimates <- s$getModel(modelName=x$modelName, iteration=iteration)
+        estimates$loadEstimates()
+        estimates$collectEstimates()
+        a <- mean(estimates$data$intersections)
+        b <- mean(estimates$data$fittedMean * estimates$getObservedOffset())
+        counts <- rbind(counts, data.frame(Model=modelName, Scenario=scenario, iteration=iteration, True=a, Estimated=b))
+      }
+      
+      return(counts)
+    },
+    
+    getMeanCounts = function(scenarios=c("A","B","C","D","E","F"), modelNames, populationSizeCutoff=c(-Inf,Inf)) {
       counts <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
         s <- getStudy(scenario=x$scenario, isTest=F)
-        iterations <- getEstimatesFileIterations(x$modelName)
-        
-        counts <- data.frame()
-        for (iteration in iterations) {
-          estimates <- s$getModel(modelName=x$modelName, iteration=iteration)
-          estimates$loadEstimates()
-          estimates$collectEstimates()
-          a <- mean(estimates$data$intersections)
-          b <- mean(estimates$data$fittedMean * estimates$getObservedOffset())
-          counts <- rbind(counts, data.frame(Model=x$modelName, Scenario=x$scenario, iteration=iteration, True=a, Estimated=b))
-        }
-        
+        validation <- Validation(study=s, populationSizeCutoff=populationSizeCutoff)
+        counts <- validation$getMeanCountsSingle(x$scenario, x$modelName)
         return(counts)
       }, .parallel=T)
-      
       return(counts)
     },
     
