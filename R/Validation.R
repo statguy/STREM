@@ -60,7 +60,7 @@ Validation <- setRefClass(
       return(x)
     },
     
-    getCounts = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
+    getMeanCounts = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
       counts <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
         s <- getStudy(scenario=x$scenario, isTest=F)
         iterations <- getEstimatesFileIterations(x$modelName)
@@ -72,7 +72,7 @@ Validation <- setRefClass(
           estimates$collectEstimates()
           a <- mean(estimates$data$intersections)
           b <- mean(estimates$data$fittedMean * estimates$getObservedOffset())
-          counts <- rbind(counts, data.frame(Model=x$modelName, Scenario=x$Scenario, iteration=iteration, True=a, Estimated=b))
+          counts <- rbind(counts, data.frame(Model=x$modelName, Scenario=x$scenario, iteration=iteration, True=a, Estimated=b))
         }
         
         return(counts)
