@@ -128,7 +128,7 @@ SimulationStudy <- setRefClass(
     #  return(weightedLengths)
     #},
     
-    getPopulationSize = function(estimates, readHabitatIntoMemory=TRUE, save=TRUE) {
+    getPopulationSize = function(estimates, iteration, readHabitatIntoMemory=TRUE, save=TRUE) {
       withHabitatPreferences <- !inherits(surveyRoutes, "uninitializedField")
       
       #lengthWeights <- if (withHabitatPreferences)
@@ -160,7 +160,7 @@ SimulationStudy <- setRefClass(
       estimates <- getModel(modelName=modelName, iteration=iteration)
       estimates$loadEstimates()
       estimates$collectEstimates()
-      populationSize <- getPopulationSize(estimates, readHabitatIntoMemory=readHabitatIntoMemory, save=save)
+      populationSize <- getPopulationSize(estimates, iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory, save=save)
       return(invisible(populationSize))
     },
     

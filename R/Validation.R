@@ -228,7 +228,7 @@ Validation <- setRefClass(
         model$data <- posteriorSamples[[index]]
         model$data$fittedMean <- model$data$z #* lengthWeights
         model$data$year <- model$data$t
-        x <- study$getPopulationSize(estimates=model, save=FALSE)$sizeData
+        x <- study$getPopulationSize(estimates=model, iteration=iteration, save=FALSE)$sizeData
         
         #x <- SimulationPopulationSize$new(study=study, iteration=iteration)
         #density <- model$data$fittedMean / model$offsetScale
