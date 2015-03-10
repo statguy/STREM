@@ -135,6 +135,7 @@ CORINEHabitatWeights <- setRefClass(
                                    fun=aggfun, na.rm=T)
       }
       else {
+        message("Aggregating habitat weights raster...")
         weightsRaster <- aggregate(habitat,
                                    fact=aggregationScale,
                                    fun=aggfun, na.rm=T)

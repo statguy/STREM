@@ -117,7 +117,7 @@ Model <- setRefClass(
     
     getDensityEstimates = function(weights=1, aggregate=F) {
       xy <- getUnscaledObservationCoordinates()
-      xyzt <- data.frame(x=xy[,1], y=xy[,y], density=data$fittedMean * weights / offsetScale, year=data$year)
+      xyzt <- data.frame(x=xy[,1], y=xy[,2], density=data$fittedMean * weights / offsetScale, year=data$year)
       if (aggregate)
         xyzt <- ddply(xyzt, .(year), function(x) data.frame(density=mean(x$density), year=x$year[1]))
       return(xyzt)
