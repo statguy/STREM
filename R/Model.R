@@ -108,35 +108,52 @@ Model <- setRefClass(
                  index=index, .parallel=F)
       return(x)
     },
-           
-    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=FALSE) {
-      if (is.null(data$fittedMean))
-        stop("Did you forgot to run collectEstimates() first?")
-      
-      library(raster)
-      library(plyr)
-      
-      #area <- maskPolygon@polygons[[1]]@area
-      meanPopulationDensity <- ddply(data, .(year), function(x)
-        data.frame(z=mean(x$fittedMean / offsetScale), year=x$year[1]))
-      
-      cellArea <- prod(res(templateRaster))
-      meanPopulationDensityRaster <- SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$z, boundary=maskPolygon, layerNames=meanPopulationDensity$year, weights=cellArea)
-      
-      sdPopulationDensityRaster <- if (getSD) {
-        sdPopulationDensity <- ddply(data, .(year), function(x)
-          data.frame(z=mean(x$fittedSD / offsetScale), year=x$year[1]))
-        SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$z, boundary=maskPolygon, layerNames=meanPopulationDensity$year, weights=cellArea)
-      }
-      else SpatioTemporalRaster(study=study)
-      
-      return(invisible(list(mean=meanPopulationDensityRaster, sd=sdPopulationDensityRaster)))
-    },
-    
+        
     getLengthWeights = function(weightedLengths, lengths) {
       lengthWeights <- weightedLengths / lengths
       lengthWeights <- rep(lengthWeights, length(years))
       return(lengthWeights)
+    },
+    
+    getDensityEstimates = function(weights=1, aggregate=F) {
+      xy <- getUnscaledObservationCoordinates()
+      xyzt <- data.frame(x=xy[,1], y=xy[,y], density=data$fittedMean * weights / offsetScale, year=data$year)
+      if (aggregate)
+        xyzt <- ddply(xyzt, .(year), function(x) data.frame(density=mean(x$density), year=x$year[1]))
+      return(xyzt)
+    },
+    
+    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, habitatWeights=NULL) {
+      if (is.null(data$fittedMean))
+        stop("Did you forgot to run collectEstimates() first?")
+      library(raster)
+      
+      effortWeights <- if (!is.null(habitatWeights)) {
+        if (inherits(study$surveyRoutes, "uninitializedField"))
+          stop("You specified habitat weights but survey routes are not available for effort weighting.")
+        weightedLengths <- study$surveyRoutes$getWeightedLengths(habitatWeights)
+        getLengthWeights(weightedLengths, study$surveyRoutes$lengths)
+      }
+      else 1
+      
+      meanPopulationDensity <- getDensityEstimates(weights=effortWeights, aggregate=TRUE)
+      cellArea <- prod(res(templateRaster))
+      meanPopulationDensityRaster <- SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$density, boundary=maskPolygon, layerNames=meanPopulationDensity$year, weights=cellArea)
+      
+      return(invisible(meanPopulationDensityRaster))
+    },
+    
+    getPopulationSize = function(populationDensity, habitatWeights=NULL) {
+      if (missing(populationDensity))
+        stop("Required argument 'populationDensity' missing.")
+      if (!inherits(populationDensity, "SpatioTemporalRaster"))
+        stop("Argument 'populationDensity' must be of type 'SpatioTemporalRaster'")
+      if (!is.null(habitatWeights)) populationDensity$weight(habitatWeights)
+      
+      populationSize <- populationDensity$integrate(volume=SimulationPopulationSize(study=study, iteration=iteration, modelName=modelName))
+      populationSize$loadValidationData()
+      
+      return(invisible(populationSize))
     }
     
     # Remove this and use *PopulationSize class instead
@@ -149,7 +166,7 @@ Model <- setRefClass(
     #  else populationSize$loadValidationData(tracks=tracks)
     #  
     # return(invisible(populationSize))
-    #}    
+    #}
   )
 )
 
@@ -179,18 +196,22 @@ AggregatedModel <- setRefClass(
                  index=index, years=data$year, .parallel=F)
       return(x)
     },
-    
-    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=FALSE) {
-      warning("Population density unavailable.")
-      return(list(mean=NA, SD=NA))
-    },
-    
+        
     getLengthWeights = function(weightedLengths, lengths) {
       lengthWeights <- sum(weightedLengths) / sum(lengths)
       lengthWeights <- rep(lengthWeights, length(years))
       return(lengthWeights)
+    },
+    
+    getDensityEstimates = function(aggragate=F) {
+      return(data.frame(density=data$fittedMean / offsetScale, year=data$year))
     }
     
+    
+    #getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=FALSE) {
+    #  warning("Population density unavailable.")
+    #  return(list(mean=NA, SD=NA))
+    #},
     
     # TODO: Support for custom areas
     #getPopulationSize = function(populationDensity, tracks, habitatWeights) {

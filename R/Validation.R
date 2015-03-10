@@ -222,17 +222,18 @@ Validation <- setRefClass(
       populationSize <- ldply(1:nSamples, function(index, model, posteriorSamples) {
         message("Processing posterior sample ", index, "...")
         
-        lengthWeights <- if (!inherits(study$surveyRoutes, "uninitializedField"))
-          model$getLengthWeights(study$getSurveyRouteWeightedLengths(iteration=iteration), study$surveyRoutes$lengths) else 1
+        #lengthWeights <- if (!inherits(study$surveyRoutes, "uninitializedField"))
+        #  model$getLengthWeights(study$getSurveyRouteWeightedLengths(iteration=iteration), study$surveyRoutes$lengths) else 1
         
         model$data <- posteriorSamples[[index]]
-        model$data$fittedMean <- model$data$z * lengthWeights
+        model$data$fittedMean <- model$data$z #* lengthWeights
         model$data$year <- model$data$t
+        x <- study$getPopulationSize(estimates=model, save=FALSE)$sizeData
         
-        x <- SimulationPopulationSize$new(study=study, iteration=iteration)
-        density <- model$data$fittedMean / model$offsetScale
-        x$getPopulationSize(density, model$data$year, loadValidationData=TRUE)
-        x <- x$sizeData  
+        #x <- SimulationPopulationSize$new(study=study, iteration=iteration)
+        #density <- model$data$fittedMean / model$offsetScale
+        #x$getPopulationSize(density, model$data$year, loadValidationData=TRUE)
+        #x <- x$sizeData  
         
         if (any(x$Estimated <= populationSizeCutoff[1] | x$Estimated >= populationSizeCutoff[2])) {
           message("Estimation failed for iteration ", iteration, ".")

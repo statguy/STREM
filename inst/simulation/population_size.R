@@ -51,7 +51,7 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
     iteration <- as.integer(1)
     
     estimates <- study$getModel(modelName=modelName, iteration=iteration)
-    estimates <- study$loadEstimates(estimates=estimates)
+    estimates$loadEstimates()
     estimates$collectEstimates()
     
     #estimates$collectHyperparameters()

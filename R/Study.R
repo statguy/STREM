@@ -101,7 +101,7 @@ SimulationStudy <- setRefClass(
       return(invisible(model))
     },
     
-    getHabitatWeights2 = function(tracks, iteration, save=TRUE, readHabitatIntoMemory=TRUE) {
+    getHabitatWeights = function(tracks, iteration, save=TRUE, readHabitatIntoMemory=TRUE) {
       if (withHabitatWeights == FALSE) return(NULL)
       
       habitatWeights <- CORINEHabitatWeights$new(study=.self)
@@ -119,34 +119,50 @@ SimulationStudy <- setRefClass(
       return(habitatWeights)
     },
     
-    getSurveyRouteWeightedLengths = function(iteration, readHabitatIntoMemory=TRUE) {
-      weightedLengths <- if (!inherits(surveyRoutes, "uninitializedField")) {
-        habitatWeights <- getHabitatWeights2(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
-        surveyRoutes$getWeightedLengths(habitatWeights)
-      } else 1
-      return(weightedLengths)
-    },
+    #getSurveyRouteWeightedLengths = function(iteration, readHabitatIntoMemory=TRUE) {
+    #  weightedLengths <- if (!inherits(surveyRoutes, "uninitializedField")) {
+    #    habitatWeights <- getHabitatWeights2(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
+    #    surveyRoutes$getWeightedLengths(habitatWeights)
+    #  } else 1
+    #  return(weightedLengths)
+    #},
     
-    getPopulationSize2 = function(modelName, iteration, readHabitatIntoMemory=TRUE, save=TRUE) {
-      estimates <- getModel(modelName=modelName, iteration=iteration)
-      estimates$loadEstimates()
+    getPopulationSize = function(estimates, readHabitatIntoMemory=TRUE, save=TRUE) {
+      withHabitatPreferences <- !inherits(surveyRoutes, "uninitializedField")
       
-      lengthWeights <- if (!inherits(surveyRoutes, "uninitializedField"))
-        estimates$getLengthWeights(getSurveyRouteWeightedLengths(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory), surveyRoutes$lengths)
-      else 1
+      #lengthWeights <- if (withHabitatPreferences)
+      #  estimates$getLengthWeights(getSurveyRouteWeightedLengths(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory), surveyRoutes$lengths)
+      #else 1
+      #estimates$collectEstimates(lengthWeights)
       
-      estimates$collectEstimates(lengthWeights)
+      if (withHabitatPreferences) {
+        habitatWeights <- getHabitatWeights(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
+        populationDensity <- estimates$getPopulationDensity(habitatWeights=habitatWeights)
+        populationSize <- estimates$getPopulationSize(populationDensity, habitatWeights=habitatWeights)
+      }
+      else {
+        populationSize <- SimulationPopulationSize$new(study=.self, modelName=modelName, iteration=iteration)
+        x <- estimates$getDensityEstimates()
+        populationSize$getPopulationSize(x$density, x$year, loadValidationData=TRUE)
+      }
       
-      populationSize <- SimulationPopulationSize$new(study=.self, modelName=modelName, iteration=iteration)
-      density <- estimates$data$fittedMean / estimates$offsetScale
-      populationSize$getPopulationSize(density, estimates$data$year, loadValidationData=TRUE)
+      #density <- estimates$data$fittedMean / estimates$offsetScale
+      #populationSize$getPopulationSize(density, estimates$data$year, loadValidationData=TRUE)
+      
       if (save) populationSize$savePopulationSize()
       
       return(invisible(populationSize))
     },
     
+    getPopulationSize2 = function(modelName, iteration, readHabitatIntoMemory=TRUE, save=TRUE) {
+      estimates <- getModel(modelName=modelName, iteration=iteration)
+      estimates$loadEstimates()
+      populationSize <- getPopulationSize(estimates, readHabitatIntoMemory=readHabitatIntoMemory, save=save)
+      return(invisible(populationSize))
+    },
+    
     ### DEPRECATED
-    getPopulationSize = function(estimates, habitatWeights, save=TRUE) {      
+    getPopulationSize_DEPRECATED = function(estimates, habitatWeights, save=TRUE) {      
       estimates <- loadEstimates(estimates)
       estimates$collectEstimates()
       populationSize <- estimates$getPopulationSize(habitatWeights=habitatWeights)
@@ -154,7 +170,7 @@ SimulationStudy <- setRefClass(
       return(invisible(populationSize))
     },
     
-    getHabitatWeights = function(tracks, iteration, save=TRUE, readHabitatIntoMemory=TRUE) {
+    getHabitatWeights_DEPRECATED = function(tracks, iteration, save=TRUE, readHabitatIntoMemory=TRUE) {
       if (withHabitatWeights == FALSE) return(NULL)
       
       habitatWeights <- CORINEHabitatWeights$new(study=.self)

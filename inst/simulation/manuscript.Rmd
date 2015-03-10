@@ -502,7 +502,7 @@ plotLogPopulationSize <- function(size, modelName, case, xlim, ylim) {
   meanSize$Scenario <- prettyScenario(meanSize$Scenario)
   
   p <- ggplot(size, aes(Observed, Estimated, colour=modelName)) +
-    geom_point(size=1, colour="darkgray", alpha=.25) +
+    geom_point(size=1, colour="darkgray", alpha=.5) +
     geom_abline(colour="black", linetype="longdash") + 
     geom_point(data=meanSize, aes(True, Estimated), size=2, shape=15, colour="black")
 
@@ -528,44 +528,44 @@ plotLogPopulationSize <- function(size, modelName, case, xlim, ylim) {
 #modelNames <- modelNames[c(2:4,1)]
 
 xlim <- log10(c(50,1200)); ylim <- xlim
-p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[1]), modelName=modelNames[1], "a", xlim=xlim, ylim=ylim)
+p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[1]), modelName=modelNames[1], "1", xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3a1.png")
 saveFigure(p, "manuscript-figure-3a1.pdf", dpi=300)
-p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[3]), modelName=modelNames[3], "a", xlim=xlim, ylim=ylim)
+p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[3]), modelName=modelNames[3], "1", xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3a2.png")
 saveFigure(p, "manuscript-figure-3a2.pdf", dpi=300)
-p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[4]), modelName=modelNames[4], "a", xlim=xlim, ylim=ylim)
+p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[4]), modelName=modelNames[4], "1", xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3a3.png")
 saveFigure(p, "manuscript-figure-3a3.pdf", dpi=300)
-p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[5]), modelName=modelNames[5], "a", xlim=xlim, ylim=ylim)
+p <- plotLogPopulationSize(subset(logPopulationSizes, modelName==modelNames[5]), modelName=modelNames[5], "1", xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3a4.png")
 saveFigure(p, "manuscript-figure-3a4.pdf", dpi=300)
 
 xlim <- log10(c(500,4000)); ylim <- xlim
-p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[1]), modelName=modelNames[1], "b", xlim=xlim, ylim=ylim)
+p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[1]), modelName=modelNames[1], "2", xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3b1.png")
 saveFigure(p, "manuscript-figure-3b1.pdf", dpi=300)
-p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[3]), modelName=modelNames[3], "b", xlim=xlim, ylim=ylim)
+p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[3]), modelName=modelNames[3], "2", xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3b2.png")
 saveFigure(p, "manuscript-figure-3b2.pdf", dpi=300)
-p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[4]), modelName=modelNames[4], "b", xlim=xlim, ylim=ylim)
+p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[4]), modelName=modelNames[4], "2", xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3b3.png")
 saveFigure(p, "manuscript-figure-3b3.pdf", dpi=300)
-p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[5]), modelName=modelNames[5], "b", xlim=xlim, ylim=ylim)
+p <- plotLogPopulationSize(subset(logPopulationSizes2000, modelName==modelNames[5]), modelName=modelNames[5], "2", xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3b4.png")
 saveFigure(p, "manuscript-figure-3b4.pdf", dpi=300)
 
 xlim <- log10(c(5,1200)); ylim <- xlim
-p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[1]), modelName=modelNames[1], "c", xlim=xlim, ylim=ylim)
+p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[1]), modelName=modelNames[1], "3", xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3c1.png")
 saveFigure(p, "manuscript-figure-3c1.pdf", dpi=300)
-p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[3]), modelName=modelNames[3], "c", xlim=xlim, ylim=ylim)
+p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[3]), modelName=modelNames[3], "3", xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3c2.png")
 saveFigure(p, "manuscript-figure-3c2.pdf", dpi=300)
-p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[4]), modelName=modelNames[4], "c", xlim=xlim, ylim=ylim)
+p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[4]), modelName=modelNames[4], "3", xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3c3.png")
 saveFigure(p, "manuscript-figure-3c3.pdf", dpi=300)
-p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[5]), modelName=modelNames[5], "c", xlim=xlim, ylim=ylim)
+p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[5]), modelName=modelNames[5], "3", xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3c4.png")
 saveFigure(p, "manuscript-figure-3c4.pdf", dpi=300)
 ```
@@ -590,7 +590,7 @@ plotLogPopulationSizeSample <- function(size, modelName, case, xlim, ylim) {
   meanSize$Scenario <- prettyScenario(meanSize$Scenario)
   
   p <- ggplot(size, aes(Observed, Estimated, colour=modelName)) +
-    geom_point(size=1, colour="darkgray", alpha=.25) +
+    geom_point(size=1, colour="darkgray", alpha=.5) +
     geom_abline(colour="black", linetype="longdash") + 
     geom_point(data=meanSize, aes(True, Estimated), size=2, shape=15, colour="black")
 
@@ -612,8 +612,8 @@ plotLogPopulationSizeSample <- function(size, modelName, case, xlim, ylim) {
 }
 
 p <- plotLogPopulationSizeSample(subset(logPopulationSizesSample, modelName==c("ST","T1","T2","FMP")), modelName=c("ST","T1","T2","FMP"), "a", xlim=xlim, ylim=ylim)
-saveFigure(p, "manuscript-figure-3sample.png", height=7.87*1.2/2) # draft quality
-saveFigure(p, "manuscript-figure-3sample.pdf", height=7.87*1.2/2, dpi=300)
+saveFigure(p, "manuscript-figure-3sample.png", height=7.87*2/3) # draft quality
+saveFigure(p, "manuscript-figure-3sample.pdf", height=7.87*2/3, dpi=300)
 ```
 
 ```{r table-1abc}

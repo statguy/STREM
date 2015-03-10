@@ -232,6 +232,30 @@ SmoothModelSpatioTemporal <- setRefClass(
       return(callSuper(n=n, index=indexObserved))
     },
     
+    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, habitatWeights=NULL) {
+      if (is.null(data$fittedMean))
+        stop("Did you forgot to run collectEstimates() first?")
+      library(raster)
+      
+      effortWeights <- if (!is.null(habitatWeights)) {
+        if (inherits(study$surveyRoutes, "uninitializedField"))
+          stop("You specified habitat weights but survey routes are not available for effort weighting.")
+        weightedLengths <- study$surveyRoutes$getWeightedLengths(habitatWeights)
+        getLengthWeights(weightedLengths, study$surveyRoutes$lengths)
+      }
+      else 1
+      
+      populationDensity <- getDensityEstimates(aggregate=FALSE)
+      cellArea <- prod(res(templateRaster))
+      populationDensityRaster <- SpatioTemporalRaster(study=study)$interpolate(populationDensity, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=sort(unique(populationDensity$year)), weights=cellArea)
+      
+      return(invisible(populationDensityRaster))
+    },
+    
+    
+    #######
+    
+    
     project = function(projectValues, projectionRaster=study$getTemplateRaster(), maskPolygon, weights=1) {
       library(INLA)
       library(raster)
