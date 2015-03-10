@@ -774,8 +774,24 @@ saveFigure(p, "manuscript-figure-4x.pdf", height=7.87/2.5, dpi=300)
 #writeTable(i10days, "table-2c.docx", context)
 ```
 
+```{r figure-x-debug}
+getTrueAndEstimatedCounts <- function(scenarios, modelNames, cutoff=c(-Inf,Inf)) {
+  study <- getStudy(scenario="A")
+  validation <- Validation(study=study, populationSizeOverEstimate=cutoff)
+  counts <- validation$getCounts(scenarios=scenarios, modelNames=modelNames)
+  counts <- ddply(counts, .(iteration), function(x) data.frame(Scenario=x$Scenario[1], Model=x$Model[1], True=mean(x$True), TrueSD=sd(x$True), Estimated=mean(x$Estimated), EstimatedSD=sd(x$Estimated)))
+  return(counts)
+}
+
+c1 <- getTrueAndEstimatedCounts(scenarios=scenarios, modelNames=modelNames[c(1,3:5)])
+c2 <- getTrueAndEstimatedCounts(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[c(1,3:5)])
+c3 <- getTrueAndEstimatedCounts(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(1,3:5)])
+
+
+```
+
 ```{r figure-4-init}
-getPopulationCorrelations <- function(scenarios, modelNames, cutoff=Inf) {
+getPopulationCorrelations <- function(scenarios, modelNames, cutoff=c(-Inf,Inf)) {
   study <- getStudy(scenario="A")
   validation <- Validation(study=study, populationSizeOverEstimate=cutoff)
   populationCorrelations <- validation$getValidationSpatialPopulationSizes(scenarios=scenarios, modelNames=modelNames)

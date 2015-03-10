@@ -60,6 +60,27 @@ Validation <- setRefClass(
       return(x)
     },
     
+    getCounts = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
+      counts <- ddply(expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE), .(scenario, modelName), function(x) {
+        s <- getStudy(scenario=x$scenario, isTest=F)
+        iterations <- getEstimatesFileIterations(x$modelName)
+        
+        counts <- data.frame()
+        for (iteration in iterations) {
+          estimates <- s$getModel(modelName=x$modelName, iteration=iteration)
+          estimates$loadEstimates()
+          estimates$collectEstimates()
+          a <- sum(estimates$data$intersections)
+          b <- sum(estimates$data$fittedMean * estimates$observedOffset)
+          counts <- rbind(counts, data.frame(Model=x$modelName, Scenario=x$Scenario, iteration=iteration, True=a, Estimated=b))
+        }
+        
+        return(counts)
+      }, .parallel=T)
+      
+      return(counts)
+    },
+    
     validateTemporalPopulationSize = function(modelName) {
       library(plyr)
       
@@ -233,7 +254,7 @@ Validation <- setRefClass(
         #x <- SimulationPopulationSize$new(study=study, iteration=iteration)
         #density <- model$data$fittedMean / model$offsetScale
         #x$getPopulationSize(density, model$data$year, loadValidationData=TRUE)
-        #x <- x$sizeData  
+        #x <- x$sizeData
         
         if (any(x$Estimated <= populationSizeCutoff[1] | x$Estimated >= populationSizeCutoff[2])) {
           message("Estimation failed for iteration ", iteration, ".")
