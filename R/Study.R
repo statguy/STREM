@@ -101,7 +101,7 @@ SimulationStudy <- setRefClass(
       return(invisible(model))
     },
     
-    getHabitatWeights = function(tracks, iteration, save=TRUE, readHabitatIntoMemory=TRUE) {
+    getHabitatWeights = function(tracks, iteration, save=TRUE, readHabitatIntoMemory=TRUE, asRaster=FALSE) {
       if (withHabitatWeights == FALSE) return(NULL)
       
       habitatWeights <- CORINEHabitatWeights$new(study=.self)
@@ -116,6 +116,7 @@ SimulationStudy <- setRefClass(
       }
             
       habitatWeights$setHabitatSelectionWeights(habitatSelection)
+      if (asRaster) return(habitatWeights$getWeightsRaster(save=FALSE))
       return(habitatWeights)
     },
     
@@ -138,7 +139,8 @@ SimulationStudy <- setRefClass(
       if (withHabitatPreferences) {
         habitatWeights <- getHabitatWeights(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
         populationDensity <- estimates$getPopulationDensity(habitatWeights=habitatWeights)
-        populationSize <- estimates$getPopulationSize(populationDensity, habitatWeights=habitatWeights)
+        habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=FALSE)
+        populationSize <- estimates$getPopulationSize(populationDensity, habitatWeightsRaster=habitatWeightsRaster)
       }
       else {
         populationSize <- SimulationPopulationSize$new(study=.self, modelName=modelName, iteration=iteration)

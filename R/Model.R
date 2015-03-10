@@ -143,12 +143,12 @@ Model <- setRefClass(
       return(invisible(meanPopulationDensityRaster))
     },
     
-    getPopulationSize = function(populationDensity, habitatWeights=NULL) {
+    getPopulationSize = function(populationDensity, habitatWeightsRaster=NULL) {
       if (missing(populationDensity))
         stop("Required argument 'populationDensity' missing.")
       if (!inherits(populationDensity, "SpatioTemporalRaster"))
         stop("Argument 'populationDensity' must be of type 'SpatioTemporalRaster'")
-      if (!is.null(habitatWeights)) populationDensity$weight(habitatWeights)
+      if (!is.null(habitatWeightsRaster)) populationDensity$weight(habitatWeightsRaster)
       
       populationSize <- populationDensity$integrate(volume=SimulationPopulationSize(study=study, iteration=iteration, modelName=modelName))
       populationSize$loadValidationData()
