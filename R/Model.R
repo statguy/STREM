@@ -203,8 +203,8 @@ AggregatedModel <- setRefClass(
       return(lengthWeights)
     },
     
-    getDensityEstimates = function(aggragate=F) {
-      return(data.frame(density=data$fittedMean / offsetScale, year=data$year))
+    getDensityEstimates = function(weights=1, aggragate=F) {
+      return(data.frame(density=data$fittedMean * weights / offsetScale, year=data$year))
     }
     
     
