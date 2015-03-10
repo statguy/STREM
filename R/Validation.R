@@ -113,7 +113,7 @@ Validation <- setRefClass(
         y$Observed.q1 <- q[1]
         y$Observed.q2 <- q[2]
         return(y)
-      }, probs=c(.0025, .975))
+      }, probs=c(.025, .975))
     },
     
     validateSpatialPopulationSize = function(modelName) {

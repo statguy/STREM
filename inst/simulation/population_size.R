@@ -22,7 +22,7 @@ library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
 parseArguments()
-  
+
 scenario <- "E"
 #scenario <- "A"
 #scenario<-"Ecombined"

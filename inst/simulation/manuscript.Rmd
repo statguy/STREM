@@ -629,8 +629,8 @@ getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEs
     y <- lm(Estimated~Observed, x)
     prop.mean <- mean(log(x$Estimated/x$Observed))
     prop.sd <- sd(log(x$Estimated/x$Observed))
-    prop.min <- quantile(log(x$Estimated/x$Observed), .05)
-    prop.max <- quantile(log(x$Estimated/x$Observed), .95)
+    prop.min <- quantile(log(x$Estimated/x$Observed), .025)
+    prop.max <- quantile(log(x$Estimated/x$Observed), .975)
     slope.sd <- coef(summary(y))[2,2]
     return(data.frame(Intercept=coef(y)[1], Slope=coef(y)[2], SlopeSD=slope.sd, R2=summary(y)$r.squared, EstTrue=prop.mean, EstTrueSD=prop.sd, EstTrueMin=prop.min, EstTrueMax=prop.max, Failed=failed, N=nrow(x)))
   }, overEstimate=overEstimate)
@@ -758,8 +758,8 @@ intersections2000x <- plyr::join(populationSizes2000, intersections2000)
 intersections10daysx <- plyr::join(populationSizes10Days, intersections10days)
 
 rer.stat <- function(x) data.frame(SizeCount=mean(x$intersections/x$Observed),
-                                   SizeCountMin=quantile(x$intersections/x$Observed, 0.05),
-                                   SizeCountMax=quantile(x$intersections/x$Observed, 0.95))
+                                   SizeCountMin=quantile(x$intersections/x$Observed, 0.025),
+                                   SizeCountMax=quantile(x$intersections/x$Observed, 0.975))
 i <- ddply(intersectionsx, .(Scenario), rer.stat); i$Scenario=prettyScenario(i$Scenario); i$Case <- "1"
 i2000 <- ddply(intersections2000x, .(Scenario), rer.stat); i2000$Scenario=prettyScenario(i2000$Scenario); i2000$Case <- "2"
 i10days <- ddply(intersections10daysx, .(Scenario), rer.stat); i10days$Scenario=prettyScenario(i10days$Scenario); i10days$Case <- "3"
@@ -829,7 +829,9 @@ plotCIProportions <- function(credibilityIntervals) {
     geom_hline(aes(yintercept=.5), color="grey90") +
     geom_hline(aes(yintercept=.95), color="grey90") +
     geom_point() +
-    scale_shape_manual(values=c(16, 1)) + scale_colour_manual("Model", values=c("black", "darkgray", "gray"), labels=modelLabels) +
+    scale_shape_manual(values=c(16, 1)) +
+    #scale_colour_manual("Model", values=c("black", "darkgray", "gray"), labels=modelLabels) +
+    scale_colour_manual("Model", values=c("blue", "green", "red"), labels=modelLabels) +
     theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent")) +
     xlab("Scenario") + ylab("Proportion") +
     facet_wrap(~panel) + ylim(0, 1) +
@@ -842,6 +844,8 @@ plotCIProportions <- function(credibilityIntervals) {
           legend.box="horizontal")
   return(p)
 }
+p <- plotCIProportions(cip)
+saveFigure(p, "manuscript-figure-5.png", height=7.87/2, dpi=200)
 ```
 
 ```{r figure-5abc}
