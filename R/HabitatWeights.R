@@ -151,7 +151,7 @@ CORINEHabitatWeights <- setRefClass(
                             paste0("r.out.gdal --o input=", output_raster, " output=", output_file, " format=GTiff"),
                             paste0("g.remove -f type=raster name=", output_raster),
                             "exit",
-                            "EOF\n"
+                            "EOF\n",
                             sep="\n")
         cat(grassInput)
         system(grassInput)
