@@ -54,7 +54,7 @@ CORINEHabitatWeights <- setRefClass(
   fields = list(
     weights = "data.frame",
     habitatTypes = "integer",
-    iteration = "iteration"
+    iteration = "integer"
   ),
   methods = list(
     initialize = function(habitatWeightsList=list(Urban=1, Agriculture=1, Forestland=1, Peatland=1, Water=1), ...) {
