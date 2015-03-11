@@ -120,7 +120,7 @@ CORINEHabitatWeights <- setRefClass(
     getWeightsRasterFileName = function() {
       if (length(iteration) == 0)
         stop("Field 'iteration' must be specified at initialization.")
-      study$context$getLongFileName(dir=study$context$resultDataDirectory, name="HabitatWeightsRaster", response=study$response, region=study$studyArea$region, tag=iteration, ext=".grd")
+      study$context$getLongFileName(dir=study$context$scratchDirectory, name="HabitatWeightsRaster", response=study$response, region=study$studyArea$region, tag=iteration, ext=".grd")
     },
     
     getWeightsRaster = function(habitat=study$studyArea$habitat, aggregationScale=100, save=FALSE, weightsRasterFileName=getWeightsRasterFileName(), grassLocalTempDir) { # TODO: determine aggregation scale automatically
