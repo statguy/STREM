@@ -141,7 +141,7 @@ CORINEHabitatWeights <- setRefClass(
         # Note: you have must set up grass to work in text mode and the input raster must be named as 'habitat' in the mapset
         output_raster <- paste("tmp_weighted_habitat", scenario, iteration, sep="_")
         output_file <- file.path(study$context$scratchDirectory, paste0(output_raster, ".tif"))
-        grassInput <- paste(grassCall,
+        grassInput <- paste(paste0(grassCall, " << EOF"),
                             "g.region raster=habitat",
                             "r.recode input=habitat output=weighted_habitat << EOF",
                             grassRecodeInput,
@@ -150,7 +150,8 @@ CORINEHabitatWeights <- setRefClass(
                             paste0("r.resamp.stats input=habitat output=", output_raster),
                             paste0("r.out.gdal --o input=", output_raster, " output=", output_file, " format=GTiff"),
                             paste0("g.remove -f type=raster name=", output_raster),
-                            "exit\n",
+                            "exit",
+                            "EOF\n"
                             sep="\n")
         cat(grassInput)
         system(grassInput)
