@@ -18,7 +18,7 @@ HabitatWeights <- setRefClass(
     },
     
     getWeightsRasterFileName = function() {
-      study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeightsRaster", response=study$response, region=study$studyArea$region, ext="")
+      study$context$getFileName(dir=study$context$scratchDirectory, name="HabitatWeightsRaster", response=study$response, region=study$studyArea$region, ext="")
     },
     
     getWeightsRaster = function(habitat=study$getTemplateRaster(), aggregationScale=100, save=FALSE) { # TODO: determine aggregation scale automatically
@@ -123,11 +123,11 @@ CORINEHabitatWeights <- setRefClass(
       study$context$getLongFileName(dir=study$context$resultDataDirectory, name="HabitatWeightsRaster", response=study$response, region=study$studyArea$region, tag=iteration, ext=".grd")
     },
     
-    getWeightsRaster = function(habitat=study$studyArea$habitat, aggregationScale=100, save=FALSE, iteration, grassLocalTempDir) { # TODO: determine aggregation scale automatically
+    getWeightsRaster = function(habitat=study$studyArea$habitat, aggregationScale=100, save=FALSE, weightsRasterFileName=getWeightsRasterFileName(), grassLocalTempDir) { # TODO: determine aggregation scale automatically
       library(raster)
       
-      if (file.exists(getWeightsRasterFileName())) {
-        return(raster(getWeightsRasterFileName()))
+      if (file.exists(weightsRasterFileName)) {
+        return(raster(weightsRasterFileName))
       }
       
       message("Aggregating raster...")
