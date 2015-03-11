@@ -89,11 +89,11 @@ SimulationStudy <- setRefClass(
       return(invisible(intersections))
     },
     
-    estimate = function(model, params, tag=NULL, save=TRUE) {
+    estimate = function(model, params, tag=NULL, predictDistances=FALSE, save=TRUE) {
       if (missing(model)) stop("Missing model argument.")
       if (missing(params)) stop("Missing params argument.")
       
-      intersections <- loadIntersections(iteration=model$iteration)
+      intersections <- loadIntersections(iteration=model$iteration, predictDistances=predictDistances)
       if (is.null(tag)) model$setup(intersections=intersections, params=params)
       else model$setup(intersections=intersections, params=params, tag=tag)
       model$estimate()
@@ -109,6 +109,8 @@ SimulationStudy <- setRefClass(
       fileName <- habitatPreferences$getHabitatSelectionFileName()
       habitatSelection <- if (file.exists(fileName)) habitatPreferences$loadHabitatSelection()
       else {      
+        message("Habitat preferences file not found: ", fileName)
+        message("Estimating...")
         if (missing(tracks)) tracks <- loadTracks(iteration=iteration)
         if (readHabitatIntoMemory)
           study$studyArea$readRasterIntoMemory()

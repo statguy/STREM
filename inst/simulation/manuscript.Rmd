@@ -779,16 +779,17 @@ saveFigure(p, "manuscript-figure-4x.pdf", height=7.87/2.5, dpi=300)
 getTrueAndEstimatedCounts <- function(scenarios, modelNames, cutoff=c(-Inf,Inf)) {
   study <- getStudy(scenario="A")
   validation <- Validation(study=study, populationSizeCutoff=cutoff)
-  counts <- validation$getCounts(scenarios=scenarios, modelNames=modelNames)
-  counts <- ddply(counts, .(iteration), function(x) data.frame(Scenario=x$Scenario[1], Model=x$Model[1], True=mean(x$True), TrueSD=sd(x$True), Estimated=mean(x$Estimated), EstimatedSD=sd(x$Estimated)))
+  counts <- validation$getMeanCounts(scenarios=scenarios, modelNames=modelNames)
   return(counts)
 }
 
-c1 <- getTrueAndEstimatedCounts(scenarios=scenarios, modelNames=modelNames[c(1,3:5)])
-c2 <- getTrueAndEstimatedCounts(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[c(1,3:5)])
-c3 <- getTrueAndEstimatedCounts(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(1,3:5)])
+c1 <- getTrueAndEstimatedCounts(scenarios=scenarios, modelNames=modelNames[c(3:5)]); c1$Case <- 1
+c2 <- getTrueAndEstimatedCounts(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[c(3:5)]); c1$Case <- 2
+c3 <- getTrueAndEstimatedCounts(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(3:5)]); c1$Case <- 3
+c.all <- rbind(c1, c2, c3)
+c.agg <- ddply(c.all, .(iteration), function(x) data.frame(Scenario=x$Scenario[1], Model=x$Model[1], Ratio=mean(x$True/x$Estimated), RatioSD=sd(x$True/x$Estimated)))
 
-
+#ggplot(c.all, aes())
 ```
 
 ```{r figure-4-init}

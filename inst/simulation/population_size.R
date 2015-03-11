@@ -31,7 +31,7 @@ isTest<-F
 #modelName<-"SmoothModelMean-nbinomial-ar1"
 modelName<-"SmoothModelMean-nbinomial-ar1-priors1"
 #modelName<-"SmoothModel-nbinomial-matern-ar1"
-iteration<-as.integer(3)
+iteration<-as.integer(1)
 readHabitatIntoMemory <- F
 mss <- getMSS(scenario=scenario, isTest=isTest, readHabitatIntoMemory=FALSE)
 study <- mss$study
@@ -47,11 +47,17 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
   surveyRoutes <- mss$getSurveyRoutes()
   
   if (otherTest) {
-    study <- getMSS(scenario="Acombined")$study
-    iteration <- as.integer(1)
+    modelName <- "SmoothModelMean-nbinomial-ar1-priors1"
+    #modelName<-"SmoothModel-nbinomial-matern-ar1"
+    study <- getMSS(scenario="E")$study
+    iteration <- as.integer(3)
+    
+    populationSize <- study$getPopulationSize2(modelName=modelName, iteration=iteration, save=T, readHabitatIntoMemory=F)
     
     estimates <- study$getModel(modelName=modelName, iteration=iteration)
     estimates$loadEstimates()
+    summary(estimates$result)
+    
     estimates$collectEstimates()
     
     #estimates$collectHyperparameters()
@@ -65,8 +71,6 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
     #study$loadPopulationSize(iteration=iteration, modelName=modelName)
   }
   else {
-    #iteration<-as.integer(6)
-    
     populationSize <- study$getPopulationSize2(modelName=modelName, iteration=iteration, save=T)
     return(invisible(populationSize))
     
