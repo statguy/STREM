@@ -147,8 +147,8 @@ SimulationStudy <- setRefClass(
         habitatWeights <- getHabitatWeights(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
         populationDensity <- estimates$getPopulationDensity(habitatWeights=habitatWeights)
         habitatWeightsRaster <- if (length(grassLocalTempDir) != 0)
-          habitatWeights$getWeightsRaster(save=TRUE, grassLocalTempDir=grassLocalTempDir)
-        else habitatWeights$getWeightsRaster(save=TRUE)
+          habitatWeights$getWeightsRaster(save=save, grassLocalTempDir=grassLocalTempDir)
+        else habitatWeights$getWeightsRaster(save=save)
         populationSize <- estimates$getPopulationSize(populationDensity, habitatWeightsRaster=habitatWeightsRaster)
       }
       else {
