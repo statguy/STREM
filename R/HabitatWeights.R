@@ -143,9 +143,9 @@ CORINEHabitatWeights <- setRefClass(
         output_file <- file.path(study$context$scratchDirectory, paste0(output_raster, ".tif"))
         grassInput <- paste(paste0(grassCall, " << EOF"),
                             "g.region raster=habitat",
-                            "r.recode input=habitat output=tmp_weighted_habitat rules=- << EOF",
+                            "r.recode input=habitat output=tmp_weighted_habitat rules=-",
                             grassRecodeInput,
-                            "EOF",
+                            "end",
                             "g.region res=2500",
                             paste0("r.resamp.stats input=tmp_weighted_habitat output=", output_raster),
                             paste0("r.out.gdal --o input=", output_raster, " output=", output_file, " format=GTiff"),
