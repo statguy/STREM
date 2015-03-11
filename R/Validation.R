@@ -238,7 +238,7 @@ Validation <- setRefClass(
     },
     
     validateCredibilityIntervals = function(modelName, iteration, nSamples=100, save=F) {
-      study$getHabitatWeights()
+      #study$getHabitatWeights(iteration=iteration)
       
       model <- study$getModel(modelName=modelName, iteration=iteration)
       model$modelName <- modelName

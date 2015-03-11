@@ -142,7 +142,7 @@ CORINEHabitatWeights <- setRefClass(
       if (!missing(grassLocalTempDir)) {
         # habitat, aggregationScale parameters ignored
 
-        # Processes habitat raster file with GRASS GIS in HPC:
+        # Processes habitat raster file with GRASS GIS in HPC (but only single process in each node):
         # 1. Create environment for GRASS
         # 2. Create local temp directory to the node
         # 3. Import habitat raster to the grass mapset
