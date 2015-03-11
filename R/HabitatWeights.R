@@ -116,7 +116,7 @@ CORINEHabitatWeights <- setRefClass(
       return(p)
     },
     
-    getWeightsRaster = function(habitat=study$studyArea$habitat, aggregationScale=100, save=FALSE) { # TODO: determine aggregation scale automatically
+    getWeightsRaster = function(habitat=study$studyArea$habitat, aggregationScale=100, save=FALSE, grassCall, iteration) { # TODO: determine aggregation scale automatically
       library(raster)
       
       aggfun <- function(habitatValue, na.rm) {
@@ -125,7 +125,41 @@ CORINEHabitatWeights <- setRefClass(
         mean(x, na.rm=na.rm)
       }
       
-      if (save) {
+      if (!missing(grassCall)) {
+        # habitat, aggregationScale, save parameters ignored
+        if (missing(iteration))
+          stop("Required argument 'iteration' missing.")
+        
+        grassRecodeInput <- ""
+        for (i in 1:nrow(weights)) {
+          grassRecodeInput <- paste(grassRecodeInput,
+                                  paste0(weights$habitat[i],":",weights$habitat[i],":",weights$weight[i],":",weights$weight[i]),
+                                  sep="\n")
+        }
+        grassRecodeInput <- substr(grassRecodeInput, 2, nchar(grassRecodeInput))
+        
+        # Note: you have must set up grass to work in text mode and the input raster must be named as 'habitat' in the mapset
+        output_raster <- paste("tmp_weighted_habitat", scenario, iteration, sep="_")
+        output_file <- file.path(study$context$scratchDirectory, paste0(output_raster, ".tif"))
+        grassInput <- paste(grassCall,
+                            "g.region raster=habitat",
+                            "r.recode input=habitat output=weighted_habitat << EOF",
+                            grassRecodeInput,
+                            "EOF",
+                            "g.region res=2500",
+                            paste0("r.resamp.stats input=habitat output=", output_raster),
+                            paste0("r.out.gdal --o input=", output_raster, " output=", output_file, " format=GTiff"),
+                            paste0("g.remove -f type=raster name=", output_raster),
+                            "exit\n",
+                            sep="\n")
+        cat(grassInput)
+        system(grassInput)
+        
+        weightsRaster <- raster(output_file)
+        weightsRaster <- readAll(weightsRaster)
+        file.remove(output_file)
+      }
+      else if (save) {
         fileName <- getWeightsRasterFileName()
         
         message("Saving habitat weights raster to ", fileName, ".grd...")

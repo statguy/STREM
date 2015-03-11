@@ -47,11 +47,18 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
   surveyRoutes <- mss$getSurveyRoutes()
   
   if (otherTest) {
+    library(WTC)
+    source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+    scenario <- "E"
+    readHabitatIntoMemory <- F
     modelName <- "SmoothModelMean-nbinomial-ar1-priors1"
     #modelName<-"SmoothModel-nbinomial-matern-ar1"
-    study <- getMSS(scenario="E")$study
+    study <- getMSS(scenario=scenario, readHabitatIntoMemory=FALSE)$study
+    study$grassCall <- grassCall
     iteration <- as.integer(3)
     
+    habitatWeights <- study$getHabitatWeights(iteration=iteration, readHabitatIntoMemory=FALSE)
+    habitatWeights$getWeightsRaster(grassCall=study$grassCall, iteration=iteration)
     populationSize <- study$getPopulationSize2(modelName=modelName, iteration=iteration, save=T, readHabitatIntoMemory=F)
     
     estimates <- study$getModel(modelName=modelName, iteration=iteration)
@@ -71,6 +78,7 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
     #study$loadPopulationSize(iteration=iteration, modelName=modelName)
   }
   else {
+    study$grassCall <- grassCall
     populationSize <- study$getPopulationSize2(modelName=modelName, iteration=iteration, save=T)
     return(invisible(populationSize))
     
