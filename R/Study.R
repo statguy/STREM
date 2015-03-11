@@ -22,7 +22,7 @@ SimulationStudy <- setRefClass(
   fields = list(
     surveyRoutes = "ANY",
     withHabitatWeights = "logical",
-    grassCall = "character"
+    grassLocalTempDir = "character"
   ),
   methods = list(
     initialize = function(...) {
@@ -146,7 +146,8 @@ SimulationStudy <- setRefClass(
       if (withHabitatPreferences) {
         habitatWeights <- getHabitatWeights(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
         populationDensity <- estimates$getPopulationDensity(habitatWeights=habitatWeights)
-        habitatWeightsRaster <- if (length(grassCall) != 0) habitatWeights$getWeightsRaster(save=FALSE, grassCall=grassCall, iteration=iteration)
+        habitatWeightsRaster <- if (length(grassLocalTempDir) != 0)
+          habitatWeights$getWeightsRaster(save=FALSE, grassLocalTempDir=grassLocalTempDir, iteration=iteration)
         else habitatWeights$getWeightsRaster(save=FALSE)
         populationSize <- estimates$getPopulationSize(populationDensity, habitatWeightsRaster=habitatWeightsRaster)
       }

@@ -116,7 +116,7 @@ CORINEHabitatWeights <- setRefClass(
       return(p)
     },
     
-    getWeightsRaster = function(habitat=study$studyArea$habitat, aggregationScale=100, save=FALSE, grassCall, iteration) { # TODO: determine aggregation scale automatically
+    getWeightsRaster = function(habitat=study$studyArea$habitat, aggregationScale=100, save=FALSE, iteration, grassLocalTempDir) { # TODO: determine aggregation scale automatically
       library(raster)
       
       aggfun <- function(habitatValue, na.rm) {
@@ -125,10 +125,32 @@ CORINEHabitatWeights <- setRefClass(
         mean(x, na.rm=na.rm)
       }
       
-      if (!missing(grassCall)) {
+      if (!missing(grassLocalTempDir)) {
         # habitat, aggregationScale, save parameters ignored
         if (missing(iteration))
           stop("Required argument 'iteration' missing.")
+        
+        grassCall <- paste("grass70", file.path(grassLocalTempDir, "/wtc/PERMANENT/"))
+        
+        # hack to parallelize grass
+        grassParallel <- paste0(
+"LOCALTMP=\"", grassLocalTempDir, "\"
+mkdir $LOCALTMP
+MYGISRC=$LOCALTMP/.grassrc
+MYLOC=loc
+MYMAPSET=mapset
+mkdir $LOCALTMP/$MYLOC
+mkdir $LOCALTMP/$MYLOC/$MYMAPSET
+echo \"GISDBASE: $LOCALTMP\" > \"$MYGISRC\"
+echo \"LOCATION_NAME: $MYLOC\" >> \"$MYGISRC\"
+echo \"MAPSET: $MYMAPSET\" >> \"$MYGISRC\"
+echo \"GRASS_GUI: text\" >> \"$MYGISRC\"
+export GISRC=$MYGISRC
+export TGISDB_DATABASE=$LOCALTMP/$MYLOC/PERMANENT/tgis/sqlite.db
+r.in.gdal input=", study$studyArea$habitat@file@name, " output=habitat location=wtc")
+        cat(grassParallel)
+        system(grassParallel)
+        
         
         grassRecodeInput <- ""
         for (i in 1:nrow(weights)) {
@@ -163,6 +185,7 @@ CORINEHabitatWeights <- setRefClass(
         weightsRaster <- raster(output_file)
         weightsRaster <- readAll(weightsRaster)
         file.remove(output_file)
+        unlink(grassLocalTempDir, recursive=TRUE, force=TRUE)
       }
       else if (save) {
         fileName <- getWeightsRasterFileName()

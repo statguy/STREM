@@ -59,8 +59,8 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
     
     habitatWeights <- study$getHabitatWeights(iteration=iteration, readHabitatIntoMemory=FALSE)
     x <- habitatWeights$getWeightsRaster(grassCall=study$grassCall, iteration=iteration)
+    writeRaster(x, "public_html/x.tif", format="GTiff", overwrite=T)
     populationSize <- study$getPopulationSize2(modelName=modelName, iteration=iteration, save=T, readHabitatIntoMemory=F)
-    
     estimates <- study$getModel(modelName=modelName, iteration=iteration)
     estimates$loadEstimates()
     summary(estimates$result)
@@ -78,7 +78,7 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
     #study$loadPopulationSize(iteration=iteration, modelName=modelName)
   }
   else {
-    study$grassCall <- grassCall
+    study$grassLocalTempDir <- grassLocalTempDir
     populationSize <- study$getPopulationSize2(modelName=modelName, iteration=iteration, save=T)
     return(invisible(populationSize))
     
