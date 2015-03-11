@@ -127,10 +127,11 @@ CORINEHabitatWeights <- setRefClass(
       library(raster)
       
       if (file.exists(weightsRasterFileName)) {
+        message("Reading habitat weights raster from ", weightsRasterFileName)
         return(raster(weightsRasterFileName))
       }
       
-      message("Aggregating raster...")
+      message("Aggregating habitat weights raster...")
       
       aggfun <- function(habitatValue, na.rm) {
         x <- getWeights(habitatValue)
@@ -211,8 +212,8 @@ r.in.gdal input=", study$studyArea$habitat@file@name, " output=habitat location=
           fileName <- getWeightsRasterFileName()
           writeRaster(weightsRaster, fileName, format="raster")
         }
-
-        message("Removing ", output_fil)
+        
+        message("Removing ", output_file)
         file.remove(output_file)
         message("Removing ", grassLocalTempDir)
         unlink(grassLocalTempDir, recursive=TRUE, force=TRUE)
