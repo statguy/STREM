@@ -126,7 +126,7 @@ CORINEHabitatWeights <- setRefClass(
     getWeightsRaster = function(habitat=study$studyArea$habitat, aggregationScale=100, save=FALSE, iteration, grassLocalTempDir) { # TODO: determine aggregation scale automatically
       library(raster)
       
-      if (file.exist(getWeightsRasterFileName())) {
+      if (file.exists(getWeightsRasterFileName())) {
         return(raster(getWeightsRasterFileName()))
       }
       
