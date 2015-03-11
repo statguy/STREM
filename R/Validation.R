@@ -237,7 +237,9 @@ Validation <- setRefClass(
       return(study$context$getLongFileName(study$context$scratchDirectory, name="CIValidation", response=study$response, region=study$studyArea$region, tag=paste(modelName, iteration, sep="-")))
     },
     
-    validateCredibilityIntervals = function(modelName, iteration, nSamples=100, save=F) {      
+    validateCredibilityIntervals = function(modelName, iteration, nSamples=100, save=F) {
+      study$getHabitatWeights()
+      
       model <- study$getModel(modelName=modelName, iteration=iteration)
       model$modelName <- modelName
       model$loadEstimates()

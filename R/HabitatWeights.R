@@ -53,7 +53,8 @@ CORINEHabitatWeights <- setRefClass(
   contains = "HabitatWeights",
   fields = list(
     weights = "data.frame",
-    habitatTypes = "integer"
+    habitatTypes = "integer",
+    iteration = "iteration"
   ),
   methods = list(
     initialize = function(habitatWeightsList=list(Urban=1, Agriculture=1, Forestland=1, Peatland=1, Water=1), ...) {
@@ -88,7 +89,7 @@ CORINEHabitatWeights <- setRefClass(
       
       return(invisible(.self))
     },
-
+    
     setHabitatSelectionWeights = function(habitatSelection) {
       w <- as.list(habitatSelection$relativeUsage / habitatSelection$relativeUsage[["Forestland"]])
       initialize(habitatWeightsList=w)
@@ -100,7 +101,7 @@ CORINEHabitatWeights <- setRefClass(
       x[is.na(habitatValues) | is.na(x)] <- na.value
       return(x)
     },
-
+    
     getWeights = function(habitatValues, na.value=NA) {
       x <- weights$weight[match(habitatValues, weights$habitat)]
       x[is.na(habitatValues) | is.na(x)] <- na.value
@@ -116,8 +117,20 @@ CORINEHabitatWeights <- setRefClass(
       return(p)
     },
     
+    getWeightsRasterFileName = function() {
+      if (length(iteration) == 0)
+        stop("Field 'iteration' must be specified at initialization.")
+      study$context$getLongFileName(dir=study$context$resultDataDirectory, name="HabitatWeightsRaster", response=study$response, region=study$studyArea$region, tag=iteration, ext=".grd")
+    },
+    
     getWeightsRaster = function(habitat=study$studyArea$habitat, aggregationScale=100, save=FALSE, iteration, grassLocalTempDir) { # TODO: determine aggregation scale automatically
       library(raster)
+      
+      if (file.exist(getWeightsRasterFileName())) {
+        return(raster(getWeightsRasterFileName()))
+      }
+      
+      message("Aggregating raster...")
       
       aggfun <- function(habitatValue, na.rm) {
         x <- getWeights(habitatValue)
@@ -126,7 +139,7 @@ CORINEHabitatWeights <- setRefClass(
       }
       
       if (!missing(grassLocalTempDir)) {
-        # habitat, aggregationScale, save parameters ignored
+        # habitat, aggregationScale, parameters ignored
         if (missing(iteration))
           stop("Required argument 'iteration' missing.")
 
@@ -195,7 +208,15 @@ r.in.gdal input=", study$studyArea$habitat@file@name, " output=habitat location=
         
         weightsRaster <- raster(output_file)
         weightsRaster <- readAll(weightsRaster)
+
+        if (save) {
+          fileName <- getWeightsRasterFileName()
+          writeRaster(weightsRaster, fileName, format="raster")
+        }
+
+        message("Removing ", output_fil)
         file.remove(output_file)
+        message("Removing ", grassLocalTempDir)
         unlink(grassLocalTempDir, recursive=TRUE, force=TRUE)
       }
       else if (save) {
