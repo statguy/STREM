@@ -58,7 +58,7 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
     iteration <- as.integer(3)
     
     habitatWeights <- study$getHabitatWeights(iteration=iteration, readHabitatIntoMemory=FALSE)
-    habitatWeights$getWeightsRaster(grassCall=study$grassCall, iteration=iteration)
+    x <- habitatWeights$getWeightsRaster(grassCall=study$grassCall, iteration=iteration)
     populationSize <- study$getPopulationSize2(modelName=modelName, iteration=iteration, save=T, readHabitatIntoMemory=F)
     
     estimates <- study$getModel(modelName=modelName, iteration=iteration)

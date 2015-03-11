@@ -147,6 +147,8 @@ CORINEHabitatWeights <- setRefClass(
                             paste0("r.recode input=habitat output=", output_raster, " rules=-"),
                             grassRecodeInput,
                             "end",
+                            "EOF", # why execution stops here?? quickfix: add second call to grass
+                            paste0(grassCall, " << EOF"),
                             "g.region res=2500",
                             paste0("r.resamp.stats input=", output_raster, " output=", output_agg_raster),
                             paste0("r.out.gdal --o input=", output_agg_raster, " output=", output_file, " format=GTiff"),
