@@ -129,6 +129,17 @@ CORINEHabitatWeights <- setRefClass(
         # habitat, aggregationScale, save parameters ignored
         if (missing(iteration))
           stop("Required argument 'iteration' missing.")
+
+        # Processes habitat raster file with GRASS GIS in HPC:
+        # 1. Create environment for GRASS
+        # 2. Create local temp directory to the node
+        # 3. Import habitat raster to the grass mapset
+        # 4. Replace habitats with weights in the raster
+        # 5. Aggregate weights raster
+        # 6. Export weights raster to scratch file
+        # 7. Read raster to R
+        # 8. Remove local GRASS environment and the scratch raster
+        # There is some overhead but still faster than raster::aggregate
         
         grassCall <- paste("grass70", file.path(grassLocalTempDir, "/wtc/PERMANENT/"))
         
