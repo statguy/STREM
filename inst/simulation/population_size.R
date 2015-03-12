@@ -17,7 +17,7 @@
 if (F) {
 library(parallel)
 library(doMC)
-registerDoMC(cores=round(detectCores()*2/3)) # let's take it easier, otherwise some problems may appear
+registerDoMC(cores=round(detectCores()))
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
