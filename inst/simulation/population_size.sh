@@ -44,6 +44,9 @@ then
   python "$exec_path"/parallel_r.py -p 15 -t "$iterations" -n "$max_nodes" -l 20.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/validate.R notest "$scenario" "$model"
 fi
 
+# ./population_size.sh ~/git/RParallelScreen/ E 1:50 60 SmoothModel-nbinomial-matern-ar1 
+
+
 # ./population_size.sh ~/git/RParallelScreen/ E 1:50 60 FMPModel 20000
 
 # ./population_size.sh ~/git/RParallelScreen/ A 1:50 60 FMPModel 0

@@ -10,6 +10,9 @@
 #
 # R --vanilla --args notest E SmoothModel-nbinomial-ar1 3 < ~/git/Winter-Track-Counts/inst/simulation/population_size.R
 
+# R --vanilla --args notest E SmoothModel-nbinomial-matern-ar1 3 < ~/git/Winter-Track-Counts/inst/simulation/population_size.R
+# R --vanilla --args notest E SmoothModel-nbinomial-matern-ar1 3 < ~/git/Winter-Track-Counts/inst/simulation/validation.R
+
 # library(devtools); install_github("statguy/Winter-Track-Counts")
 # echo 'library(devtools); install_github("statguy/Winter-Track-Counts")' | R --slave
 # args <- c("notest","A","1")
@@ -17,7 +20,7 @@
 if (F) {
 library(parallel)
 library(doMC)
-registerDoMC(cores=round(detectCores()))
+registerDoMC(cores=round(detectCores()) * 1/2)
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
