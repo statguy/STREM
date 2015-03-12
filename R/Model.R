@@ -136,7 +136,7 @@ Model <- setRefClass(
       }
       else 1
       
-      meanPopulationDensity <- getDensityEstimates(weights=effortWeights, aggregate=TRUE)
+      meanPopulationDensity <- getDensityEstimates(weights=1/effortWeights, aggregate=TRUE)
       cellArea <- prod(res(templateRaster))
       meanPopulationDensityRaster <- SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$density, layerNames=meanPopulationDensity$year, weights=cellArea, .parallel=.parallel)
       #meanPopulationDensityRaster <- SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$density, boundary=maskPolygon, layerNames=meanPopulationDensity$year, weights=cellArea, .parallel=.parallel)
