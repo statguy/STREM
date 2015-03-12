@@ -89,7 +89,7 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
 
 library(parallel)
 library(doMC)
-registerDoMC(cores=detectCores())
+registerDoMC(cores=detectCores() * 1/2)
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
