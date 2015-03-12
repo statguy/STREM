@@ -259,7 +259,7 @@ rasterInterpolate <- function(xyz, templateRaster, transform=identity, inverseTr
 }
 
 # Interpolates a set spatial points to a set of raster objects.
-multiRasterInterpolate <- function(xyzt, variables, templateRaster, transform=identity, inverseTransform=identity) {
+multiRasterInterpolate <- function(xyzt, variables, templateRaster, transform=identity, inverseTransform=identity, .parallel=TRUE) {
   library(plyr)
   library(raster)
   
@@ -274,7 +274,7 @@ multiRasterInterpolate <- function(xyzt, variables, templateRaster, transform=id
     xyz <- xyz[complete.cases(xyz),]
     resultRaster <- rasterInterpolate(xyz=xyz, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)
     return(resultRaster)
-  }, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform, .parallel=TRUE)
+  }, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform, .parallel=.parallel)
   
   return(stack(rasterList))
 }
