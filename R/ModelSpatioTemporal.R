@@ -247,7 +247,8 @@ SmoothModelSpatioTemporal <- setRefClass(
       
       populationDensity <- getDensityEstimates(weights=effortWeights, aggregate=FALSE)
       cellArea <- prod(res(templateRaster))
-      populationDensityRaster <- SpatioTemporalRaster(study=study)$interpolate(populationDensity, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=sort(unique(populationDensity$year)), weights=cellArea, .parallel=.parallel)
+      populationDensityRaster <- SpatioTemporalRaster(study=study)$interpolate(populationDensity, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, layerNames=sort(unique(populationDensity$year)), weights=cellArea, .parallel=.parallel)
+      #populationDensityRaster <- SpatioTemporalRaster(study=study)$interpolate(populationDensity, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=sort(unique(populationDensity$year)), weights=cellArea, .parallel=.parallel)
       
       return(invisible(populationDensityRaster))
     },

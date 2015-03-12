@@ -237,7 +237,7 @@ parseArguments <- function() {
 }
 
 # Interpolates spatial points to a raster object using thin plate spline regression.
-rasterInterpolate <- function(xyz, templateRaster, transform=identity, inverseTransform=identity) {
+rasterInterpolateTPS <- function(xyz, templateRaster, transform=identity, inverseTransform=identity) {
   library(fields)
   library(raster)
   
@@ -246,7 +246,7 @@ rasterInterpolate <- function(xyz, templateRaster, transform=identity, inverseTr
   
   message("Interpolating data, minmax = ", min(xyz[,3], na.rm=T), " ", max(xyz[,3], na.rm=T), ", sd = ", sd(xyz[,3], na.rm=T), "...")
   
-  z <- transform (xyz[,3])
+  z <- transform(xyz[,3])
   #z <- if (transform != identity) transform(xyz[,3]) else xyz[,3]
   fit <- Tps(xyz[,1:2], z)
   predicted <- raster::interpolate(templateRaster, fit)
@@ -272,7 +272,7 @@ multiRasterInterpolate <- function(xyzt, variables, templateRaster, transform=id
 
   rasterList <- dlply(.data=xyzt, .variables=variables, .fun=function(xyz, templateRaster, transform, inverseTransform) {
     xyz <- xyz[complete.cases(xyz),]
-    resultRaster <- rasterInterpolate(xyz=xyz, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)
+    resultRaster <- rasterInterpolateTPS(xyz=xyz, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform)
     return(resultRaster)
   }, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform, .parallel=.parallel)
   

@@ -101,7 +101,7 @@ StudyArea <- setRefClass(
     #},
     
     getHabitatRasterFile = function() {
-      return(context$getFileName(context$scratchDirectory, name="HabitatRaster", region=region, ext=".tif"))
+      return(context$getLongFileName(context$scratchDirectory, name="HabitatRaster", region=region, tag="cropped", ext=".tif"))
     },
     
     loadHabitatRaster = function() {

@@ -5,7 +5,7 @@
 
 library(parallel)
 library(doMC)
-registerDoMC(cores=round(detectCores() * 1/2)) # let's take it easier, otherwise nodes might get stuck under too heavy load
+registerDoMC(cores=round(detectCores() * 1/2)) # let's take it easier, otherwise nodes might get stuck under too heavy load / memory consuption
 library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 

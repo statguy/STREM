@@ -61,25 +61,20 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
     iteration <- as.integer(3)
     
     habitatWeights <- study$getHabitatWeights(iteration=iteration, readHabitatIntoMemory=FALSE)
-    x <- habitatWeights$getWeightsRaster(grassLocalTempDir=study$grassLocalTempDir, save=TRUE)
-    writeRaster(x, "public_html/x.tif", format="GTiff", overwrite=T)
+    #writeRaster(x, "public_html/x.tif", format="GTiff", overwrite=T)
     
-    populationSize <- study$getPopulationSize2(modelName=modelName, iteration=iteration, save=T, readHabitatIntoMemory=F)
-    estimates <- study$getModel(modelName=modelName, iteration=iteration)
+    estimates <- study$getModel(modelName = modelName, iteration = iteration)
     estimates$loadEstimates()
-    summary(estimates$result)
+    estimates$collectEstimates()    
+    populationDensity <- estimates$getPopulationDensity(habitatWeights=habitatWeights, .parallel=FALSE)
+    #habitatWeightsRaster <- habitatWeights$getWeightsRaster(grassLocalTempDir=study$grassLocalTempDir, save=TRUE)    
+    habitatWeightsRaster <- habitatWeights$getWeightsRaster()
+    populationDensity$weight(habitatWeightsRaster)
+    plot(populationDensity$rasterStack[[1]])     
     
-    estimates$collectEstimates()
+    populationSize <- estimates$getPopulationSize(populationDensity, habitatWeightsRaster=habitatWeightsRaster)
     
-    #estimates$collectHyperparameters()
-    populationSize <- estimates$getPopulationSize()
-    populationSize$loadValidationData()
-    populationSize
-    colSums(populationSize$sizeData[,-1])
-    colMeans(populationSize$sizeData[,-1])
-    populationSize$plotPopulationSize()
     
-    #study$loadPopulationSize(iteration=iteration, modelName=modelName)
   }
   else {
     study$grassLocalTempDir <- grassLocalTempDir

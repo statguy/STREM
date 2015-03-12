@@ -72,6 +72,16 @@ SpatioTemporalRaster <- setRefClass(
       return(invisible(p))
     },
     
+    crop = function(boundary, .parallel=TRUE) {
+      rasterStack <<- stack(llply(1:nlayers(rasterStack),
+                                  function(i, rasterStack, boundary) {
+                                    message("Cropping ", i, "/", nlayers(rasterStack), "...")
+                                    mask(rasterStack[[i]], boundary)
+                                  },
+                                  rasterStack=rasterStack, boundary=boundary, .parallel=.parallel))
+      return(invisible(.self))
+    },
+    
     fill = function(z, templateRaster=study$getTemplateRaster(), layerNames, boundary, weights=1, .parallel=T) {
       library(raster)
       library(plyr)
@@ -82,35 +92,29 @@ SpatioTemporalRaster <- setRefClass(
                                     r[] <- z[i]
                                     return(r)
                                   },
-                                  z=z, templateRaster=templateRaster), .parallel=.parallel)
+                                  z=z, templateRaster=templateRaster), .parallel=FALSE)
       
-      if (!missing(boundary) & !is.null(boundary)) {
-        rasterStack <<- stack(llply(1:nlayers(rasterStack),
-                                    function(i, rasterStack, boundary) {
-                                      message("Cropping ", i, "/", nlayers(rasterStack), "...")
-                                      mask(rasterStack[[i]], boundary)
-                                    },
-                                    rasterStack=rasterStack, boundary=boundary, .parallel=.parallel))
-      }
+      if (!missing(boundary) && !is.null(boundary)) crop(boundary, .parallel=.parallel)
       weight(weights)
       if (!missing(layerNames)) names(rasterStack) <<- layerNames
       return(invisible(.self))      
     },
     
     interpolate = function(xyzt, timeVariable=colnames(xyzt)[4], templateRaster=study$getTemplateRaster(), transform=identity, inverseTransform=identity, layerNames, boundary, weights=1, .parallel=T) {
-      library(ST)
       library(raster)
       library(plyr)
       
       rasterStack <<- multiRasterInterpolate(xyzt, variables=timeVariable, templateRaster=templateRaster, transform=transform, inverseTransform=inverseTransform, .parallel=.parallel)
-      if (!missing(boundary) & !is.null(boundary)) {
-        rasterStack <<- stack(llply(1:nlayers(rasterStack),
-                              function(i, rasterStack, boundary) {
-                                message("Cropping ", i, "/", nlayers(rasterStack), "...")
-                                mask(rasterStack[[i]], boundary)
-                              },
-                              rasterStack=rasterStack, boundary=boundary, .parallel=.parallel))
-      }
+      if (!missing(boundary) && !is.null(boundary)) crop(boundary, .parallel=.parallel)
+      
+      #if (!missing(boundary) && !is.null(boundary)) {
+      #  rasterStack <<- stack(llply(1:nlayers(rasterStack),
+      #                        function(i, rasterStack, boundary) {
+      #                          message("Cropping ", i, "/", nlayers(rasterStack), "...")
+      #                          mask(rasterStack[[i]], boundary)
+      #                        },
+      #                        rasterStack=rasterStack, boundary=boundary, .parallel=.parallel))
+      #}
       weight(weights)
       
       if (!missing(layerNames)) names(rasterStack) <<- layerNames
