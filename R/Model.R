@@ -123,7 +123,7 @@ Model <- setRefClass(
       return(xyzt)
     },
     
-    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, habitatWeights=NULL) {
+    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, habitatWeights=NULL, .parallel=TRUE) {
       if (is.null(data$fittedMean))
         stop("Did you forgot to run collectEstimates() first?")
       library(raster)
@@ -138,7 +138,7 @@ Model <- setRefClass(
       
       meanPopulationDensity <- getDensityEstimates(weights=effortWeights, aggregate=TRUE)
       cellArea <- prod(res(templateRaster))
-      meanPopulationDensityRaster <- SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$density, boundary=maskPolygon, layerNames=meanPopulationDensity$year, weights=cellArea)
+      meanPopulationDensityRaster <- SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$density, boundary=maskPolygon, layerNames=meanPopulationDensity$year, weights=cellArea, .parallel=.parallel)
       
       return(invisible(meanPopulationDensityRaster))
     },

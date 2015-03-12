@@ -135,7 +135,7 @@ SimulationStudy <- setRefClass(
     #  return(weightedLengths)
     #},
     
-    getPopulationSize = function(estimates, iteration, readHabitatIntoMemory=TRUE, save=TRUE) {
+    getPopulationSize = function(estimates, iteration, readHabitatIntoMemory=TRUE, save=TRUE, .parallel=TRUE) {
       withHabitatPreferences <- !inherits(surveyRoutes, "uninitializedField")
       
       #lengthWeights <- if (withHabitatPreferences)
@@ -145,7 +145,7 @@ SimulationStudy <- setRefClass(
       
       if (withHabitatPreferences) {
         habitatWeights <- getHabitatWeights(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
-        populationDensity <- estimates$getPopulationDensity(habitatWeights=habitatWeights)
+        populationDensity <- estimates$getPopulationDensity(habitatWeights=habitatWeights, .parallel=.parallel)
         habitatWeightsRaster <- if (length(grassLocalTempDir) != 0)
           habitatWeights$getWeightsRaster(save=save, grassLocalTempDir=grassLocalTempDir)
         else habitatWeights$getWeightsRaster(save=save)

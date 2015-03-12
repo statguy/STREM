@@ -232,7 +232,7 @@ SmoothModelSpatioTemporal <- setRefClass(
       return(callSuper(n=n, index=indexObserved))
     },
     
-    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, habitatWeights=NULL) {
+    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, habitatWeights=NULL, .parallel=TRUE) {
       if (is.null(data$fittedMean))
         stop("Did you forgot to run collectEstimates() first?")
       library(raster)
@@ -247,7 +247,7 @@ SmoothModelSpatioTemporal <- setRefClass(
       
       populationDensity <- getDensityEstimates(weights=effortWeights, aggregate=FALSE)
       cellArea <- prod(res(templateRaster))
-      populationDensityRaster <- SpatioTemporalRaster(study=study)$interpolate(populationDensity, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=sort(unique(populationDensity$year)), weights=cellArea)
+      populationDensityRaster <- SpatioTemporalRaster(study=study)$interpolate(populationDensity, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=sort(unique(populationDensity$year)), weights=cellArea, .parallel=.parallel)
       
       return(invisible(populationDensityRaster))
     },
