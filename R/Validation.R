@@ -164,13 +164,15 @@ Validation <- setRefClass(
         estimates <- study$loadEstimates(estimates)
         estimates$collectEstimates()
         
-        estimated <- estimates$getPopulationDensityInterpolate(templateRaster=template, maskPolygon=NULL, getSD=F)
-        if (is.null(estimated$mean)) {
+        estimated <- estimates$getPopulationDensity(templateRaster=template)
+        #estimated <- estimates$getPopulationDensityInterpolate(templateRaster=template, maskPolygon=NULL, getSD=F)
+        #if (is.null(estimated$mean)) {
+        if (is.null(estimated)) {
           message("Estimation failed for iteration ", iteration, " scenario ", study$response, ".")
           next
         }
         
-        estimated$mean$rasterStack <- stack(mask(estimated$mean$rasterStack, coverArea) * coverArea)
+        #estimated$mean$rasterStack <- stack(mask(estimated$mean$rasterStack, coverArea) * coverArea)
         
         tracks <- study$loadTracks(iteration=iteration)
         cc <- ddply(subset(tracks$tracks, yday == 29), .(year, id), function(x) x[1,])[,c("year","x","y","herdSize")]
@@ -185,8 +187,10 @@ Validation <- setRefClass(
           true <- rasterize(subcc[,c("x","y")], template, field=subcc$herdSize, fun='sum', background=0)
           true <- mask(true, coverArea)
           
-          correlation <- cor(estimated$mean$rasterStack[[i]][], true[], use="complete.obs", method="spearman")
-          estpop <- sum(estimated$mean$rasterStack[[i]][], na.rm=T)
+          #correlation <- cor(estimated$mean$rasterStack[[i]][], true[], use="complete.obs", method="spearman")
+          correlation <- cor(estimated$rasterStack[[i]][], true[], use="complete.obs", method="spearman")
+          #estpop <- sum(estimated$mean$rasterStack[[i]][], na.rm=T)
+          estpop <- sum(estimated$rasterStack[[i]][], na.rm=T)
           truepop <- sum(true[], na.rm=T)
           realtrue <- subset(tracks$truePopulationSize, Year == year0)$Observed
                     

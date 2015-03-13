@@ -32,7 +32,7 @@ scenario <- "E"
 isTest<-F
 #modelName<-"FMPModel"
 #modelName<-"SmoothModelMean-nbinomial-ar1"
-modelName<-"SmoothModelMean-nbinomial-ar1-priors1"
+#odelName<-"SmoothModelMean-nbinomial-ar1-priors1"
 #modelName<-"SmoothModel-nbinomial-matern-ar1"
 iteration<-as.integer(1)
 readHabitatIntoMemory <- F
@@ -52,22 +52,22 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
   if (otherTest) {
     library(WTC)
     source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
-    scenario <- "E"
+    scenario <- "F"
     readHabitatIntoMemory <- F
     modelName <- "SmoothModelMean-nbinomial-ar1-priors1"
     #modelName<-"SmoothModel-nbinomial-matern-ar1"
     study <- getMSS(scenario=scenario, readHabitatIntoMemory=FALSE)$study
     study$grassLocalTempDir <- grassLocalTempDir
-    iteration <- as.integer(3)
+    iteration <- as.integer(18)
     
     habitatWeights <- study$getHabitatWeights(iteration=iteration, readHabitatIntoMemory=FALSE)
-    #writeRaster(x, "public_html/x.tif", format="GTiff", overwrite=T)
     
     estimates <- study$getModel(modelName = modelName, iteration = iteration)
     estimates$loadEstimates()
     estimates$collectEstimates()    
     populationDensity <- estimates$getPopulationDensity(habitatWeights=habitatWeights, .parallel=FALSE)
-    #habitatWeightsRaster <- habitatWeights$getWeightsRaster(grassLocalTempDir=study$grassLocalTempDir, save=TRUE)    
+    #habitatWeightsRaster <- habitatWeights$getWeightsRaster(grassLocalTempDir=study$grassLocalTempDir, save=TRUE)
+    #writeRaster(habitatWeightsRaster, "public_html/x.tif", format="GTiff", overwrite=T)
     habitatWeightsRaster <- habitatWeights$getWeightsRaster()
     populationDensity$weight(habitatWeightsRaster)
     plot(populationDensity$rasterStack[[1]])     

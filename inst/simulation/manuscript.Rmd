@@ -767,8 +767,8 @@ i10days <- ddply(intersections10daysx, .(Scenario), rer.stat); i10days$Scenario=
 
 iall <- rbind(i, i2000, i10days)
 p <- plotIntersectionPopulationSizeTable(iall)
-saveFigure(p, "manuscript-figure-4x.png", height=7.87/2.5) # draft quality
-saveFigure(p, "manuscript-figure-4x.pdf", height=7.87/2.5, dpi=300)
+saveFigure(p, "manuscript-figure-4x.png", height=7.87/2) # draft quality
+saveFigure(p, "manuscript-figure-4x.pdf", height=7.87/2, dpi=300)
 
 #writeTable(i, "table-2a.docx", context)
 #writeTable(i2000, "table-2b.docx", context)
@@ -808,7 +808,7 @@ plotPopulationCorrelations <- function(populationCorrelations, case) {
   ggtitle(paste("Case:", case)) +
   theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"),
                                       plot.title=element_text(size=10),
-                                      plot.margin=unit(c(0, 0, 0, 0), units="line"),
+                                      plot.margin=unit(c(0.2, 0, 0, 0), units="line"),
                                       panel.margin=unit(0, units="line"))#, axis.text.x=element_text(angle=45, hjust=.5, vjust=1))
   return(p)
 }
@@ -819,12 +819,15 @@ pc1 <- getPopulationCorrelations(scenarios=scenarios, modelNames=modelNames[1], 
 pc2 <- getPopulationCorrelations(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[1], cutoff=cutoff)
 pc3 <- getPopulationCorrelations(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[1], cutoff=cutoff)
 
-p1 <- plotPopulationCorrelations(pc1, "a")
+p1 <- plotPopulationCorrelations(pc1, "Case 1")
 saveFigure(p1, "manuscript-figure-4a.png")
-p2 <- plotPopulationCorrelations(pc2, "b")
+saveFigure(p1, "manuscript-figure-4a.pdf", dpi=300)
+p2 <- plotPopulationCorrelations(pc2, "Case 2")
 saveFigure(p2, "manuscript-figure-4b.png")
-p3 <- plotPopulationCorrelations(pc3, "c")
+saveFigure(p2, "manuscript-figure-4b.pdf", dpi=300)
+p3 <- plotPopulationCorrelations(pc3, "Case 3")
 saveFigure(p3, "manuscript-figure-4c.png")
+saveFigure(p3, "manuscript-figure-4c.pdf", dpi=300)
 ```
 
 
@@ -848,31 +851,32 @@ plotCIProportions <- function(credibilityIntervals) {
     geom_hline(aes(yintercept=.95), color="grey90") +
     geom_point() +
     scale_shape_manual(values=c(16, 1)) +
-    #scale_colour_manual("Model", values=c("black", "darkgray", "gray"), labels=modelLabels) +
-    scale_colour_manual("Model", values=c("blue", "green", "red"), labels=modelLabels) +
+    scale_colour_manual("Model", values=c("black", "gray26", "gray80"), labels=modelLabels) +
+    #scale_colour_manual("Model", values=c("blue", "green", "red"), labels=modelLabels) +
     theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent")) +
     xlab("Scenario") + ylab("Proportion") +
     facet_wrap(~panel) + ylim(0, 1) +
     theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
-          plot.margin=unit(c(0, 0, 0, 0), units="line"),
+          plot.margin=unit(c(0.2, 0, 0, 0), units="line"),
           #legend.background=element_rect(fill="transparent"),
           legend.margin=unit(-2, units="line"),
           panel.margin=unit(0, units="line"),
           legend.position="bottom",
-          legend.box="horizontal")
+          legend.box="horizontal",
+          legend.key.width=unit(.7, "line"))
   return(p)
 }
-p <- plotCIProportions(cip)
-saveFigure(p, "manuscript-figure-5.png", height=7.87/2, dpi=200)
+#p <- plotCIProportions(cip)
+#saveFigure(p, "manuscript-figure-5.png", height=7.87/2, dpi=200)
 ```
 
 ```{r figure-5abc}
-cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames[c(1,3,5)], panel="a", scenarioNames=scenarios, cutoff=cutoff)
-cip2 <- getCIProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[c(1,3,5)], panel="b", scenarioNames=scenarios, cutoff=10*cutoff)
-cip3 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(1,3,5)], panel="c", scenarioNames=scenarios, cutoff=cutoff)
+cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames[c(1,3,5)], panel="Case 1", scenarioNames=scenarios, cutoff=cutoff)
+cip2 <- getCIProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[c(1,3,5)], panel="Case 2", scenarioNames=scenarios, cutoff=10*cutoff)
+cip3 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(1,3,5)], panel="Case 3", scenarioNames=scenarios, cutoff=cutoff)
 
 cip <- subset(rbind(cip1, cip2, cip3), modelName != "SmoothModel-nbinomial-ar1")
 p <- plotCIProportions(cip)
-saveFigure(p, "manuscript-figure-5.png", height=7.87/2, dpi=200)
+saveFigure(p, "manuscript-figure-5.png", height=7.87/2)
 saveFigure(p, "manuscript-figure-5.pdf", height=7.87/2, dpi=300)
 ```

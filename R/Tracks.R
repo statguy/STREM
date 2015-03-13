@@ -281,14 +281,14 @@ SimulatedTracks <- setRefClass(
     },
     
     getTracksFileName = function() {
-      if (inherits(study, "undefinedField") | length(iteration) == 0)
+      if (inherits(study, "undefinedField") || length(iteration) == 0)
         stop("Provide study and iteration parameters.")
       return(study$context$getLongFileName(dir=getTracksDirectory(), name="Tracks", response=study$response, region=study$studyArea$region, tag=iteration))
     },
     
     loadTracks = function(fileName=getTracksFileName(), addColumns=TRUE) {
       callSuper(fileName=fileName, addColumns=addColumns)
-      if (inherits(truePopulationSize, "uninitializedField") | nrow(truePopulationSize) == 0)
+      if (inherits(truePopulationSize, "uninitializedField") || nrow(truePopulationSize) == 0)
         setTruePopulationSize()
       return(invisible(.self))
     },
