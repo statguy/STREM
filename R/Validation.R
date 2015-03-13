@@ -215,9 +215,9 @@ Validation <- setRefClass(
     },
     
     getValidationSpatialPopulationSizes = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
-       scenarios <- "Acombined"
-       modelNames <- "SmoothModel-nbinomial-matern-ar1"
-       populationSizeCutoff <- c(1,1000)*10
+       #scenarios <- "Acombined"
+       #modelNames <- "SmoothModel-nbinomial-matern-ar1"
+       #populationSizeCutoff <- c(1,1000)*10
       
       y <- expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE)
       spatialCorrelations <- data.frame()
