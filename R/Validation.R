@@ -142,7 +142,7 @@ Validation <- setRefClass(
       }, probs=c(.025, .975))
     },
     
-    validateSpatialPopulationSize = function(modelName) {
+    validateSpatialPopulationSize = function(modelName, debugMaxIterations=Inf) {
       library(raster)
       
       # 100 km x 100 km grid
@@ -156,6 +156,8 @@ Validation <- setRefClass(
       iterations <- getEstimatesFileIterations(modelName)
       spatialCorrelation <- data.frame()
       if (length(iterations) == 0) return(spatialCorrelation)
+      
+      iterations <- iterations[iterations <= debugMaxIterations]
       
       for (iteration in iterations) {
         message("Iteration ", iteration, " of ", length(iterations), " iterations of scenario ", study$response, "...")
@@ -213,6 +215,10 @@ Validation <- setRefClass(
     },
     
     getValidationSpatialPopulationSizes = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
+       scenarios <- "Acombined"
+       modelNames <- "SmoothModel-nbinomial-matern-ar1"
+       populationSizeCutoff <- c(1,1000)*10
+      
       y <- expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE)
       spatialCorrelations <- data.frame()
       for (i in 1:nrow(y)) {
