@@ -215,9 +215,11 @@ Validation <- setRefClass(
     },
     
     getValidationSpatialPopulationSizes = function(scenarios=c("A","B","C","D","E","F"), modelNames) {
+      debugMaxIterations <- Inf
        #scenarios <- "Acombined"
        #modelNames <- "SmoothModel-nbinomial-matern-ar1"
        #populationSizeCutoff <- c(1,1000)*10
+       #debugMaxIterations <- 2
       
       y <- expand.grid(scenario=scenarios, modelName=modelNames, stringsAsFactors=FALSE)
       spatialCorrelations <- data.frame()
@@ -225,7 +227,7 @@ Validation <- setRefClass(
         x <- y[i,]
         s <- getStudy(scenario=x$scenario, isTest=F)
         validation <- Validation(study=s, populationSizeCutoff=populationSizeCutoff)
-        z <- validation$validateSpatialPopulationSize(x$modelName)
+        z <- validation$validateSpatialPopulationSize(x$modelName, debugMaxIterations=debugMaxIterations)
         if (nrow(z) == 0) next
         spatialCorrelations <- rbind(spatialCorrelations, z)
       }
