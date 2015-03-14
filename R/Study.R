@@ -488,7 +488,7 @@ FinlandRussiaWTCStudy <- setRefClass(
       if (missing(params)) stop("Missing params argument.")
       
       intersections <- loadIntersections()
-      model$setup(intersections=intersections, meshParams=meshParams)      
+      model$setup(intersections=intersections, params=params)      
       if (!test) model$estimate(save=save, fileName=model$getEstimatesFileName())
       
       return(model)
