@@ -327,6 +327,7 @@ Validation <- setRefClass(
       populationSizeCI <- ldply(iterations, function(iteration) {
         .self$loadCredibilityIntervalsValidation(modelName=modelName, iteration=iteration)
       })
+      populationSizeCI <- populationSizeCI[complete.cases(populationSizeCI),]
       
       x <- .self$summarizePopulationSizeCI(populationSizeCI, variables=.(scenario, Year, iteration), probs=probs)
       validationProportion <- ddply(x, .(scenario), function(x) {

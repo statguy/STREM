@@ -470,9 +470,7 @@ getLogPopulationSizes <- function(populationSizes) {
   logPopulationSizes$Estimated <- log10(logPopulationSizes$Estimated + 1)
   return(logPopulationSizes)
 }
-```
 
-```{r figure-3-init-2}
 populationSizes <- getPopulationSizes(scenarios=scenarios, modelNames=modelNames[c(1,3,4,5)])
 populationSizes2000 <- getPopulationSizes(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[c(1,3,4,5)])
 populationSizes10Days <- getPopulationSizes(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(1,3,4,5)])
@@ -816,7 +814,13 @@ plotPopulationCorrelations <- function(populationCorrelations, case) {
 
 ```{r figure-4abc}
 pc1 <- getPopulationCorrelations(scenarios=scenarios, modelNames=modelNames[1], cutoff=cutoff)
-pc2 <- getPopulationCorrelations(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[1], cutoff=cutoff)
+pc2a <- getPopulationCorrelations(scenarios="Acombined", modelNames=modelNames[1], cutoff=cutoff)
+pc2b <- getPopulationCorrelations(scenarios="Bcombined", modelNames=modelNames[1], cutoff=cutoff)
+pc2c <- getPopulationCorrelations(scenarios="Ccombined", modelNames=modelNames[1], cutoff=cutoff)
+pc2d <- getPopulationCorrelations(scenarios="Dcombined", modelNames=modelNames[1], cutoff=cutoff)
+pc2e <- getPopulationCorrelations(scenarios="Ecombined", modelNames=modelNames[1], cutoff=cutoff)
+pc2f <- getPopulationCorrelations(scenarios="Fcombined", modelNames=modelNames[1], cutoff=cutoff)
+pc2 <- rbind(pc2a,pc2b,pc2c,pc2d,pc2e,pc2f)
 pc3 <- getPopulationCorrelations(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[1], cutoff=cutoff)
 
 p1 <- plotPopulationCorrelations(pc1, "Case 1")
@@ -831,12 +835,12 @@ saveFigure(p3, "manuscript-figure-4c.pdf", dpi=300)
 ```
 
 
-```{r figure-5-init}
-getCIProportions <- function(scenarios, modelNames, panel, scenarioNames, cutoff=Inf) {
+```{r figure-5}
+getCIProportions <- function(scenario, modelName, panel, scenarioNames, cutoff=Inf) {
   study <- getStudy(scenario="A")
   validation <- Validation(study=study, populationSizeCutoff=cutoff)
-  a <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames)
-  b <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames, probs=c(.25, .75), probsName="50%")
+  a <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenario, modelNames=modelName)
+  b <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenario, modelNames=modelName, probs=c(.25, .75), probsName="50%")
   credibilityIntervals <- rbind(a, b)
   credibilityIntervals$panel <- panel
   credibilityIntervals$scenario <- rep(scenarioNames, times=2, each=length(modelNames))
@@ -868,9 +872,7 @@ plotCIProportions <- function(credibilityIntervals) {
 }
 #p <- plotCIProportions(cip)
 #saveFigure(p, "manuscript-figure-5.png", height=7.87/2, dpi=200)
-```
 
-```{r figure-5abc}
 cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames[c(1,3,5)], panel="Case 1", scenarioNames=scenarios, cutoff=cutoff)
 cip2 <- getCIProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[c(1,3,5)], panel="Case 2", scenarioNames=scenarios, cutoff=10*cutoff)
 cip3 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(1,3,5)], panel="Case 3", scenarioNames=scenarios, cutoff=cutoff)
