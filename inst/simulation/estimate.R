@@ -78,4 +78,4 @@ source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 parseArguments()
 modelName <- extraArgs[1]
 estimateSpatioTemporal(scenario=scenario, modelName=modelName, iteration=as.integer(task_id), isTest=isTest)
-#estimateSpatioTemporal(scenario="A", modelName="SmoothModelMean-nbinomial-ar1", iteration=as.integer(1), isTest=FALSE)
+#estimateSpatioTemporal(scenario="Acombined", modelName="SmoothModel-nbinomial-matern-ar1", iteration=as.integer(1), isTest=FALSE)
