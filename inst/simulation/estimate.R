@@ -41,11 +41,13 @@ estimateSpatioTemporal <- function(scenario, modelName, iteration, isTest=FALSE,
     }
     else if (modelName == "SmoothModel-nbinomial-ar1") {
       model <- SimulatedSmoothModelTemporal(study=study, iteration=iteration)
-      modelParams <- list(family="nbinomial", offsetScale=1000^2, timeModel="ar1")
+      formula <- response ~ 1 + f(year, model="ar1")
+      modelParams <- list(family="nbinomial", offsetScale=1000^2, model=formula, timeModel="ar1")
     }
     else if (modelName == "SmoothModelMean-nbinomial-ar1") {
       model <- SimulatedSmoothModelMeanTemporal(study=study, iteration=iteration)
-      modelParams <- list(family="nbinomial", offsetScale=1000^2, timeModel="ar1")
+      formula <- response ~ 1 + f(year, model="ar1")
+      modelParams <- list(family="nbinomial", offsetScale=1000^2, model=formula, timeModel="ar1")
     }
     else if (modelName == "SmoothModelMean-nbinomial-ar1-priors1") {
       model <- SimulatedSmoothModelMeanTemporal(study=study, iteration=iteration)
@@ -54,7 +56,7 @@ estimateSpatioTemporal <- function(scenario, modelName, iteration, isTest=FALSE,
       precPrior <- model$setupPrecisionPrior(priorParams=list(mean=1, sd=1, initial=4))
       rhoPrior <- model$setupTemporalPrior(priorParams=list(shape=0, rate=1, initial=2))
       formula <- response ~ 1 + f(year, model="ar1", hyper=list(theta1=precPrior, theta2=rhoPrior))
-      modelParams <- list(family="nbinomial", timeModel="ar1", offsetScale=1000^2, model=formula)
+      modelParams <- list(family="nbinomial", offsetScale=1000^2, model=formula, timeModel="ar1")
       tag <- "priors1"
     }
     else if (modelName == "FMPModel") {
