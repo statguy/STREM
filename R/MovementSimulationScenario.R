@@ -21,9 +21,8 @@ MovementSimulationScenario <- setRefClass(
     newAgentId = "integer",
     nProposal = "integer",
     maxTry = "integer",
-    debug = "logical",
-    
-    surveyRoutes = "ANY"
+    debug = "logical"
+    #surveyRoutes = "ANY"
   ),
   methods = list(
     initialize = function(..., distanceScale=1e3, maxTry=as.integer(100), debug=FALSE) {
@@ -45,19 +44,22 @@ MovementSimulationScenario <- setRefClass(
       nSteps <<- as.integer(nSteps.tmp)
       if (length(birthDeathParams) == 0) birthDeathParams <<- list(mean=0, sd=0.1) # 95% = 0.82 - 1.22 variation coefficient each year
       
-      study <<- SimulationStudy(response=response)$setup(context=context, surveyRoutes=surveyRoutes, withHabitatWeights=withHabitatWeights, isTest=isTest)
+      message("Setup study...")
+      study <<- SimulationStudy(response=response)$setup(context=context, withHabitatWeights=withHabitatWeights, isTest=isTest)
       if (!missing(nSurveyRoutes)) {
-        surveyRoutes <<- if (isTest) FinlandRandomWTCSurveyRoutes(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
+        message("Setup survey routes...")
+        surveyRoutes <- if (isTest) FinlandRandomWTCSurveyRoutes(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes)
         else FinlandWTCSurveyRoutes(study=study)$loadSurveyRoutes(context=context, nSurveyRoutes=nSurveyRoutes)
+        study$surveyRoutes <<- surveyRoutes
       }
       
       return(invisible(.self))
     },
     
-    getSurveyRoutes = function() {
-      #return(FinlandRandomWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes))
-      return(surveyRoutes)
-    },
+    #getSurveyRoutes = function() {
+    #  #return(FinlandRandomWTCSurveyRoutes$new(study=study)$randomizeSurveyRoutes(nSurveyRoutes=nSurveyRoutes))
+    #  return(surveyRoutes)
+    #},
     
     randomizeDistance = function(n) {
       rweibull(n, shape=2, scale=stepSpeedScale * stepIntervalHours * distanceScale)
@@ -437,8 +439,9 @@ MovementSimulationScenarioE <- setRefClass(
       
       transects <- FinlandRandomForestWTCSurveyRoutes$new(study=study)
       transects$loadSurveyRoutes()
-      surveyRoutes <<- transects
-      study$surveyRoutes <<- surveyRoutes
+      #surveyRoutes <<- transects
+      #study$surveyRoutes <<- surveyRoutes
+      study$surveyRoutes <<- transects
       
       return(invisible(.self))
     }
@@ -462,8 +465,9 @@ MovementSimulationScenarioF <- setRefClass(
       
       transects <- FinlandRandomForestWTCSurveyRoutes$new(study=study)
       transects$loadSurveyRoutes()
-      surveyRoutes <<- transects
-      study$surveyRoutes <<- surveyRoutes
+      #surveyRoutes <<- transects
+      #study$surveyRoutes <<- surveyRoutes
+      study$surveyRoutes <<- transects
       
       return(invisible(.self))
     },

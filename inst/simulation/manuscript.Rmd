@@ -66,7 +66,7 @@ subset(aggrates, year==2020)
 library(raster)
 mss <- getMSS("E")
 study <- mss$study
-surveyRoutes <- mss$getSurveyRoutes()
+surveyRoutes <- study$surveyRoutes
 #habitatTypes <- raster::extract(habitat, surveyRoutes$surveyRoutes[1:3])
 
 study$studyArea$readRasterIntoMemory()
@@ -790,7 +790,7 @@ c.agg <- ddply(c.all, .(iteration), function(x) data.frame(Scenario=x$Scenario[1
 #ggplot(c.all, aes())
 ```
 
-```{r figure-4-init}
+```{r figure-4}
 getPopulationCorrelations <- function(scenarios, modelNames, cutoff=c(-Inf,Inf)) {
   study <- getStudy(scenario="A")
   validation <- Validation(study=study, populationSizeCutoff=cutoff)
@@ -810,9 +810,7 @@ plotPopulationCorrelations <- function(populationCorrelations, case) {
                                       panel.margin=unit(0, units="line"))#, axis.text.x=element_text(angle=45, hjust=.5, vjust=1))
   return(p)
 }
-```
 
-```{r figure-4abc}
 pc1 <- getPopulationCorrelations(scenarios=scenarios, modelNames=modelNames[1], cutoff=cutoff)
 pc2a <- getPopulationCorrelations(scenarios="Acombined", modelNames=modelNames[1], cutoff=cutoff)
 pc2b <- getPopulationCorrelations(scenarios="Bcombined", modelNames=modelNames[1], cutoff=cutoff)

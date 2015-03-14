@@ -47,7 +47,7 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
   #mss <- getMSS(scenario=scenario, isTest=isTest, readHabitatIntoMemory=readHabitatIntoMemory)
   mss <- getMSS(scenario=scenario, isTest=isTest, readHabitatIntoMemory=FALSE)
   study <- mss$study
-  surveyRoutes <- mss$getSurveyRoutes()
+  surveyRoutes <- study$surveyRoutes
   
   if (otherTest) {
     library(WTC)

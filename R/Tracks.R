@@ -305,13 +305,20 @@ SimulatedTracks <- setRefClass(
       library(plyr)
       message("Randomizing observation days = ", days, " and filtering tracks...")
 
-      observationTracksDF <- ddply(tracks, .(year), function(x, days) {
+      observationTracksDF <- ddply(x, .(year, id), function(x, days) {
+        days <- days + 1 # Cos we want also the last vector of the day
         randomDays <- x$yday
         if (max(randomDays) + 1 - days < 0)
-          stop("Too many days to randomize, max days available = ", max(randomDays) + 1)
+          stop("Too many days to randomize, max days available = ", max(randomDays) + 1   -1) # So max avail days is -1
+        
         randomDays <- randomDays[randomDays <= max(randomDays) + 1 - days]
         randomDay <- base::sample(randomDays, 1)
-        return(subset(x, yday %in% randomDay:(randomDay + days - 1)))
+        
+        # From the last day, remove everything except the first relocation
+        y <- subset(x, yday %in% randomDay:(randomDay + days - 1))
+        lastDay <- max(y$yday)
+        y <- rbind(y[y$yday != lastDay,,drop=FALSE], y[y$yday == lastDay,,drop=FALSE][1,,drop=FALSE])
+        return(y)
       }, days=days)
       
       observationTracks <- copy(shallow=TRUE) # Avoid possible recursion

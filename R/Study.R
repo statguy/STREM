@@ -126,24 +126,9 @@ SimulationStudy <- setRefClass(
       }
       return(habitatWeights)
     },
-    
-    #getSurveyRouteWeightedLengths = function(iteration, readHabitatIntoMemory=TRUE) {
-    #  weightedLengths <- if (!inherits(surveyRoutes, "uninitializedField")) {
-    #    habitatWeights <- getHabitatWeights2(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
-    #    surveyRoutes$getWeightedLengths(habitatWeights)
-    #  } else 1
-    #  return(weightedLengths)
-    #},
-    
+        
     getPopulationSize = function(estimates, iteration, readHabitatIntoMemory=TRUE, save=TRUE, .parallel=TRUE) {
-      withHabitatPreferences <- !inherits(surveyRoutes, "uninitializedField")
-      
-      #lengthWeights <- if (withHabitatPreferences)
-      #  estimates$getLengthWeights(getSurveyRouteWeightedLengths(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory), surveyRoutes$lengths)
-      #else 1
-      #estimates$collectEstimates(lengthWeights)
-      
-      if (withHabitatPreferences) {
+      if (withHabitatWeights) {
         habitatWeights <- getHabitatWeights(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
         populationDensity <- estimates$getPopulationDensity(habitatWeights=habitatWeights, .parallel=.parallel)
         habitatWeightsRaster <- if (length(grassLocalTempDir) != 0)
@@ -156,9 +141,6 @@ SimulationStudy <- setRefClass(
         x <- estimates$getDensityEstimates()
         populationSize$getPopulationSize(x$density, x$year, loadValidationData=TRUE)
       }
-      
-      #density <- estimates$data$fittedMean / estimates$offsetScale
-      #populationSize$getPopulationSize(density, estimates$data$year, loadValidationData=TRUE)
       
       if (save) populationSize$savePopulationSize()
       
