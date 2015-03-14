@@ -56,7 +56,7 @@ estimateSpatioTemporal <- function(scenario, modelName, iteration, isTest=FALSE,
       #precPrior <- model$setupPrecisionPrior(priorParams=list(mean=1, sd=1, initial=4))
       #rhoPrior <- model$setupTemporalPrior(priorParams=list(shape=0, rate=1, initial=2))
       #formula <- response ~ 1 + f(year, model="ar1", hyper=list(theta1=precPrior, theta2=rhoPrior))
-      formula <- response ~ 1 + f(year, model="ar1", hyper=list(theta1=list(1, 1), theta2=list(0, 1)))
+      formula <- response ~ 1 + f(year, model="ar1", hyper=list(theta1=list(param=c(1,1)), theta2=list(param=c(0,1))))
       modelParams <- list(family="nbinomial", offsetScale=1000^2, model=formula, timeModel="ar1")
       tag <- "priors1"
     }
