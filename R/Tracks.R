@@ -305,7 +305,7 @@ SimulatedTracks <- setRefClass(
       library(plyr)
       message("Randomizing observation days = ", days, " and filtering tracks...")
 
-      observationTracksDF <- ddply(x, .(year, id), function(x, days) {
+      observationTracksDF <- ddply(tracks, .(year, id), function(x, days) {
         days <- days + 1 # Cos we want also the last vector of the day
         randomDays <- x$yday
         if (max(randomDays) + 1 - days < 0)
