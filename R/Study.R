@@ -39,8 +39,8 @@ SimulationStudy <- setRefClass(
       return(invisible(.self))
     },
     
-    loadTracks = function(iteration, addColumns=TRUE) {
-      tracks <- SimulatedTracks$new(study=.self, iteration=iteration)$loadTracks(addColumns=addColumns)
+    loadTracks = function(iteration, addColumns=TRUE, findTruePopulationSize=TRUE) {
+      tracks <- SimulatedTracks$new(study=.self, iteration=iteration)$loadTracks(addColumns=addColumns, findTruePopulationSize=findTruePopulationSize)
       return(tracks)
     },
     
