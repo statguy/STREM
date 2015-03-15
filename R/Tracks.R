@@ -34,7 +34,7 @@ Tracks <- setRefClass(
       stop("Override saveData() method.")
     },
     
-    loadTracks = function(fileName=getTracksFileName(), addColumns=TRUE) {
+    loadTracks = function(fileName=getTracksFileName(), addColumns=TRUE, findTruePopulationSize=TRUE) {
       library(adehabitatLT)
       library(data.table)
       load(fileName, envir=as.environment(.self))
@@ -286,9 +286,9 @@ SimulatedTracks <- setRefClass(
       return(study$context$getLongFileName(dir=getTracksDirectory(), name="Tracks", response=study$response, region=study$studyArea$region, tag=iteration))
     },
     
-    loadTracks = function(fileName=getTracksFileName(), addColumns=TRUE) {
+    loadTracks = function(fileName=getTracksFileName(), addColumns=TRUE, findTruePopulationSize=TRUE) {
       callSuper(fileName=fileName, addColumns=addColumns)
-      if (inherits(truePopulationSize, "uninitializedField") || nrow(truePopulationSize) == 0)
+      if (findTruePopulationSize && (inherits(truePopulationSize, "uninitializedField") || nrow(truePopulationSize)) == 0)
         setTruePopulationSize()
       return(invisible(.self))
     },
