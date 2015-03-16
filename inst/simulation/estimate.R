@@ -21,6 +21,8 @@ estimateSpatioTemporal <- function(scenario, modelName, iteration, isTest=FALSE,
     #meshParams <- list(coordsScale=1e-6, maxEdge=c(.1e6, .2e6), cutOff=.05e6)
     #meshParams <- list(coordsScale=1e-6, maxEdge=c(.01e6, .2e6), cutOff=.01e6)
     meshParams <- list(coordsScale=1e-6, maxEdge=c(.05e6, .2e6), cutOff=.03e6)
+    
+    meshParams <- list(coordsScale=1e-6, maxEdge=c(.01e6, .02e6), cutOff=.007e6)
     modelParams <- list(family="nbinomial", offsetScale=1000^2, meshParams=meshParams, timeModel="ar1")
     model$setup(intersections=intersections, params=modelParams)
     plot(model$mesh)

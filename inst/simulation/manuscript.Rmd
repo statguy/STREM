@@ -118,10 +118,7 @@ for (i in 1:50) {
 
 ```
 
-```{r figure-1-init}
-#scenario <- "A"
-#iterations <- as.integer(1)
-
+```{r figure-1}
 i <- 1
 trackData <- data.frame()
 surveyRoutesData <- data.frame()
@@ -166,9 +163,8 @@ for (scenario in scenarios) {
 }
 
 trackData$scenario <- factor(trackData$scenario)
-```
 
-```{r figure-1}
+
 #window <- c(3.375, 3.4, 6.9, 6.925)*1e6
 window <- (c(3.425, 3.45, 6.95, 6.975)+c(-.01,.01,-.01,.01)*9)*1e6
 habitatRaster <- crop(study$studyArea$habitat, extent(window))
@@ -246,38 +242,7 @@ p <- arrangeGrob(p1, p2, p3, p4, p5, p6, ncol=3, nrow=2)
 saveFigure(p, "manuscript-figure-1.png")
 ```
 
-
-```{r, eval=F}
-#x<-data.frame(scenario="C", iteration=as.integer(3), stringsAsFactors=F)
-modelName <- modelNames[2]
-x<-data.frame(scenario="A", iteration=as.integer(10), stringsAsFactors=F)
-study <- getStudy(scenario=x$scenario)
-estimates <- study$getModel(modelName=modelName, iteration=x$iteration)
-estimates$modelName <- modelName
-estimates <- study$loadEstimates(estimates)
-intersections <- study$loadIntersections(iteration=x$iteration)
-head(subset(intersections$intersections@data, intersections>0), 20)
-head(subset(estimates$data, intersections>0), 20)
-
-
-model <- SimulatedSmoothModelTemporal(study=study, iteration=as.integer(1))
-params <- list(family="nbinomial", offsetScale=1000^2, timeModel="ar1")
-intersections <- study$loadIntersections(iteration = model$iteration)
-model$setup(intersections = intersections, params = params)
-model$estimate()
-
-head(subset(model$data, intersections>0), 20)
-head(subset(intersections$intersections@data, intersections>0), 20)
-
-
-./count_intersections.sh ~/git/RParallelScreen/ A 1 1 1
-./estimate.sh ~/git/RParallelScreen/ A 1 1 SmoothModel-nbinomial-ar1
-
-./estimate.sh ~/git/RParallelScreen/ A 1 1 FMPModel
-
-```
-
-```{r figure-2-init}
+```{r figure-2}
 getSurveyRouteLocations = function(scenarios, modelName, iterations, years) {
   ddply(data.frame(scenario=scenarios, iteration=iterations, stringsAsFactors=FALSE), .(scenario, iteration), function(x, modelName, years) {
     message("Scenario = ", x$scenario, ", iteration = ", x$iteration)
@@ -346,21 +311,29 @@ getAgentLocations = function(scenarios, modelName, iterations, years) {
   }, modelName=modelName, years=years)
 }
 
-getEstimatedDensity = function(scenarios, modelName, iterations, year, sd=FALSE, log=FALSE) {
+getEstimatedDensity = function(scenarios, modelName, iterations, year, sd=FALSE, weightHabitats=F) {
   ddply(data.frame(scenario=scenarios, year=rep(year, length(scenarios)), iteration=iterations, stringsAsFactors=FALSE), .(scenario, iteration), function(x, modelName, sd) {
     message("Scenario = ", x$scenario, ", iteration = ", x$iteration)
-    study <- getStudy(scenario=x$scenario)
+    withHabitatWeights <- if (weightHabitats && substr(x$scenario, 1, 1) %in% c("E","F")) T else F
+    study <- getStudy(scenario=x$scenario, withHabitatWeights=withHabitatWeights)
     estimates <- study$getModel(modelName=modelName, iteration=x$iteration)
     estimates$modelName <- modelName
     estimates <- study$loadEstimates(estimates)
     estimates$collectEstimates()
-    
-    studyArea <- FinlandStudyArea$new(context=context)$setup(tolerance=0.001)
-    
     estimates$data <- subset(estimates$data, year == x$year)
-    #if (log) estimates$data$fittedMean <- log(estimates$data$fittedMean)
-    density <- estimates$getPopulationDensityInterpolate(getSD=sd, maskPolygon=studyArea$boundary)
-    density <- if (sd) density$sd else density$mean
+    #studyArea <- FinlandStudyArea$new(context=context)$setup(tolerance=0.001)
+    #density <- estimates$getPopulationDensityInterpolate(getSD=sd, maskPolygon=studyArea$boundary)
+    
+    #habitatWeights <- study$getHabitatWeights(iteration=x$iteration)
+    #density <- estimates$getPopulationDensity(habitatWeights=habitatWeights, .parallel=T)
+    density <- estimates$getPopulationDensity(.parallel=T)
+    density <- if (withHabitatWeights) {
+      habitatWeights <- study$getHabitatWeights(iteration=x$iteration)
+      habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=F)
+      density$weight(habitatWeightsRaster)
+    } else wdensity <- density$copy()
+    
+    #density <- if (sd) density$sd else density$mean
     if (is.null(density) || maxValue(density$rasterStack[[1]]) > 1) stop("Estimation failed.")
     density <- as.data.frame(density$rasterStack[[1]], xy=T)
     density$Scenario <- x$scenario
@@ -371,33 +344,35 @@ getEstimatedDensity = function(scenarios, modelName, iterations, year, sd=FALSE,
     return(density)
   }, modelName=modelName, sd=sd)
 }
-```
+#iterations <- as.integer(c(1,4,1,2,5,31))
+#densities <- getEstimatedDensity(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, year=year, sd=F, log=F)
 
-```{r figure-2}
+
+
 study <- getStudy(scenario="A")
 limits <- extent(study$studyArea$boundary)
-iterations <- as.integer(c(1,6,3,2,5,31))
+iterations <- as.integer(c(1,4,1,2,5,31))
 year <- 2010
 yearLayer <- paste0("X", year)
 surveyRoutes <- getSurveyRouteLocations(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, years=year)
-#surveyRoutes <- rbind(surveyRoutes[surveyRoutes$intersections == FALSE,], surveyRoutes[surveyRoutes$intersections == TRUE,])
 agents <- getAgentLocations(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, years=year)
-densities <- getEstimatedDensity(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, year=year, sd=F, log=F)
-# TODO: do not use scaling??
-#densitiesScaled <- ddply(densities, .(scenario), function(x, yearLayer) { x[,yearLayer] <- scale(x[,yearLayer]); return(x) }, yearLayer=yearLayer)
+densities <- getEstimatedDensity(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, year=year)
+wdensities <- getEstimatedDensity(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, year=year, weightHabitats=T)
 
 # Scale density to 1/km^2
-densitiesScaled <- ddply(densities, .(scenario), function(x, yearLayer, weight, logTrans) {
+scaleDensity <- function(x, yearLayer, weight) {
   x[,yearLayer] <- x[,yearLayer] * weight
-  if (logTrans) x[,yearLayer] <- log(x[,yearLayer])
   return(x)
-}, yearLayer=yearLayer, weight=1 / (prod(res(study$getTemplateRaster())) / 1000^2), logTrans=F)
+}
+wscale <- 1 / (prod(res(study$getTemplateRaster())) / 1000^2)
+densitiesScaled <- ddply(densities, .(scenario), scaleDensity, yearLayer=yearLayer, weight=wscale)
+wdensitiesScaled <- ddply(wdensities, .(scenario), scaleDensity, yearLayer=yearLayer, weight=wscale)
 
 #library(directlabels)
 
-p <- ggplot(densitiesScaled) +
+p <- ggplot(wdensitiesScaled) +
   geom_raster(aes_string(x="x", y="y", fill=yearLayer)) +
-  stat_contour(aes_string(x="x", y="y", z=yearLayer, colour=yearLayer), size=0.1)
+  stat_contour(data=densitiesScaled, aes_string(x="x", y="y", z=yearLayer, colour=yearLayer), size=0.1)
 #p <- direct.label(p)
 p <- p + scale_fill_gradientn(colours=terrain.colors(100), na.value="transparent",
                        guide=guide_legend(title=expression(paste("Population density ", (individuals/km^2)))), trans="log10",
@@ -418,7 +393,6 @@ p <- p + scale_fill_gradientn(colours=terrain.colors(100), na.value="transparent
 saveFigure(p, "manuscript-figure-2a.png", width=17, height=7.2, dpi=200) # draft quality
 saveFigure(p, "manuscript-figure-2a.pdf", width=17, height=7.2, dpi=300)
 
-
 ###
 
 gridTemplate <- raster(extent(study$studyArea$boundary), nrows=12, ncols=6, crs=study$studyArea$proj4string)
@@ -436,6 +410,12 @@ saveFigure(p, "manuscript-figure-2b.pdf", width=17, height=6.7, dpi=300)
 ```
 
 ```{r figure-3-init}
+cutoffPopulationSizes <- function(populationSizes, cutoff=c(0,Inf), models) {
+  x <- subset(populationSizes, modelName %in% models & cutoff[1] <= Estimated & Estimated <= cutoff[2])
+  y <- subset(populationSizes, !(modelName %in% models))
+  rbind(x, y)
+}
+
 getIntersections <- function(scenarios) {
   study <- getStudy(scenario="A")
   validation <- Validation(study=study)
@@ -450,8 +430,6 @@ getPopulationSizes <- function(scenarios, modelNames, populationSizeCutoff=Inf) 
   populationSizes <- validation$getValidationTemporalPopulationSizes(scenarios=scenarios, modelNames=modelNames)
   #validation$summarizePopulationSize(populationSizes)  
 }
-
-cutoffPopulationSizes <- function(populationSizes, cutoff=c(0,Inf)) subset(populationSizes, cutoff[1] <= Estimated & Estimated <= cutoff[2])
 
 getMeanPopulationSizes <- function(populationSizes) {
   library(plyr)
@@ -477,17 +455,137 @@ populationSizes10Days <- getPopulationSizes(scenarios=paste0(scenarios, "10days"
 
 cutoff <- c(1,1000)
 
-meanPopulationSizes  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes, cutoff))
-logPopulationSizes <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes, cutoff))
+meanPopulationSizes  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes, cutoff, models=modelNames[1]))
+logPopulationSizes <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes, cutoff, models=modelNames[1]))
 logMeanPopulationSizes  <- getMeanPopulationSizes(logPopulationSizes)
 
-meanPopulationSizes2000  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes2000, 10*cutoff))
-logPopulationSizes2000 <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes2000, 10*cutoff))
+meanPopulationSizes2000  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes2000, 10*cutoff, models=modelNames[1]))
+logPopulationSizes2000 <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes2000, 10*cutoff, models=modelNames[1]))
 logMeanPopulationSizes2000  <- getMeanPopulationSizes(logPopulationSizes2000)
 
-meanPopulationSizes10Days  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes10Days, cutoff))
-logPopulationSizes10Days <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes10Days, cutoff))
+meanPopulationSizes10Days  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes10Days, cutoff, models=modelNames[1]))
+logPopulationSizes10Days <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes10Days, cutoff, models=modelNames[1]))
 logMeanPopulationSizes10Days  <- getMeanPopulationSizes(logPopulationSizes10Days)
+```
+
+```{r table-1abc}
+getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEstimate, models, file, ...) {
+  library(plyr)
+  x <- ddply(populationSizes, .(Scenario, modelName), function(x, overEstimate, models) {
+    xrows <- nrow(x)
+    old <- x
+    x <- cutoffPopulationSizes(x, overEstimate, models=models)
+    if (nrow(x) == 0) {
+      print(old)
+      stop("ERROR")
+    }
+    
+    if (nrow(x) == 0) return(NULL)
+    failed <- (1 - nrow(x) / xrows) * 100
+    
+    y <- lm(Estimated~Observed, x)
+    prop <- x$Estimated/x$Observed
+    prop <- prop[!is.infinite(prop) & prop > 0]
+    prop.mean <- mean(log(prop))
+    prop.sd <- sd(log(prop))
+    prop.min <- quantile(log(prop), .025)
+    prop.max <- quantile(log(prop), .975)
+    slope.sd <- coef(summary(y))[2,2]
+    
+    #print(prop)
+    #message("prop = ", mean(prop), " log mean = ", prop.mean)
+
+    df <- data.frame(Intercept=coef(y)[1], Slope=coef(y)[2], SlopeSD=slope.sd, R2=summary(y)$r.squared, EstTrue=prop.mean, EstTrueSD=prop.sd, EstTrueMin=prop.min, EstTrueMax=prop.max, Failed=failed, N=nrow(x))
+    #print(df)
+    return(df)
+  }, overEstimate=overEstimate, models=models, .inform=T)
+  
+  y <- unique(meanPopulationSizes)
+  y$Scenario <- y$scenario  
+  z <- plyr::join(x, y)
+  z$Model <- prettyModelName(z$modelName)
+  z$Scenario <- prettyScenario(z$Scenario)  
+  return(z)
+}
+
+table1 <- getPopulationSizesTable(populationSizes, meanPopulationSizes, overEstimate=cutoff, models=modelNames[1])
+logTable1 <- getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(cutoff+1), models=modelNames[1])
+logTable1$Failed <- table1$Failed
+
+table2 <- getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, overEstimate=10*cutoff, models=modelNames[1])
+logTable2 <- getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(10*cutoff+1), models=modelNames[1])
+logTable2$Failed <- table2$Failed
+
+table3 <- getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, overEstimate=cutoff, models=modelNames[1])
+logTable3 <- getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, overEstimate=log10(cutoff+1), models=modelNames[1])
+logTable3$Failed <- table3$Failed
+
+subset(logTable1, Model != "VT")
+subset(logTable2, Model != "VT")
+subset(logTable3, Model != "VT")
+
+
+writeTable <- function(df, filename, context) {
+  library(ReporteRs)
+  doc <- docx()
+  flextable <- FlexTable(df)
+  addFlexTable(doc, flextable)
+  dir <- normalizePath(context$figuresDirectory)
+  writeDoc(doc, file=file.path(dir, filename))
+}
+
+plotPopulationSizesTable <- function(logTable) {
+  library(reshape2)
+  facet_labeller <- function(variable, value) {
+    measured <- list(Slope=expression(beta), R2=expression(R^2), EstTrue=expression(alpha), Failed="Failed (%)")
+    print(paste0(variable,"=",value))
+    if (variable=="variable") return(measured[value])
+    if (variable=="Case") return(paste("Case", value))
+  }
+  x <- melt(logTable, id.vars=c("Scenario", "Model", "Case"), measure.vars=c("Slope", "R2", "EstTrue", "Failed"))
+  bestFit <- data.frame(variable=unique(x$variable), y=c(1, 1, 0, 0))
+  errorBars <- x
+  errorBars$value <- NA
+  errorBars$value[errorBars$variable=="Slope"] <- logTable$Slope
+  errorBars$qmin[errorBars$variable=="Slope"] <- logTable$Slope-logTable$SlopeSD
+  errorBars$qmax[errorBars$variable=="Slope"] <- logTable$Slope+logTable$SlopeSD
+  errorBars$value[errorBars$variable=="EstTrue"] <- logTable$EstTrue
+  errorBars$qmin[errorBars$variable=="EstTrue"] <- logTable$EstTrueMin
+  errorBars$qmax[errorBars$variable=="EstTrue"] <- logTable$EstTrueMax
+  
+  p <- ggplot(x, aes(Scenario, value, group=Model)) +
+    geom_hline(data=bestFit, aes(yintercept=y), color="darkgray") + 
+    geom_errorbar(data=errorBars, aes(Scenario, group=Model, ymax=qmax, ymin=qmin), position=position_dodge(width=.7), colour="darkgray") +
+    geom_point(aes(shape=Model), position=position_dodge(width=.7)) +
+    facet_grid(variable~Case, scales="free_y", labeller=facet_labeller) + ylab("") +
+    theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"), legend.title=element_text(size=10),
+                                        legend.position="bottom",
+                                        strip.text.x=element_text(size=10), strip.text.y=element_text(size=10),
+                                        plot.margin=unit(c(0, 0, -.5, -.5), units="line"),
+                                        legend.margin=unit(0, units="line"))# , legend.key=element_rect(fill="transparent"))
+  return(p)
+}
+
+logTable1$Case <- "1"
+logTable2$Case <- "2"
+logTable3$Case <- "3"
+logTable <- rbind(subset(logTable1, Model != "VT"), subset(logTable2, Model != "VT"), subset(logTable3, Model != "VT"))
+p <- plotPopulationSizesTable(logTable)
+saveFigure(p, "manuscript-figure-3.png", width=17, height=17, dpi=200) # draft quality
+saveFigure(p, "manuscript-figure-3.pdf", width=17, height=17, dpi=300)
+
+logTablePretty <- logTable
+logTablePretty$Slope <- round(logTablePretty$Slope, 2)
+logTablePretty$R2 <- round(logTablePretty$R2, 2)
+logTablePretty$EstTrue <- round(logTablePretty$EstTrue, 2)
+logTablePretty$EstTrueSD <- round(logTablePretty$EstTrueSD, 2)
+logTablePretty$Failed <- round(logTablePretty$Failed, 0)
+logTablePretty <- logTablePretty[,c("Case","Scenario","Model","Slope","R2","EstTrue","EstTrueSD","Failed")]
+writeTable(subset(logTablePretty, Model != "VT"), "table-1.docx", context)
+
+#writeTable(subset(logTable1, Model != "VT"), "table-1a.docx", context)
+#writeTable(subset(logTable2, Model != "VT"), "table-1b.docx", context)
+#writeTable(subset(logTable3, Model != "VT"), "table-1c.docx", context)
 ```
 
 ```{r figure-3abc}
@@ -615,113 +713,26 @@ saveFigure(p, "manuscript-figure-3sample.png", height=7.87*2/3) # draft quality
 saveFigure(p, "manuscript-figure-3sample.pdf", height=7.87*2/3, dpi=300)
 ```
 
-```{r table-1abc}
-getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEstimate, full=F, file, ...) {
-  library(plyr)
-  x <- ddply(populationSizes, .(Scenario, modelName), function(x, overEstimate) {
-    failed <- (1 - nrow(cutoffPopulationSizes(x, overEstimate)) / nrow(x)) * 100
-      #(sum(x$Estimated < overEstimate[1] | x$Estimated > overEstimate[2]) / nrow(x)) * 100)
-    x <- cutoffPopulationSizes(x, overEstimate)
-    #subset(x, Estimated <= overEstimate)
-    #if (x$modelName[1] == "FMPModel") failed <- NA
-    #if (any(abs(x$Estimated) == Inf)) return(data.frame(Intercept=NA, Slope=NA, SlopeSD=NA, R2=NA, Failed=failed, EstTrue=NA, EstTrueSD=NA, EstTrueMin=NA, EstTrueMax=NA, N=NA))
-    y <- lm(Estimated~Observed, x)
-    prop.mean <- mean(log(x$Estimated/x$Observed))
-    prop.sd <- sd(log(x$Estimated/x$Observed))
-    prop.min <- quantile(log(x$Estimated/x$Observed), .025)
-    prop.max <- quantile(log(x$Estimated/x$Observed), .975)
-    slope.sd <- coef(summary(y))[2,2]
-    return(data.frame(Intercept=coef(y)[1], Slope=coef(y)[2], SlopeSD=slope.sd, R2=summary(y)$r.squared, EstTrue=prop.mean, EstTrueSD=prop.sd, EstTrueMin=prop.min, EstTrueMax=prop.max, Failed=failed, N=nrow(x)))
-  }, overEstimate=overEstimate)
-  
-  y <- unique(meanPopulationSizes)
-  y$Scenario <- y$scenario
-  z <- plyr::join(x, y)
-  z$Model <- prettyModelName(z$modelName)
-  z$Scenario <- prettyScenario(z$Scenario)
-  if (full) return(z)
-  
-  return(z)
-}
+```{r habitat-bias}
+ddply(logTable, .(modelName, Case, Scenario), function(x) {
+  data.frame(p=mean(exp(x$EstTrue)))
+})
+ddply(logTable, .(modelName, Case), function(x) {
+  data.frame(p=mean(exp(x$EstTrue)))
+})
+ddply(logTable, .(modelName, Scenario), function(x) {
+  data.frame(p=mean(exp(x$EstTrue)))
+})
 
-table1 <- getPopulationSizesTable(populationSizes, meanPopulationSizes, overEstimate=cutoff)
-logTable1 <- getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(cutoff+1))
-logTable1$Failed <- table1$Failed
-
-table2 <- getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, overEstimate=10*cutoff)
-logTable2 <- getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(10*cutoff+1))
-logTable2$Failed <- table2$Failed
-
-table3 <- getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, overEstimate=cutoff)
-logTable3 <- getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, overEstimate=log10(cutoff+1))
-logTable3$Failed <- table3$Failed
-
-subset(logTable1, Model != "VT")
-subset(logTable2, Model != "VT")
-subset(logTable3, Model != "VT")
-
-
-writeTable <- function(df, filename, context) {
-  library(ReporteRs)
-  doc <- docx()
-  flextable <- FlexTable(df)
-  addFlexTable(doc, flextable)
-  dir <- normalizePath(context$figuresDirectory)
-  writeDoc(doc, file=file.path(dir, filename))
-}
-
-plotPopulationSizesTable <- function(logTable) {
-  library(reshape2)
-  facet_labeller <- function(variable, value) {
-    measured <- list(Slope=expression(beta), R2=expression(R^2), EstTrue=expression(alpha), Failed="Failed (%)")
-    print(paste0(variable,"=",value))
-    if (variable=="variable") return(measured[value])
-    if (variable=="Case") return(paste("Case", value))
-  }
-  x <- melt(logTable, id.vars=c("Scenario", "Model", "Case"), measure.vars=c("Slope", "R2", "EstTrue", "Failed"))
-  bestFit <- data.frame(variable=unique(x$variable), y=c(1, 1, 0, 0))
-  errorBars <- x
-  errorBars$value <- NA
-  errorBars$value[errorBars$variable=="Slope"] <- logTable$Slope
-  errorBars$qmin[errorBars$variable=="Slope"] <- logTable$Slope-logTable$SlopeSD
-  errorBars$qmax[errorBars$variable=="Slope"] <- logTable$Slope+logTable$SlopeSD
-  errorBars$value[errorBars$variable=="EstTrue"] <- logTable$EstTrue
-  errorBars$qmin[errorBars$variable=="EstTrue"] <- logTable$EstTrueMin
-  errorBars$qmax[errorBars$variable=="EstTrue"] <- logTable$EstTrueMax
-  
-  p <- ggplot(x, aes(Scenario, value, group=Model)) +
-    geom_hline(data=bestFit, aes(yintercept=y), color="darkgray") + 
-    geom_errorbar(data=errorBars, aes(Scenario, group=Model, ymax=qmax, ymin=qmin), position=position_dodge(width=.7), colour="darkgray") +
-    geom_point(aes(shape=Model), position=position_dodge(width=.7)) +
-    facet_grid(variable~Case, scales="free_y", labeller=facet_labeller) + ylab("") +
-    theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"), legend.title=element_text(size=10),
-                                        legend.position="bottom",
-                                        strip.text.x=element_text(size=10), strip.text.y=element_text(size=10),
-                                        plot.margin=unit(c(0, 0, -.5, -.5), units="line"),
-                                        legend.margin=unit(0, units="line"))# , legend.key=element_rect(fill="transparent"))
-  return(p)
-}
-
-logTable1$Case <- "1"
-logTable2$Case <- "2"
-logTable3$Case <- "3"
-logTable <- rbind(subset(logTable1, Model != "VT"), subset(logTable2, Model != "VT"), subset(logTable3, Model != "VT"))
-p <- plotPopulationSizesTable(logTable)
-saveFigure(p, "manuscript-figure-3.png", width=17, height=17, dpi=200) # draft quality
-saveFigure(p, "manuscript-figure-3.pdf", width=17, height=17, dpi=300)
-
-logTablePretty <- logTable
-logTablePretty$Slope <- round(logTablePretty$Slope, 2)
-logTablePretty$R2 <- round(logTablePretty$R2, 2)
-logTablePretty$EstTrue <- round(logTablePretty$EstTrue, 2)
-logTablePretty$EstTrueSD <- round(logTablePretty$EstTrueSD, 2)
-logTablePretty$Failed <- round(logTablePretty$Failed, 0)
-logTablePretty <- logTablePretty[,c("Case","Scenario","Model","Slope","R2","EstTrue","EstTrueSD","Failed")]
-writeTable(subset(logTablePretty, Model != "VT"), "table-1.docx", context)
-
-#writeTable(subset(logTable1, Model != "VT"), "table-1a.docx", context)
-#writeTable(subset(logTable2, Model != "VT"), "table-1b.docx", context)
-#writeTable(subset(logTable3, Model != "VT"), "table-1c.docx", context)
+p <- ddply(subset(logTable, Scenario %in% c("A","E")), .(modelName, Case), function(x) {
+  p <- 1 - exp(subset(x, Scenario %in% "A")$EstTrue) / exp(subset(x, Scenario %in% "E")$EstTrue)
+  data.frame(p=p)
+})
+mean(p$p)
+p <- ddply(subset(logTable, Scenario %in% c("A","F")), .(modelName, Case), function(x) {
+  p <- 1 - exp(subset(x, Scenario %in% "A")$EstTrue) / exp(subset(x, Scenario %in% "F")$EstTrue)
+  data.frame(p=p)
+})
 ```
 
 ```{r table-2}
@@ -764,6 +775,7 @@ i2000 <- ddply(intersections2000x, .(Scenario), rer.stat); i2000$Scenario=pretty
 i10days <- ddply(intersections10daysx, .(Scenario), rer.stat); i10days$Scenario=prettyScenario(i10days$Scenario); i10days$Case <- "3"
 
 iall <- rbind(i, i2000, i10days)
+iall
 p <- plotIntersectionPopulationSizeTable(iall)
 saveFigure(p, "manuscript-figure-4x.png", height=7.87/2) # draft quality
 saveFigure(p, "manuscript-figure-4x.pdf", height=7.87/2, dpi=300)
@@ -771,23 +783,6 @@ saveFigure(p, "manuscript-figure-4x.pdf", height=7.87/2, dpi=300)
 #writeTable(i, "table-2a.docx", context)
 #writeTable(i2000, "table-2b.docx", context)
 #writeTable(i10days, "table-2c.docx", context)
-```
-
-```{r figure-x-debug}
-getTrueAndEstimatedCounts <- function(scenarios, modelNames, cutoff=c(-Inf,Inf)) {
-  study <- getStudy(scenario="A")
-  validation <- Validation(study=study, populationSizeCutoff=cutoff)
-  counts <- validation$getMeanCounts(scenarios=scenarios, modelNames=modelNames)
-  return(counts)
-}
-
-c1 <- getTrueAndEstimatedCounts(scenarios=scenarios, modelNames=modelNames[c(3:5)]); c1$Case <- 1
-c2 <- getTrueAndEstimatedCounts(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[c(3:5)]); c1$Case <- 2
-c3 <- getTrueAndEstimatedCounts(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(3:5)]); c1$Case <- 3
-c.all <- rbind(c1, c2, c3)
-c.agg <- ddply(c.all, .(iteration), function(x) data.frame(Scenario=x$Scenario[1], Model=x$Model[1], Ratio=mean(x$True/x$Estimated), RatioSD=sd(x$True/x$Estimated)))
-
-#ggplot(c.all, aes())
 ```
 
 ```{r figure-4}
@@ -834,11 +829,11 @@ saveFigure(p3, "manuscript-figure-4c.pdf", dpi=300)
 
 
 ```{r figure-5}
-getCIProportions <- function(scenario, modelName, panel, scenarioNames, cutoff=Inf) {
+getCIProportions <- function(scenarios, modelNames, panel, scenarioNames, cutoff=Inf) {
   study <- getStudy(scenario="A")
   validation <- Validation(study=study, populationSizeCutoff=cutoff)
-  a <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenario, modelNames=modelName)
-  b <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenario, modelNames=modelName, probs=c(.25, .75), probsName="50%")
+  a <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames)
+  b <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames, probs=c(.25, .75), probsName="50%")
   credibilityIntervals <- rbind(a, b)
   credibilityIntervals$panel <- panel
   credibilityIntervals$scenario <- rep(scenarioNames, times=2, each=length(modelNames))
@@ -876,6 +871,7 @@ cip2 <- getCIProportions(scenarios=paste0(scenarios, "combined"), modelNames=mod
 cip3 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(1,3,5)], panel="Case 3", scenarioNames=scenarios, cutoff=cutoff)
 
 cip <- subset(rbind(cip1, cip2, cip3), modelName != "SmoothModel-nbinomial-ar1")
+#cip <- subset(rbind(cip1, cip2, cip3), !(modelName %in% c("SmoothModel-nbinomial-ar1", "SmoothModel-nbinomial-matern-ar1")))
 p <- plotCIProportions(cip)
 saveFigure(p, "manuscript-figure-5.png", height=7.87/2)
 saveFigure(p, "manuscript-figure-5.pdf", height=7.87/2, dpi=300)
