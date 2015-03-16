@@ -455,16 +455,16 @@ populationSizes10Days <- getPopulationSizes(scenarios=paste0(scenarios, "10days"
 
 cutoff <- c(1,1000)
 
-meanPopulationSizes  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes, cutoff, models=modelNames[1]))
-logPopulationSizes <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes, cutoff, models=modelNames[1]))
+meanPopulationSizes  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes, cutoff, models=modelNames[c(1,3,5)]))
+logPopulationSizes <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes, cutoff, models=modelNames[c(1,3,5)]))
 logMeanPopulationSizes  <- getMeanPopulationSizes(logPopulationSizes)
 
-meanPopulationSizes2000  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes2000, 10*cutoff, models=modelNames[1]))
-logPopulationSizes2000 <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes2000, 10*cutoff, models=modelNames[1]))
+meanPopulationSizes2000  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes2000, 10*cutoff, models=modelNames[c(1,3,5)]))
+logPopulationSizes2000 <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes2000, 10*cutoff, models=modelNames[c(1,3,5)]))
 logMeanPopulationSizes2000  <- getMeanPopulationSizes(logPopulationSizes2000)
 
-meanPopulationSizes10Days  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes10Days, cutoff, models=modelNames[1]))
-logPopulationSizes10Days <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes10Days, cutoff, models=modelNames[1]))
+meanPopulationSizes10Days  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes10Days, cutoff, models=modelNames[c(1,3,5)]))
+logPopulationSizes10Days <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes10Days, cutoff, models=modelNames[c(1,3,5)]))
 logMeanPopulationSizes10Days  <- getMeanPopulationSizes(logPopulationSizes10Days)
 ```
 
@@ -508,15 +508,19 @@ getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEs
   return(z)
 }
 
-table1 <- getPopulationSizesTable(populationSizes, meanPopulationSizes, overEstimate=cutoff, models=modelNames[1])
+#x <- subset(populationSizes, modelName=="SmoothModelMean-nbinomial-ar1-priors1" & Scenario=="C")
+#y <- lm(Estimated~Observed, x)
+
+
+table1 <- getPopulationSizesTable(populationSizes, meanPopulationSizes, overEstimate=cutoff, models=modelNames[c(1,3,5)])
 logTable1 <- getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(cutoff+1), models=modelNames[1])
 logTable1$Failed <- table1$Failed
 
-table2 <- getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, overEstimate=10*cutoff, models=modelNames[1])
+table2 <- getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, overEstimate=10*cutoff, models=modelNames[c(1,3,5)])
 logTable2 <- getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(10*cutoff+1), models=modelNames[1])
 logTable2$Failed <- table2$Failed
 
-table3 <- getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, overEstimate=cutoff, models=modelNames[1])
+table3 <- getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, overEstimate=cutoff, models=modelNames[c(1,3,5)])
 logTable3 <- getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, overEstimate=log10(cutoff+1), models=modelNames[1])
 logTable3$Failed <- table3$Failed
 
@@ -546,9 +550,9 @@ plotPopulationSizesTable <- function(logTable) {
   bestFit <- data.frame(variable=unique(x$variable), y=c(1, 1, 0, 0))
   errorBars <- x
   errorBars$value <- NA
-  errorBars$value[errorBars$variable=="Slope"] <- logTable$Slope
-  errorBars$qmin[errorBars$variable=="Slope"] <- logTable$Slope-logTable$SlopeSD
-  errorBars$qmax[errorBars$variable=="Slope"] <- logTable$Slope+logTable$SlopeSD
+  #errorBars$value[errorBars$variable=="Slope"] <- logTable$Slope
+  #errorBars$qmin[errorBars$variable=="Slope"] <- logTable$Slope-logTable$SlopeSD
+  #errorBars$qmax[errorBars$variable=="Slope"] <- logTable$Slope+logTable$SlopeSD
   errorBars$value[errorBars$variable=="EstTrue"] <- logTable$EstTrue
   errorBars$qmin[errorBars$variable=="EstTrue"] <- logTable$EstTrueMin
   errorBars$qmax[errorBars$variable=="EstTrue"] <- logTable$EstTrueMax
@@ -668,7 +672,7 @@ saveFigure(p, "manuscript-figure-3c4.pdf", dpi=300)
 ```
 
 ```{r figure-3sample}
-xlim <- log10(c(10,800)); ylim <- xlim
+xlim <- log10(c(30,800)); ylim <- xlim
 logPopulationSizesSample <- subset(logPopulationSizes, scenario == "A")
 logPopulationSizesSample$modelName <- prettyModelName(logPopulationSizesSample$modelName)
 logPopulationSizesSample <- rbind(
@@ -806,13 +810,19 @@ plotPopulationCorrelations <- function(populationCorrelations, case) {
   return(p)
 }
 
-pc1 <- getPopulationCorrelations(scenarios=scenarios, modelNames=modelNames[1], cutoff=cutoff)
-pc2a <- getPopulationCorrelations(scenarios="Acombined", modelNames=modelNames[1], cutoff=cutoff)
-pc2b <- getPopulationCorrelations(scenarios="Bcombined", modelNames=modelNames[1], cutoff=cutoff)
-pc2c <- getPopulationCorrelations(scenarios="Ccombined", modelNames=modelNames[1], cutoff=cutoff)
-pc2d <- getPopulationCorrelations(scenarios="Dcombined", modelNames=modelNames[1], cutoff=cutoff)
-pc2e <- getPopulationCorrelations(scenarios="Ecombined", modelNames=modelNames[1], cutoff=cutoff)
-pc2f <- getPopulationCorrelations(scenarios="Fcombined", modelNames=modelNames[1], cutoff=cutoff)
+pc1a <- getPopulationCorrelations(scenarios="A", modelNames=modelNames[1], cutoff=cutoff)
+pc1b <- getPopulationCorrelations(scenarios="B", modelNames=modelNames[1], cutoff=cutoff)
+pc1c <- getPopulationCorrelations(scenarios="C", modelNames=modelNames[1], cutoff=cutoff)
+pc1d <- getPopulationCorrelations(scenarios="D", modelNames=modelNames[1], cutoff=cutoff)
+pc1e <- getPopulationCorrelations(scenarios="E", modelNames=modelNames[1], cutoff=cutoff)
+pc1f <- getPopulationCorrelations(scenarios="F", modelNames=modelNames[1], cutoff=cutoff)
+pc1 <- rbind(pc1a,pc1b,pc1c,pc1d,pc1e,pc1f)
+pc2a <- getPopulationCorrelations(scenarios="Acombined", modelNames=modelNames[1], cutoff=10*cutoff)
+pc2b <- getPopulationCorrelations(scenarios="Bcombined", modelNames=modelNames[1], cutoff=10*cutoff)
+pc2c <- getPopulationCorrelations(scenarios="Ccombined", modelNames=modelNames[1], cutoff=10*cutoff)
+pc2d <- getPopulationCorrelations(scenarios="Dcombined", modelNames=modelNames[1], cutoff=10*cutoff)
+pc2e <- getPopulationCorrelations(scenarios="Ecombined", modelNames=modelNames[1], cutoff=10*cutoff)
+pc2f <- getPopulationCorrelations(scenarios="Fcombined", modelNames=modelNames[1], cutoff=10*cutoff)
 pc2 <- rbind(pc2a,pc2b,pc2c,pc2d,pc2e,pc2f)
 pc3 <- getPopulationCorrelations(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[1], cutoff=cutoff)
 

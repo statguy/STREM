@@ -166,6 +166,8 @@ Validation <- setRefClass(
         estimates <- study$loadEstimates(estimates)
         estimates$collectEstimates()
         
+        if (any(!is.finite(estimates$data$fittedMean))) next
+        
         estimated <- estimates$getPopulationDensity(templateRaster=template)
         #estimated <- estimates$getPopulationDensityInterpolate(templateRaster=template, maskPolygon=NULL, getSD=F)
         #if (is.null(estimated$mean)) {
@@ -208,6 +210,8 @@ Validation <- setRefClass(
         spatialCorrelation <- rbind(spatialCorrelation, x)
       }
       
+      if (nrow(spatialCorrelation) == 0) return(NULL)
+      
       spatialCorrelation$Scenario <- study$response
       spatialCorrelation$modelName <- modelName
       
@@ -228,7 +232,7 @@ Validation <- setRefClass(
         s <- getStudy(scenario=x$scenario, isTest=F)
         validation <- Validation(study=s, populationSizeCutoff=populationSizeCutoff)
         z <- validation$validateSpatialPopulationSize(x$modelName, debugMaxIterations=debugMaxIterations)
-        if (nrow(z) == 0) next
+        if (is.null(z)) next
         spatialCorrelations <- rbind(spatialCorrelations, z)
       }
       return(spatialCorrelations)
