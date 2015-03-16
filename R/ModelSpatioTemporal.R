@@ -99,6 +99,7 @@ SmoothModelSpatioTemporal <- setRefClass(
                                                        max.edge=params$meshParams$maxEdge * coordsScale,
                                                        cutoff=params$meshParams$cutOff * coordsScale),
                                timeout=10, onTimeout="error")
+      message("Mesh nodes = ", mesh$n)
       #mesh <<- inla.mesh.create.helper(points.domain=locations,
       #                                 min.angle=params$meshParams$minAngle,
       #                                 max.edge=params$meshParams$maxEdge * coordsScale,
