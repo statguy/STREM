@@ -270,8 +270,8 @@ TestStudyArea <- setRefClass(
     
     getMesh = function() {
       #list(coordsScale=1e-6, maxEdge=c(.01e6, .2e6), cutOff=.01e6)
-      #list(coordsScale=1e-6, maxEdge=c(.01e6, .02e6), cutOff=.007e6)
-      list(coordsScale=1e-6, maxEdge=c(.05e6, .2e6), cutOff=.03e6)
+      list(coordsScale=1e-6, maxEdge=c(.01e6, .02e6), cutOff=.007e6)
+#list(coordsScale=1e-6, maxEdge=c(.05e6, .2e6), cutOff=.03e6)
     }
   )
 )
