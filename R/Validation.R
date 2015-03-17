@@ -260,7 +260,7 @@ Validation <- setRefClass(
       model$modelName <- modelName
       model$loadEstimates()
       model$collectEstimates()
-      if (any(!is.finite(model$fittedMean))) {
+      if (any(!is.finite(model$data$fittedMean))) {
         message("Non-finite values. Failed to validate scenario = ", study$response, ", model = ", modelName, ", iteration = ", iteration)
         return(NULL)
       }
