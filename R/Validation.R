@@ -261,7 +261,7 @@ Validation <- setRefClass(
       model$loadEstimates()
       model$collectEstimates()
       if (any(!is.finite(model$fittedMean))) {
-        message("Failed to validate scenario = ", study$response, ", model = ", modelName, ", iteration = ", iteration)
+        message("Non-finite values. Failed to validate scenario = ", study$response, ", model = ", modelName, ", iteration = ", iteration)
         return(NULL)
       }
       
@@ -270,22 +270,14 @@ Validation <- setRefClass(
       populationSize <- ldply(1:nSamples, function(index, model, posteriorSamples) {
         message("Processing posterior sample ", index, "...")
         
-        #lengthWeights <- if (!inherits(study$surveyRoutes, "uninitializedField"))
-        #  model$getLengthWeights(study$getSurveyRouteWeightedLengths(iteration=iteration), study$surveyRoutes$lengths) else 1
-        
         model$data <- posteriorSamples[[index]]
-        model$data$fittedMean <- model$data$z #* lengthWeights
+        model$data$fittedMean <- model$data$z
         model$data$year <- model$data$t
         x <- study$getPopulationSize(estimates=model, iteration=iteration, save=FALSE, .parallel=FALSE)$sizeData
         
-        #x <- SimulationPopulationSize$new(study=study, iteration=iteration)
-        #density <- model$data$fittedMean / model$offsetScale
-        #x$getPopulationSize(density, model$data$year, loadValidationData=TRUE)
-        #x <- x$sizeData
-        
         if (any(x$Estimated <= populationSizeCutoff[1] | x$Estimated >= populationSizeCutoff[2])) {
-          message("Estimation failed for iteration ", iteration, ".")
-          next
+          message("Estimates not within cutoff threshold. Failed to validate scenario = ", study$response, ", model = ", modelName, ", iteration = ", iteration)
+          return(NULL)
         }
         x$sample <- index
         return(x)
