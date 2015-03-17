@@ -260,6 +260,10 @@ Validation <- setRefClass(
       model$modelName <- modelName
       model$loadEstimates()
       model$collectEstimates()
+      if (any(!is.finite(model$fittedMean))) {
+        message("Failed to validate scenario = ", study$response, ", model = ", modelName, ", iteration = ", iteration)
+        return(NULL)
+      }
       
       posteriorSamples <- model$samplePosterior(n=nSamples)
       
