@@ -282,7 +282,9 @@ Validation <- setRefClass(
         x$sample <- index
         return(x)
       }, model=model, posteriorSamples=posteriorSamples, .parallel=T)
- 
+      
+      if (nrow(populationSize) == 0) return(NULL)
+      
       populationSize$scenario <- study$response
       populationSize$modelName <- modelName
       populationSize$iteration <- iteration
