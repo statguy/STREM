@@ -178,15 +178,15 @@ Validation <- setRefClass(
           message("Estimation failed for iteration ", iteration, " scenario ", study$response, ".")
           next
         }
+        estimated$rasterStack <- stack(mask(estimated$rasterStack, coverArea) * coverArea)
         
         habitatWeights <- study$getHabitatWeights(iteration=iteration, save=F)
         if (!is.null(habitatWeights)) {
+          message("Weighting density with habitat weights...")
           habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=F)
+          habitatWeightsRaster <- resample(habitatWeightsRaster, estimated$rasterStack, method="bilinear")
           estimated$weight(habitatWeightsRaster)
         }
-        
-        #estimated$mean$rasterStack <- stack(mask(estimated$mean$rasterStack, coverArea) * coverArea)
-        estimated$rasterStack <- stack(mask(estimated$rasterStack, coverArea) * coverArea)
         
         tracks <- study$loadTracks(iteration=iteration)
         cc <- ddply(subset(tracks$tracks, yday == 29), .(year, id), function(x) x[1,])[,c("year","x","y","herdSize")]
