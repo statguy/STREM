@@ -239,7 +239,10 @@ Validation <- setRefClass(
       spatialCorrelations <- data.frame()
       for (i in 1:nrow(y)) {
         x <- y[i,]
-        s <- getStudy(scenario=x$scenario, isTest=F)
+        
+        # TODO: fix this quickfix
+        withHabitatWeights <- if (substr(x$scenario, 1, 1) %in% c("E","F")) T else F
+        s <- getStudy(scenario=x$scenario, withHabitatWeights=withHabitatWeights, isTest=F)
         validation <- Validation(study=s, populationSizeCutoff=populationSizeCutoff)
         z <- validation$validateSpatialPopulationSize(x$modelName, debugMaxIterations=debugMaxIterations)
         if (is.null(z)) next
