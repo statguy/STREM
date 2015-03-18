@@ -179,6 +179,12 @@ Validation <- setRefClass(
           next
         }
         
+        habitatWeights <- study$getHabitatWeights(iteration=iteration, save=F)
+        if (!is.null(habitatWeights)) {
+          habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=F)
+          estimated$weight(habitatWeightsRaster)
+        }
+        
         #estimated$mean$rasterStack <- stack(mask(estimated$mean$rasterStack, coverArea) * coverArea)
         estimated$rasterStack <- stack(mask(estimated$rasterStack, coverArea) * coverArea)
         
