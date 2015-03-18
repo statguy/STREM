@@ -824,6 +824,14 @@ pc2d <- getPopulationCorrelations(scenarios="Dcombined", modelNames=modelNames[1
 pc2e <- getPopulationCorrelations(scenarios="Ecombined", modelNames=modelNames[1], cutoff=10*cutoff)
 pc2f <- getPopulationCorrelations(scenarios="Fcombined", modelNames=modelNames[1], cutoff=10*cutoff)
 pc2 <- rbind(pc2a,pc2b,pc2c,pc2d,pc2e,pc2f)
+pc3a <- getPopulationCorrelations(scenarios="A10days", modelNames=modelNames[1], cutoff=cutoff)
+pc3b <- getPopulationCorrelations(scenarios="B10days", modelNames=modelNames[1], cutoff=cutoff)
+pc3c <- getPopulationCorrelations(scenarios="C10days", modelNames=modelNames[1], cutoff=cutoff)
+pc3d <- getPopulationCorrelations(scenarios="D10days", modelNames=modelNames[1], cutoff=cutoff)
+pc3e <- getPopulationCorrelations(scenarios="E10days", modelNames=modelNames[1], cutoff=cutoff)
+pc3f <- getPopulationCorrelations(scenarios="F10days", modelNames=modelNames[1], cutoff=cutoff)
+pc3 <- rbind(pc3a,pc3b,pc3c,pc3d,pc3e,pc3f)
+
 pc3 <- getPopulationCorrelations(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[1], cutoff=cutoff)
 
 p1 <- plotPopulationCorrelations(pc1, "Case 1")
