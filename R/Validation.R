@@ -166,8 +166,11 @@ Validation <- setRefClass(
         estimates <- study$loadEstimates(estimates)
         estimates$collectEstimates()
         
-        if (any(!is.finite(estimates$data$fittedMean))) next
-        
+        if (any(!is.finite(estimates$data$fittedMean))) {
+          message("Estimation failed for iteration ", iteration, " scenario ", study$response, ".")
+          next
+        }
+
         estimated <- estimates$getPopulationDensity(templateRaster=template)
         #estimated <- estimates$getPopulationDensityInterpolate(templateRaster=template, maskPolygon=NULL, getSD=F)
         #if (is.null(estimated$mean)) {
@@ -177,6 +180,7 @@ Validation <- setRefClass(
         }
         
         #estimated$mean$rasterStack <- stack(mask(estimated$mean$rasterStack, coverArea) * coverArea)
+        estimated$rasterStack <- stack(mask(estimated$rasterStack, coverArea) * coverArea)
         
         tracks <- study$loadTracks(iteration=iteration)
         cc <- ddply(subset(tracks$tracks, yday == 29), .(year, id), function(x) x[1,])[,c("year","x","y","herdSize")]
