@@ -831,8 +831,7 @@ pc3d <- getPopulationCorrelations(scenarios="D10days", modelNames=modelNames[1],
 pc3e <- getPopulationCorrelations(scenarios="E10days", modelNames=modelNames[1], cutoff=cutoff)
 pc3f <- getPopulationCorrelations(scenarios="F10days", modelNames=modelNames[1], cutoff=cutoff)
 pc3 <- rbind(pc3a,pc3b,pc3c,pc3d,pc3e,pc3f)
-
-pc3 <- getPopulationCorrelations(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[1], cutoff=cutoff)
+#pc3 <- getPopulationCorrelations(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[1], cutoff=cutoff)
 
 p1 <- plotPopulationCorrelations(pc1, "Case 1")
 saveFigure(p1, "manuscript-figure-4a.png")
