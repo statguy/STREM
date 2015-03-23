@@ -14,7 +14,7 @@ estimateSpatioTemporal <- function(scenario, modelName, iteration, isTest=FALSE,
   mss <- getMSS(scenario=scenario, isTest=isTest)
   study <- mss$study
   
-  if (quick) {    
+  if (quick) {
     stop("TODO")
     intersections <- study$loadIntersections(iteration=iteration)
     model <- SimulatedSmoothModelSpatioTemporal(study=study, iteration=iteration)

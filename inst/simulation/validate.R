@@ -15,7 +15,7 @@ modelName <- extraArgs[1]
 nSamples <- 50
 mss <- getMSS(scenario=scenario, isTest=isTest)
 study <- mss$study
-cutoff <- c(1,2000)
+cutoff <- c(1,1000)
 if (substr(scenario, 2, nchar(scenario)) == "combined") cutoff <- 10 * cutoff
 validation <- Validation(study=study, populationSizeCutoff=cutoff)
 iteration <- as.integer(task_id)
