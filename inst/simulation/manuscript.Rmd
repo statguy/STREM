@@ -450,8 +450,8 @@ getLogPopulationSizes <- function(populationSizes) {
 }
 
 populationSizes <- getPopulationSizes(scenarios=scenarios, modelNames=modelNames[c(1,3,4,5)])
-populationSizes2000 <- getPopulationSizes(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[c(1,3,4,5)])
-populationSizes10Days <- getPopulationSizes(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(1,3,4,5)])
+#populationSizes2000 <- getPopulationSizes(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[c(1,3,4,5)])
+#populationSizes10Days <- getPopulationSizes(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(1,3,4,5)])
 
 cutoff <- c(1,1000)
 
@@ -459,13 +459,13 @@ meanPopulationSizes  <- getMeanPopulationSizes(cutoffPopulationSizes(populationS
 logPopulationSizes <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes, cutoff, models=modelNames[c(1,3,5)]))
 logMeanPopulationSizes  <- getMeanPopulationSizes(logPopulationSizes)
 
-meanPopulationSizes2000  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes2000, 10*cutoff, models=modelNames[c(1,3,5)]))
-logPopulationSizes2000 <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes2000, 10*cutoff, models=modelNames[c(1,3,5)]))
-logMeanPopulationSizes2000  <- getMeanPopulationSizes(logPopulationSizes2000)
+#meanPopulationSizes2000  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes2000, 10*cutoff, models=modelNames[c(1,3,5)]))
+#logPopulationSizes2000 <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes2000, 10*cutoff, models=modelNames[c(1,3,5)]))
+#logMeanPopulationSizes2000  <- getMeanPopulationSizes(logPopulationSizes2000)
 
-meanPopulationSizes10Days  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes10Days, cutoff, models=modelNames[c(1,3,5)]))
-logPopulationSizes10Days <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes10Days, cutoff, models=modelNames[c(1,3,5)]))
-logMeanPopulationSizes10Days  <- getMeanPopulationSizes(logPopulationSizes10Days)
+#meanPopulationSizes10Days  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes10Days, cutoff, models=modelNames[c(1,3,5)]))
+#logPopulationSizes10Days <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes10Days, cutoff, models=modelNames[c(1,3,5)]))
+#logMeanPopulationSizes10Days  <- getMeanPopulationSizes(logPopulationSizes10Days)
 ```
 
 ```{r table-1abc}
@@ -484,7 +484,8 @@ getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEs
     failed <- (1 - nrow(x) / xrows) * 100
     
     y <- lm(Estimated~Observed, x)
-    prop <- x$Estimated/x$Observed
+    #prop <- x$Estimated/x$Observed
+    prop <- (x$Estimated+1)/(x$Observed+1)
     prop <- prop[!is.infinite(prop) & prop > 0]
     prop.mean <- mean(log(prop))
     prop.sd <- sd(log(prop))
@@ -513,16 +514,16 @@ getPopulationSizesTable <- function(populationSizes, meanPopulationSizes, overEs
 
 
 table1 <- getPopulationSizesTable(populationSizes, meanPopulationSizes, overEstimate=cutoff, models=modelNames[c(1,3,5)])
-logTable1 <- getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(cutoff+1), models=modelNames[1])
+logTable1 <- getPopulationSizesTable(logPopulationSizes, logMeanPopulationSizes, overEstimate=log10(cutoff+1), models=modelNames[c(1,3,5)])
 logTable1$Failed <- table1$Failed
 
-table2 <- getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, overEstimate=10*cutoff, models=modelNames[c(1,3,5)])
-logTable2 <- getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(10*cutoff+1), models=modelNames[1])
-logTable2$Failed <- table2$Failed
+#table2 <- getPopulationSizesTable(populationSizes2000, meanPopulationSizes2000, overEstimate=10*cutoff, models=modelNames[c(1,3,5)])
+#logTable2 <- getPopulationSizesTable(logPopulationSizes2000, logMeanPopulationSizes2000, overEstimate=log10(10*cutoff+1), models=modelNames[1])
+#logTable2$Failed <- table2$Failed
 
-table3 <- getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, overEstimate=cutoff, models=modelNames[c(1,3,5)])
-logTable3 <- getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, overEstimate=log10(cutoff+1), models=modelNames[1])
-logTable3$Failed <- table3$Failed
+#table3 <- getPopulationSizesTable(populationSizes10Days, meanPopulationSizes10Days, overEstimate=cutoff, models=modelNames[c(1,3,5)])
+#logTable3 <- getPopulationSizesTable(logPopulationSizes10Days, logMeanPopulationSizes10Days, overEstimate=log10(cutoff+1), models=modelNames[1])
+#logTable3$Failed <- table3$Failed
 
 subset(logTable1, Model != "VT")
 subset(logTable2, Model != "VT")
@@ -538,16 +539,37 @@ writeTable <- function(df, filename, context) {
   writeDoc(doc, file=file.path(dir, filename))
 }
 
+facet_wrap_labeller <- function(gg.plot,labels=NULL) {
+  #works with R 3.0.1 and ggplot2 0.9.3.1
+  require(gridExtra)
+
+  g <- ggplotGrob(gg.plot)
+  gg <- g$grobs      
+  strips <- grep("strip_t", names(gg))
+
+  for(ii in seq_along(labels))  {
+    modgrob <- getGrob(gg[[strips[ii]]], "strip.text", 
+                       grep=TRUE, global=TRUE)
+    gg[[strips[ii]]]$children[[modgrob$name]] <- editGrob(modgrob,label=labels[ii])
+  }
+
+  g$grobs <- gg
+  class(g) = c("arrange", "ggplot",class(g)) 
+  g
+}
+
 plotPopulationSizesTable <- function(logTable) {
   library(reshape2)
   facet_labeller <- function(variable, value) {
-    measured <- list(Slope=expression(beta), R2=expression(R^2), EstTrue=expression(alpha), Failed="Failed (%)")
+    measured <- list(EstTrue=expression(alpha), Slope=expression(beta), R2=expression(R^2), Failed="Failed (%)")
     print(paste0(variable,"=",value))
     if (variable=="variable") return(measured[value])
     if (variable=="Case") return(paste("Case", value))
   }
-  x <- melt(logTable, id.vars=c("Scenario", "Model", "Case"), measure.vars=c("Slope", "R2", "EstTrue", "Failed"))
-  bestFit <- data.frame(variable=unique(x$variable), y=c(1, 1, 0, 0))
+  #x <- melt(logTable, id.vars=c("Scenario", "Model", "Case"), measure.vars=c("EstTrue", "Slope", "R2", "Failed"))
+  x <- melt(logTable, id.vars=c("Scenario", "Model"), measure.vars=c("EstTrue", "Slope", "R2", "Failed"))
+    
+  bestFit <- data.frame(variable=unique(x$variable), y=c(0, 1, 1, 0))
   errorBars <- x
   errorBars$value <- NA
   #errorBars$value[errorBars$variable=="Slope"] <- logTable$Slope
@@ -560,23 +582,32 @@ plotPopulationSizesTable <- function(logTable) {
   p <- ggplot(x, aes(Scenario, value, group=Model)) +
     geom_hline(data=bestFit, aes(yintercept=y), color="darkgray") + 
     geom_errorbar(data=errorBars, aes(Scenario, group=Model, ymax=qmax, ymin=qmin), position=position_dodge(width=.7), colour="darkgray") +
-    geom_point(aes(shape=Model), position=position_dodge(width=.7)) +
-    facet_grid(variable~Case, scales="free_y", labeller=facet_labeller) + ylab("") +
+    geom_point(aes(shape=Model), position=position_dodge(width=.7)) + ylab("") +
+    #facet_grid(variable~., scales="free_y", labeller=facet_labeller) +
+    facet_wrap(~variable, scales="free_y", nrow=2) +
     theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"), legend.title=element_text(size=10),
                                         legend.position="bottom",
                                         strip.text.x=element_text(size=10), strip.text.y=element_text(size=10),
-                                        plot.margin=unit(c(0, 0, -.5, -.5), units="line"),
-                                        legend.margin=unit(0, units="line"))# , legend.key=element_rect(fill="transparent"))
+                                        plot.margin=unit(c(0, 0.2, 0, -.5), units="line"),  #top, right, bottom, and left margins
+                                        legend.margin=unit(-1.5, units="line"))# , legend.key=element_rect(fill="transparent"))
+  
+  # Expand y-axis 100 for Failed
+  x <- data.frame(Scenario="A", Model="FMP", variable="Failed", value=100)
+  p <- p + geom_blank(data=x, aes(x=Scenario, y=value, group=Model))
+  
+  p <- facet_wrap_labeller(p, labels=c(expression(alpha), Slope=expression(beta), R2=expression(R^2), Failed="Failed (%)"))
+
   return(p)
 }
 
-logTable1$Case <- "1"
-logTable2$Case <- "2"
-logTable3$Case <- "3"
-logTable <- rbind(subset(logTable1, Model != "VT"), subset(logTable2, Model != "VT"), subset(logTable3, Model != "VT"))
+#logTable1$Case <- "1"
+#logTable2$Case <- "2"
+#logTable3$Case <- "3"
+#logTable <- rbind(subset(logTable1, Model != "VT"), subset(logTable2, Model != "VT"), subset(logTable3, Model != "VT"))
+logTable <- logTable1
 p <- plotPopulationSizesTable(logTable)
-saveFigure(p, "manuscript-figure-3.png", width=17, height=17, dpi=200) # draft quality
-saveFigure(p, "manuscript-figure-3.pdf", width=17, height=17, dpi=300)
+saveFigure(p, "manuscript-figure-3.png", width=17, dpi=200) # draft quality
+saveFigure(p, "manuscript-figure-3.pdf", height=17, dpi=300)
 
 logTablePretty <- logTable
 logTablePretty$Slope <- round(logTablePretty$Slope, 2)
@@ -584,12 +615,63 @@ logTablePretty$R2 <- round(logTablePretty$R2, 2)
 logTablePretty$EstTrue <- round(logTablePretty$EstTrue, 2)
 logTablePretty$EstTrueSD <- round(logTablePretty$EstTrueSD, 2)
 logTablePretty$Failed <- round(logTablePretty$Failed, 0)
-logTablePretty <- logTablePretty[,c("Case","Scenario","Model","Slope","R2","EstTrue","EstTrueSD","Failed")]
+#logTablePretty <- logTablePretty[,c("Case","Scenario","Model","Slope","R2","EstTrue","EstTrueSD","Failed")]
+logTablePretty <- logTablePretty[,c("Scenario","Model","Slope","R2","EstTrue","EstTrueSD","Failed")]
 writeTable(subset(logTablePretty, Model != "VT"), "table-1.docx", context)
 
 #writeTable(subset(logTable1, Model != "VT"), "table-1a.docx", context)
 #writeTable(subset(logTable2, Model != "VT"), "table-1b.docx", context)
 #writeTable(subset(logTable3, Model != "VT"), "table-1c.docx", context)
+```
+
+```{r figure-3sample}
+xlim <- log10(c(30,800)); ylim <- xlim
+logPopulationSizesSample <- subset(logPopulationSizes, scenario == "A")
+logPopulationSizesSample <- cutoffPopulationSizes(logPopulationSizesSample, cutoff, models=modelNames[c(1,3,5)])
+logPopulationSizesSample$modelName <- prettyModelName(logPopulationSizesSample$modelName)
+logPopulationSizesSample <- rbind(
+  subset(logPopulationSizesSample, modelName=="ST"),
+  subset(logPopulationSizesSample, modelName=="T1"),
+  subset(logPopulationSizesSample, modelName=="T2"),
+  subset(logPopulationSizesSample, modelName=="FMP"))
+
+lm(Estimated~Observed, subset(logPopulationSizes, modelName=="FMPModel" & Scenario=="A"))
+lm(Estimated~Observed, subset(logPopulationSizesSample, modelName=="FMP" & Scenario=="A"))
+
+
+plotLogPopulationSizeSample <- function(size, modelName, case, xlim, ylim) {
+  library(ggplot2)
+  library(scales)  
+  size$Scenario <- prettyScenario(size$Scenario)
+  meanSize <- getMeanPopulationSizes(size)
+  meanSize$Scenario <- prettyScenario(meanSize$Scenario)
+  
+  p <- ggplot(size, aes(Observed, Estimated, colour=modelName)) +
+    geom_point(size=1, colour="darkgray", alpha=.5) +
+    geom_abline(colour="black", linetype="longdash") + 
+    geom_point(data=meanSize, aes(True, Estimated), size=2, shape=15, colour="black")
+
+  #if (!any(abs(size$Estimated) == Inf)) p <- p + geom_smooth(method="lm", se=F, fullrange=T, colour="black")
+  ls <- ddply(size, .(modelName), function(x) if (!any(abs(x$Estimated) == Inf)) coef(lm(Estimated~Observed, x)) else c(NA,NA))
+  print(ls)
+  p <- p + geom_abline(data=ls, aes(intercept=`(Intercept)`, slope=Observed))
+  
+  p <- p + facet_wrap(~modelName) +
+    scale_x_continuous(limits=xlim, labels=trans_format("identity", math_format(10^.x))) +
+    scale_y_continuous(limits=ylim, labels=trans_format("identity", math_format(10^.x))) +
+    xlab("True population size") + ylab("Estimated population size") +
+    theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"),
+                                        plot.title=element_text(size=10),
+                                        plot.margin=unit(c(0, 0.1, 0, 0), units="line"), #top, right, bottom, and left margins
+                                        legend.margin=unit(0, units="line"),
+                                        panel.margin=unit(0, units="line"))
+
+  return(p)
+}
+
+p <- plotLogPopulationSizeSample(subset(logPopulationSizesSample, modelName %in% c("ST","T1","T2","FMP")), modelName=c("ST","T1","T2","FMP"), "a", xlim=xlim, ylim=ylim)
+saveFigure(p, "manuscript-figure-3sample.png", height=7.87) # draft quality
+saveFigure(p, "manuscript-figure-3sample.pdf", height=7.87, dpi=300)
 ```
 
 ```{r figure-3abc}
@@ -669,52 +751,6 @@ saveFigure(p, "manuscript-figure-3c3.pdf", dpi=300)
 p <- plotLogPopulationSize(subset(logPopulationSizes10Days, modelName==modelNames[5]), modelName=modelNames[5], "3", xlim=xlim, ylim=ylim)
 saveFigure(p, "manuscript-figure-3c4.png")
 saveFigure(p, "manuscript-figure-3c4.pdf", dpi=300)
-```
-
-```{r figure-3sample}
-xlim <- log10(c(30,800)); ylim <- xlim
-logPopulationSizesSample <- subset(logPopulationSizes, scenario == "A")
-logPopulationSizesSample$modelName <- prettyModelName(logPopulationSizesSample$modelName)
-logPopulationSizesSample <- rbind(
-  subset(logPopulationSizesSample, modelName=="ST"),
-  subset(logPopulationSizesSample, modelName=="T1"),
-  subset(logPopulationSizesSample, modelName=="T2"),
-  subset(logPopulationSizesSample, modelName=="FMP"))
-
-#p <- plotLogPopulationSize(subset(logPopulationSizesSample, modelName==modelNames[c(1,3,4)]), modelName=modelNames[c(1,3,4)], "a", xlim=xlim, ylim=ylim)
-
-plotLogPopulationSizeSample <- function(size, modelName, case, xlim, ylim) {
-  library(ggplot2)
-  library(scales)  
-  size$Scenario <- prettyScenario(size$Scenario)
-  meanSize <- getMeanPopulationSizes(size)
-  meanSize$Scenario <- prettyScenario(meanSize$Scenario)
-  
-  p <- ggplot(size, aes(Observed, Estimated, colour=modelName)) +
-    geom_point(size=1, colour="darkgray", alpha=.5) +
-    geom_abline(colour="black", linetype="longdash") + 
-    geom_point(data=meanSize, aes(True, Estimated), size=2, shape=15, colour="black")
-
-  #if (!any(abs(size$Estimated) == Inf)) p <- p + geom_smooth(method="lm", se=F, fullrange=T, colour="black")
-  ls <- ddply(size, .(modelName), function(x) if (!any(abs(x$Estimated) == Inf)) coef(lm(Estimated~Observed, x)) else c(NA,NA))
-  p <- p + geom_abline(data=ls, aes(intercept=`(Intercept)`, slope=Observed))
-  
-  p <- p + facet_wrap(~modelName) +
-    scale_x_continuous(limits=xlim, labels=trans_format("identity", math_format(10^.x))) +
-    scale_y_continuous(limits=ylim, labels=trans_format("identity", math_format(10^.x))) +
-    xlab("True population size") + ylab("Estimated population size") +
-    theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"),
-                                        plot.title=element_text(size=10),
-                                        plot.margin=unit(c(0, 0.1, 0, 0), units="line"), #top, right, bottom, and left margins
-                                        legend.margin=unit(0, units="line"),
-                                        panel.margin=unit(0, units="line"))
-
-  return(p)
-}
-
-p <- plotLogPopulationSizeSample(subset(logPopulationSizesSample, modelName==c("ST","T1","T2","FMP")), modelName=c("ST","T1","T2","FMP"), "a", xlim=xlim, ylim=ylim)
-saveFigure(p, "manuscript-figure-3sample.png", height=7.87*2/3) # draft quality
-saveFigure(p, "manuscript-figure-3sample.pdf", height=7.87*2/3, dpi=300)
 ```
 
 ```{r habitat-bias}
@@ -802,10 +838,10 @@ plotPopulationCorrelations <- function(populationCorrelations, case) {
   p <- ggplot(populationCorrelations, aes(True, Correlation)) + geom_point(size=1, colour="black") +
   facet_wrap(~Scenario, ncol=2) + xlab("True population size") +
   scale_y_continuous(limits=c(-1,1)) +
-  ggtitle(paste("Case:", case)) +
+  #ggtitle(paste("Case:", case)) +
   theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"),
                                       plot.title=element_text(size=10),
-                                      plot.margin=unit(c(0.2, 0, 0, 0), units="line"),
+                                      plot.margin=unit(c(0, 0.2, 0, 0), units="line"),
                                       panel.margin=unit(0, units="line"))#, axis.text.x=element_text(angle=45, hjust=.5, vjust=1))
   return(p)
 }
@@ -857,21 +893,27 @@ getCIProportions <- function(scenarios, modelNames, panel, scenarioNames, cutoff
   return(credibilityIntervals)  
 }
 
+cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames[c(1,3,5)], panel="Case 1", scenarioNames=scenarios, cutoff=cutoff)
+#cip2 <- getCIProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[c(1,3,5)], panel="Case 2", scenarioNames=scenarios, cutoff=10*cutoff)
+#cip3 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(1,3,5)], panel="Case 3", scenarioNames=scenarios, cutoff=cutoff)
+
+
 plotCIProportions <- function(credibilityIntervals) {
-  modelLabels <- prettyModelName(unique(credibilityIntervals$modelName))
+  #modelLabels <- prettyModelName(unique(credibilityIntervals$modelName))
+  credibilityIntervals$Model <- prettyModelName(credibilityIntervals$modelName)
   credibilityIntervals$CI <- credibilityIntervals$Interval
-  p <- ggplot(credibilityIntervals, aes(scenario, Proportion, shape=CI, colour=modelName)) +
+  p <- ggplot(credibilityIntervals, aes(scenario, Proportion, shape=Model, colour=CI)) +
     geom_hline(aes(yintercept=.5), color="grey90") +
     geom_hline(aes(yintercept=.95), color="grey90") +
-    geom_point() +
-    scale_shape_manual(values=c(16, 1)) +
-    scale_colour_manual("Model", values=c("black", "gray26", "gray80"), labels=modelLabels) +
+    geom_point(aes(shape=Model, group=Model), position=position_dodge(width=.7)) +
+    scale_shape_manual("Model", values=c(17,15,3)) +
+    scale_colour_manual("CI", values=c("gray", "black")) +
     #scale_colour_manual("Model", values=c("blue", "green", "red"), labels=modelLabels) +
     theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent")) +
-    xlab("Scenario") + ylab("Proportion") +
-    facet_wrap(~panel) + ylim(0, 1) +
+    xlab("Scenario") + ylab("Proportion") + ylim(0, 1) +
+    #facet_wrap(~panel) +
     theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
-          plot.margin=unit(c(0.2, 0, 0, 0), units="line"),
+          plot.margin=unit(c(0.2, 0.2, 0, 0), units="line"),
           #legend.background=element_rect(fill="transparent"),
           legend.margin=unit(-2, units="line"),
           panel.margin=unit(0, units="line"),
@@ -880,14 +922,9 @@ plotCIProportions <- function(credibilityIntervals) {
           legend.key.width=unit(.7, "line"))
   return(p)
 }
-#p <- plotCIProportions(cip)
-#saveFigure(p, "manuscript-figure-5.png", height=7.87/2, dpi=200)
 
-cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames[c(1,3,5)], panel="Case 1", scenarioNames=scenarios, cutoff=cutoff)
-cip2 <- getCIProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[c(1,3,5)], panel="Case 2", scenarioNames=scenarios, cutoff=10*cutoff)
-cip3 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(1,3,5)], panel="Case 3", scenarioNames=scenarios, cutoff=cutoff)
-
-cip <- subset(rbind(cip1, cip2, cip3), modelName != "SmoothModel-nbinomial-ar1")
+cip <- cip1
+#cip <- subset(rbind(cip1, cip2, cip3), modelName != "SmoothModel-nbinomial-ar1")
 #cip <- subset(rbind(cip1, cip2, cip3), !(modelName %in% c("SmoothModel-nbinomial-ar1", "SmoothModel-nbinomial-matern-ar1")))
 p <- plotCIProportions(cip)
 saveFigure(p, "manuscript-figure-5.png", height=7.87/2)

@@ -1,3 +1,53 @@
+Covariates <- setRefClass(
+  Class = "Covariates",
+  fields = list(
+    study = "Study",
+    covariatesName = "character",
+    covariates = "data.frame"
+  ),
+  methods = list(
+    getCovariatesFileName = function() {
+      if (inherits(study, "uninitializedField"))
+        stop("Provide study parameters.")
+      study$context$getFileName(dir=study$context$scratchDirectory, name=covariatesName, region=study$studyArea$region)
+    },
+    
+    saveCovariates = function(fileName=getCovariatesFileName()) {
+      save(covariates, file=fileName)
+      return(invisible(.self))
+    },
+    
+    loadCovariates = function(fileName=getCovariatesFileName()) {
+      load(fileName, envir=as.environment(.self))  
+      return(invisible(.self))
+    },
+    
+    obtain = function(save=F) {
+      stop("Unimplemented abstract method.")
+    }  
+  )
+)
+
+SmoothHabitatCovariates <- setRefClass(
+  Class =" SmoothHabitatCovariates",
+  contains = "Covariates",
+  field = list(
+    scales = "numeric"
+  ),
+  methods = list(
+    obtain = function(save=F) {
+      transects <- study$loadSurveyRoutes(findLengths=F)
+      habitatWeights <- study$loadHabitatWeights()
+      habitatValues <- dlply(habitatWeights$weights[habitatWeights$weights$type != 0,], .(type), function(x) x$habitat)
+      edgeValues <- habitatWeights$weights$habitat[habitatWeights$weights$type == 0]
+      covariates <<- smoothSubsets(study$studyArea$habitat, coords=transects$centroids, scales=scales, processValues=habitatValues, edgeValues=edgeValues)
+      if (save) saveCovariates()
+    }
+  )
+)
+
+
+### TODO: fix
 FinlandCovariates <- setRefClass(
   Class = "FinlandCovariates",
   fields = list(
@@ -6,10 +56,10 @@ FinlandCovariates <- setRefClass(
     covariates = "data.frame"
   ),
   methods = list(
-    initialize = function(...) {
-      callSuper(...)
-      return(invisible(.self))
-    },
+    #initialize = function(study, covariatesName, ...) {
+    #  callSuper(study=study, covariatesName=covariatesName, ...)
+    #  return(invisible(.self))
+    #},
     
     # Note: Currently uses the same raster file for all inheriting classes.
     # Can be changed by adding covariatesName field in the file name.
