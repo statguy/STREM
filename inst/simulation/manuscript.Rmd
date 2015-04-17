@@ -351,7 +351,7 @@ getEstimatedDensity = function(scenarios, modelName, iterations, year, sd=FALSE,
 
 study <- getStudy(scenario="A")
 limits <- extent(study$studyArea$boundary)
-iterations <- as.integer(c(1,4,1,2,5,31))
+iterations <- as.integer(c(1,4,1,2,5,34))
 year <- 2010
 yearLayer <- paste0("X", year)
 surveyRoutes <- getSurveyRouteLocations(scenarios=scenarios, modelName=modelNames[1], iterations=iterations, years=year)
@@ -368,13 +368,15 @@ wscale <- 1 / (prod(res(study$getTemplateRaster())) / 1000^2)
 densitiesScaled <- ddply(densities, .(scenario), scaleDensity, yearLayer=yearLayer, weight=wscale)
 wdensitiesScaled <- ddply(wdensities, .(scenario), scaleDensity, yearLayer=yearLayer, weight=wscale)
 
-#library(directlabels)
+gridTemplate <- raster(extent(study$studyArea$boundary), nrows=12, ncols=6, crs=study$studyArea$proj4string)
+gridTemplate@extent@xmax <- gridTemplate@extent@xmin + dim(gridTemplate)[2] * 100 * 1e3
+gridTemplate@extent@ymax <- gridTemplate@extent@ymin + dim(gridTemplate)[1] * 100 * 1e3
 
-p <- ggplot(wdensitiesScaled) +
+
+p1 <- ggplot(wdensitiesScaled) +
   geom_raster(aes_string(x="x", y="y", fill=yearLayer)) +
-  stat_contour(data=densitiesScaled, aes_string(x="x", y="y", z=yearLayer, colour=yearLayer), size=0.1)
-#p <- direct.label(p)
-p <- p + scale_fill_gradientn(colours=terrain.colors(100), na.value="transparent",
+  stat_contour(data=densitiesScaled, aes_string(x="x", y="y", z=yearLayer, colour=yearLayer), size=0.1) +
+  scale_fill_gradientn(colours=terrain.colors(100), na.value="transparent",
                        guide=guide_legend(title=expression(paste("Population density ", (individuals/km^2)))), trans="log10",
                        #breaks=c(10^-4.5, 10^-4, 10^-3.5, 10^-3, 10^-2.5),
                        breaks=trans_breaks("log10", function(x) 10^x),
@@ -387,26 +389,27 @@ p <- p + scale_fill_gradientn(colours=terrain.colors(100), na.value="transparent
   scale_x_continuous(limits=c(limits@xmin, limits@xmax), expand=c(0.01,0.01)) +
   scale_y_continuous(limits=c(limits@ymin, limits@ymax), expand=c(0.01,0.01)) +
   facet_grid(~scenario) + coord_equal() + theme_raster(base_size=10) +
-  theme(legend.position="bottom", legend.margin=unit(-2, units="line"),
-        plot.margin=unit(c(-.5, 0, 0, -.5), units="line"))
-#p <- direct.label(p)
-saveFigure(p, "manuscript-figure-2a.png", width=17, height=7.2, dpi=200) # draft quality
-saveFigure(p, "manuscript-figure-2a.pdf", width=17, height=7.2, dpi=300)
+  theme(legend.position="bottom", legend.margin=unit(-2, units="line"), legend.title=element_text(size=10), legend.text=element_text(size=10),
+        plot.margin=unit(c(-3, 0, 0, -.5), units="line")) #top, right, bottom, and left margins
+g1 <- arrangeGrob(p1, main=textGrob("a)", x=0.01, just="left", gp=gpar(fontsize=10)))
+saveFigure(g1, "manuscript-figure-2a.png", width=17, height=8.8, dpi=200) # draft quality
+saveFigure(g1, "manuscript-figure-2a.pdf", width=17, height=8.8, dpi=300)
 
-###
-
-gridTemplate <- raster(extent(study$studyArea$boundary), nrows=12, ncols=6, crs=study$studyArea$proj4string)
-gridTemplate@extent@xmax <- gridTemplate@extent@xmin + dim(gridTemplate)[2] * 100 * 1e3
-gridTemplate@extent@ymax <- gridTemplate@extent@ymin + dim(gridTemplate)[1] * 100 * 1e3
-
-p <- ggplot(boundaryDF) + geom_path(aes(long, lat, group=group), colour="grey") +
+p2 <- ggplot(boundaryDF) + geom_path(aes(long, lat, group=group), colour="grey") +
   geom_point(data=surveyRoutes, aes(x, y, colour=intersections), size=1) + scale_color_manual(values=c("darkgrey", "black")) +
   scale_x_continuous(breaks=seq(gridTemplate@extent@xmin, gridTemplate@extent@xmax, 1e5), expand=c(0.01,0.01)) +
   scale_y_continuous(breaks=seq(gridTemplate@extent@ymin, gridTemplate@extent@ymax, 1e5), expand=c(0.01,0.01)) +
   facet_grid(~scenario) + theme_raster(base_size=10) + coord_equal() +
-  theme(panel.grid.major=element_line(colour="grey"), plot.margin=unit(c(0, 0, 0, -.5), units="line"))
-saveFigure(p, "manuscript-figure-2b.png", width=17, height=6.7, dpi=200) # draft quality
-saveFigure(p, "manuscript-figure-2b.pdf", width=17, height=6.7, dpi=300)
+  theme(panel.grid.major=element_line(colour="grey"),
+        plot.margin=unit(c(0, 0, 0, -.5), units="line")) #top, right, bottom, and left margins
+g2 <- arrangeGrob(p2, main=textGrob("b)", x=0.01, just="left", gp=gpar(fontsize=10)))
+saveFigure(g2, "manuscript-figure-2b.png", width=17, height=6.9, dpi=200) # draft quality
+saveFigure(g2, "manuscript-figure-2b.pdf", width=17, height=6.9, dpi=300)
+
+p <- arrangeGrob(g1, g2)
+saveFigure(p, "manuscript-figure-2.png", width=17, height=17, dpi=200) # draft quality
+saveFigure(p, "manuscript-figure-2.pdf", width=17, height=17, dpi=300)
+
 ```
 
 ```{r figure-3-init}
@@ -558,7 +561,7 @@ facet_wrap_labeller <- function(gg.plot,labels=NULL) {
   g
 }
 
-plotPopulationSizesTable <- function(logTable) {
+plotPopulationSizesTable_DEPRECATED <- function(logTable) {
   library(reshape2)
   facet_labeller <- function(variable, value) {
     measured <- list(EstTrue=expression(alpha), Slope=expression(beta), R2=expression(R^2), Failed="Failed (%)")
@@ -566,6 +569,7 @@ plotPopulationSizesTable <- function(logTable) {
     if (variable=="variable") return(measured[value])
     if (variable=="Case") return(paste("Case", value))
   }
+
   #x <- melt(logTable, id.vars=c("Scenario", "Model", "Case"), measure.vars=c("EstTrue", "Slope", "R2", "Failed"))
   x <- melt(logTable, id.vars=c("Scenario", "Model"), measure.vars=c("EstTrue", "Slope", "R2", "Failed"))
     
@@ -599,6 +603,80 @@ plotPopulationSizesTable <- function(logTable) {
 
   return(p)
 }
+
+
+plotPopulationSizesTable <- function(logTable) {
+  library(reshape2)
+  library(dplyr)
+  library(gtable)
+  library(gridExtra)
+  
+  x <- melt(logTable, id.vars=c("Scenario", "Model"), measure.vars=c("EstTrue", "Slope", "R2", "Failed"))
+    
+  bestFit <- data.frame(variable=unique(x$variable), y=c(0, 1, 1, 0))
+  errorBars <- x
+  errorBars$value <- NA
+  errorBars$value[errorBars$variable=="EstTrue"] <- logTable$EstTrue
+  errorBars$qmin[errorBars$variable=="EstTrue"] <- logTable$EstTrueMin
+  errorBars$qmax[errorBars$variable=="EstTrue"] <- logTable$EstTrueMax
+  
+  
+  p1 <- x %>% filter(variable=="EstTrue") %>%
+    ggplot(aes(Scenario, value, group=Model)) +
+    geom_hline(data=data.frame(y=0), aes(yintercept=y), color="darkgray") + 
+    geom_errorbar(data=errorBars, aes(Scenario, group=Model, ymax=qmax, ymin=qmin), position=position_dodge(width=.7), colour="darkgray") +
+    geom_point(aes(shape=Model), position=position_dodge(width=.7)) +
+    xlab("") + ylab(expression(alpha)) +
+    theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"),
+                                        legend.title=element_text(size=10), legend.position="none",
+                                        strip.text.x=element_text(size=10), strip.text.y=element_text(size=10),
+                                        plot.margin=unit(c(0, 0.2, -.75, 0), units="line")) #top, right, bottom, and left margins
+  g1 <- arrangeGrob(p1, main=textGrob("a)", x=0.01, just="left", gp=gpar(fontsize=10)))
+
+  p2 <- x %>% filter(variable=="Slope") %>%
+    ggplot(aes(Scenario, value, group=Model)) +
+    geom_hline(data=data.frame(y=1), aes(yintercept=y), color="darkgray") + 
+    geom_point(aes(shape=Model), position=position_dodge(width=.7)) +
+    xlab("") + ylab(expression(beta)) +
+    theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"),
+                                        legend.title=element_text(size=10), legend.position="none",
+                                        strip.text.x=element_text(size=10), strip.text.y=element_text(size=10),
+                                        plot.margin=unit(c(0, 0.2, -.75, 0), units="line"))
+  g2 <- arrangeGrob(p2, main=textGrob("b)", x=0.01, just="left", gp=gpar(fontsize=10)))
+  
+  p3 <- x %>% filter(variable=="R2") %>%
+    ggplot(aes(Scenario, value, group=Model)) +
+    geom_hline(data=data.frame(y=1), aes(yintercept=y), color="darkgray") + 
+    geom_point(aes(shape=Model), position=position_dodge(width=.7)) +
+    xlab("") + ylab(expression(R^2)) +
+    theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"),
+                                        legend.title=element_text(size=10), legend.position="none",
+                                        strip.text.x=element_text(size=10), strip.text.y=element_text(size=10),
+                                        plot.margin=unit(c(0, 0.2, -.75, 0), units="line"))
+  g3 <- arrangeGrob(p3, main=textGrob("c)", x=0.01, just="left", gp=gpar(fontsize=10)))
+
+  p4 <- x %>% filter(variable=="Failed") %>%
+    ggplot(aes(Scenario, value, group=Model)) +
+    geom_hline(data=data.frame(y=0), aes(yintercept=y), color="darkgray") + 
+    geom_point(aes(shape=Model), position=position_dodge(width=.7)) +
+    xlab("") + ylab("Failed (%)") + ylim(0,100) +
+    theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"),
+                                        legend.title=element_text(size=10), legend.position="none",
+                                        strip.text.x=element_text(size=10), strip.text.y=element_text(size=10),
+                                        plot.margin=unit(c(0, 0.2, -.75, 0), units="line"))
+  g4 <- arrangeGrob(p4, main=textGrob("d)", x=0.01, just="left", gp=gpar(fontsize=10)))
+  
+  legend <- gtable_filter(ggplot_gtable(ggplot_build(p1 + theme(legend.position="bottom", legend.margin=unit(-1, units="line")))), "guide-box")
+  lheight <- sum(legend$height)
+  p <- arrangeGrob(g1, g2, g3, g4, ncol=2)
+  theight <- unit(10, "points")
+  p <- arrangeGrob(p, textGrob("Scenario", gp=gpar(fontsize=10)), heights=unit.c(unit(1, "npc") - theight, theight))
+  p <- arrangeGrob(p, legend, heights=unit.c(unit(1, "npc") - lheight, lheight), ncol=1)
+  
+  return(p)
+}
+
+
 
 #logTable1$Case <- "1"
 #logTable2$Case <- "2"

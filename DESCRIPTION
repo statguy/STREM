@@ -7,9 +7,9 @@ Author: Jussi Jousimo
 Maintainer: Jussi Jousimo <jvj@iki.fi>
 Description: Winter track counts
 Depends: data.table
-Imports: INLA,sp,CircStats,plyr,maptools,raster,rgdal,parallel,adehabitatLT,gdata,methods,fields,gstat,rasterVis,Rcpp (>= 0.11.0),rstan,doMC,dplyr,R.utils
+Imports: INLA,sp,CircStats,plyr,maptools,raster,rgdal,parallel,adehabitatLT,gdata,methods,fields,gstat,rasterVis,Rcpp (>= 0.11.0),rstan,doMC,dplyr,R.utils,gisfin,fmi
 LinkingTo: Rcpp
-Suggests: grid,lattice,ggplot2,reshape2,knitr,xlsx
+Suggests: grid,lattice,ggplot2,reshape2,knitr,xlsx,gridExtra,gtable
 License: MIT
 Collate:
   RcppExports.R

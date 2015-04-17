@@ -24,12 +24,12 @@ Covariates <- setRefClass(
     
     obtain = function(save=F) {
       stop("Unimplemented abstract method.")
-    }  
+    }
   )
 )
 
 SmoothHabitatCovariates <- setRefClass(
-  Class =" SmoothHabitatCovariates",
+  Class = "SmoothHabitatCovariates",
   contains = "Covariates",
   field = list(
     scales = "numeric"
@@ -45,6 +45,44 @@ SmoothHabitatCovariates <- setRefClass(
     }
   )
 )
+
+PopulationDensityCovariates <- setRefClass(
+  Class = "PopulationDensityCovariates",
+  contains = "Covariates",
+  field = list(
+    years = "numeric"
+  ),
+  methods = list(
+    obtain = function(save=F) {
+      request <- gisfin::GeoStatFiWFSRequest$new()$getPopulationLayers()
+      client <- gisfin::GeoStatFiWFSClient$new(request)
+      layers <- client$listLayers()
+      
+      availableLayers <- layers[grep("vaki\\d+_5km", layers)]
+      availableYears <- as.integer(substr(availableLayers, 17, 20))
+      nearestIndex <- sapply(years, function(x) which.min(abs(x-availableYears)))
+      nearestYears <- unique(availableYears[nearestIndex])
+
+      for (i in 1:length(availableYears)) {
+        nearestYear <- availableYears[i]
+        nearestLayer <- availableLayers[i]
+        focalYears <- years[availableYears[nearestIndex] == nearestYear]
+        
+        request$getPopulation(nearestLayer)
+        client <- gisfin::GeoStatFiWFSClient$new(request)
+        populationLayer <- client$getLayer(layerName)
+        x <- sp::SpatialPixelsDataFrame(coordinates(populationLayer), populationLayer@data[,"vaesto", drop=F], proj4string=populationLayer@proj4string)
+        population <- raster::stack(x)
+                
+        for (year in focalYears) {
+          # process movements
+        }
+      }
+    }
+  )
+)
+
+
 
 
 ### TODO: fix
