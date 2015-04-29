@@ -20,7 +20,8 @@ SmoothModelTemporal <- setRefClass(
                       E=getObservedOffset(),
                       verbose=verbose,
                       control.predictor=list(compute=TRUE),
-                      control.compute=list(cpo=FALSE, dic=TRUE, config=TRUE))
+                      control.inla=list(int.strategy="grid"),
+                      control.compute=list(waic=TRUE, config=TRUE))
       
       if (is.null(result$ok) | result$ok == FALSE) {
         warning("INLA failed to run.")

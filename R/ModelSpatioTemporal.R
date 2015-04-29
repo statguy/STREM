@@ -172,7 +172,8 @@ SmoothModelSpatioTemporal <- setRefClass(
                       verbose=verbose,
                       control.fixed=control.fixed,
                       control.predictor=list(A=inla.stack.A(fullStack), link=stackData$link, compute=TRUE),
-                      control.compute=list(cpo=FALSE, dic=TRUE, config=TRUE))
+                      control.inla=list(int.strategy="grid"),
+                      control.compute=list(waic=TRUE, config=TRUE))
       
       if (is.null(result$ok) | result$ok == FALSE) {
         warning("INLA failed to run.")

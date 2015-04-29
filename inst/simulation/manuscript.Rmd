@@ -913,14 +913,16 @@ getPopulationCorrelations <- function(scenarios, modelNames, cutoff=c(-Inf,Inf))
 
 plotPopulationCorrelations <- function(populationCorrelations, case) {
   populationCorrelations$Scenario <- prettyScenario(populationCorrelations$Scenario)
-  p <- ggplot(populationCorrelations, aes(True, Correlation)) + geom_point(size=1, colour="black") +
-  facet_wrap(~Scenario, ncol=2) + xlab("True population size") +
-  scale_y_continuous(limits=c(-1,1)) +
-  #ggtitle(paste("Case:", case)) +
-  theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"),
-                                      plot.title=element_text(size=10),
-                                      plot.margin=unit(c(0, 0.2, 0, 0), units="line"),
-                                      panel.margin=unit(0, units="line"))#, axis.text.x=element_text(angle=45, hjust=.5, vjust=1))
+  p <- ggplot(populationCorrelations, aes(True, Correlation)) +
+    geom_hline(data=data.frame(y=0), aes(yintercept=y), color="darkgray") +
+    geom_point(size=1, colour="black") +
+    facet_wrap(~Scenario, ncol=2) + xlab("True population size") +
+    scale_y_continuous(limits=c(-1,1)) +
+    #ggtitle(paste("Case:", case)) +
+    theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent"),
+                                        plot.title=element_text(size=10),
+                                        plot.margin=unit(c(0, 0.2, 0, 0), units="line"),
+                                        panel.margin=unit(0, units="line"))#, axis.text.x=element_text(angle=45, hjust=.5, vjust=1))
   return(p)
 }
 
@@ -981,8 +983,8 @@ plotCIProportions <- function(credibilityIntervals) {
   credibilityIntervals$Model <- prettyModelName(credibilityIntervals$modelName)
   credibilityIntervals$CI <- credibilityIntervals$Interval
   p <- ggplot(credibilityIntervals, aes(scenario, Proportion, shape=Model, colour=CI)) +
-    geom_hline(aes(yintercept=.5), color="grey90") +
-    geom_hline(aes(yintercept=.95), color="grey90") +
+    geom_hline(aes(yintercept=.5), color="darkgrey") +
+    geom_hline(aes(yintercept=.95), color="darkgrey") +
     geom_point(aes(shape=Model, group=Model), position=position_dodge(width=.7)) +
     scale_shape_manual("Model", values=c(17,15,3)) +
     scale_colour_manual("CI", values=c("gray", "black")) +
