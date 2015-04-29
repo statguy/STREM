@@ -71,7 +71,7 @@ estimateSpatioTemporal <- function(scenario, modelName, iteration, isTest=FALSE,
       modelParams <- NULL
     }
     else stop("Unknown model.")
-    study$estimate(model=model, params=modelParams, tag=tag)
+    model <- study$estimate(model=model, params=modelParams, tag=tag)
   }
 }
 

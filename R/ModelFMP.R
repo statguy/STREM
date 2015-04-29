@@ -1,6 +1,7 @@
 FMPModel <- setRefClass(
   Class = "FMPModel",
-  contains = "AggregatedModel",
+  #contains = "AggregatedModel",
+  contains = "Model",
   fields = list(
   ),
   methods = list(
@@ -14,7 +15,7 @@ FMPModel <- setRefClass(
       locations <<- intersections$getCoordinates() * coordsScale
       years <<- as.integer(sort(unique(data$year)))
       
-      .self$aggregate()
+      #.self$aggregate()
       
       return(invisible(.self))      
     },
@@ -65,6 +66,19 @@ SimulatedFMPModel <- setRefClass(
     
     samplePosterior = function(n, index) {
       stop("Unsupported.")
+    },
+    
+    getPopulationSize = function(populationDensity, habitatWeightsRaster=NULL) {
+      if (missing(populationDensity))
+        stop("Required argument 'populationDensity' missing.")
+      if (!inherits(populationDensity, "SpatioTemporalRaster"))
+        stop("Argument 'populationDensity' must be of type 'SpatioTemporalRaster'")
+      if (!is.null(habitatWeightsRaster)) populationDensity$weight(habitatWeightsRaster)
+      
+      populationSize <- populationDensity$integrate(volume=SimulationPopulationSize(study=study, iteration=iteration, modelName=modelName))
+      populationSize$loadValidationData()
+      
+      return(invisible(populationSize))
     }
   )
 )

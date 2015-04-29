@@ -76,7 +76,8 @@ SmoothModelTemporal <- setRefClass(
 
 SmoothModelMeanTemporal <- setRefClass(
   Class = "SmoothModelMeanTemporal",
-  contains = c("AggregatedModel","SmoothModelTemporal"),
+  #contains = c("AggregatedModel","SmoothModelTemporal"),
+  contains = "SmoothModelTemporal",
   fields = list(
   ),
   methods = list(
@@ -98,7 +99,7 @@ SmoothModelMeanTemporal <- setRefClass(
     
     setup = function(intersections, params, tag) {
       callSuper(intersections, params, tag)
-      .self$aggregate()
+      #.self$aggregate()
       return(invisible(.self)) 
     },
     
@@ -118,7 +119,7 @@ SmoothModelMeanTemporal <- setRefClass(
                       E=getObservedOffset(),
                       verbose=verbose,
                       control.predictor=list(compute=TRUE),
-                      control.compute=list(cpo=FALSE, dic=TRUE, config=TRUE))
+                      control.compute=list(waic=TRUE, config=TRUE))
       
       if (is.null(result$ok) | result$ok == FALSE) {
         warning("INLA failed to run.")
@@ -188,6 +189,19 @@ SimulatedSmoothModelMeanTemporal <- setRefClass(
       if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
         stop("Provide study, modelName and iteration parameters.")
       return(study$context$getLongFileName(study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
+    },
+    
+    getPopulationSize = function(populationDensity, habitatWeightsRaster=NULL) {
+      if (missing(populationDensity))
+        stop("Required argument 'populationDensity' missing.")
+      if (!inherits(populationDensity, "SpatioTemporalRaster"))
+        stop("Argument 'populationDensity' must be of type 'SpatioTemporalRaster'")
+      if (!is.null(habitatWeightsRaster)) populationDensity$weight(habitatWeightsRaster)
+      
+      populationSize <- populationDensity$integrate(volume=SimulationPopulationSize(study=study, iteration=iteration, modelName=modelName))
+      populationSize$loadValidationData()
+      
+      return(invisible(populationSize))
     }
   )
 )
@@ -209,6 +223,19 @@ SimulatedSmoothModelTemporal <- setRefClass(
       if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
         stop("Provide study, modelName and iteration parameters.")
       return(study$context$getLongFileName(study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
+    },
+    
+    getPopulationSize = function(populationDensity, habitatWeightsRaster=NULL) {
+      if (missing(populationDensity))
+        stop("Required argument 'populationDensity' missing.")
+      if (!inherits(populationDensity, "SpatioTemporalRaster"))
+        stop("Argument 'populationDensity' must be of type 'SpatioTemporalRaster'")
+      if (!is.null(habitatWeightsRaster)) populationDensity$weight(habitatWeightsRaster)
+      
+      populationSize <- populationDensity$integrate(volume=SimulationPopulationSize(study=study, iteration=iteration, modelName=modelName))
+      populationSize$loadValidationData()
+      
+      return(invisible(populationSize))
     }
   )
 )

@@ -9,15 +9,11 @@ using namespace Rcpp;
 SEXP internal_countIntersections(Rcpp::NumericMatrix track, Rcpp::NumericMatrix surveyRoute);
 RcppExport SEXP WTC_internal_countIntersections(SEXP trackSEXP, SEXP surveyRouteSEXP) {
 BEGIN_RCPP
-    SEXP __sexp_result;
-    {
-        Rcpp::RNGScope __rngScope;
-        Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type track(trackSEXP );
-        Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type surveyRoute(surveyRouteSEXP );
-        SEXP __result = internal_countIntersections(track, surveyRoute);
-        PROTECT(__sexp_result = Rcpp::wrap(__result));
-    }
-    UNPROTECT(1);
-    return __sexp_result;
+    Rcpp::RObject __result;
+    Rcpp::RNGScope __rngScope;
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type track(trackSEXP);
+    Rcpp::traits::input_parameter< Rcpp::NumericMatrix >::type surveyRoute(surveyRouteSEXP);
+    __result = Rcpp::wrap(internal_countIntersections(track, surveyRoute));
+    return __result;
 END_RCPP
 }

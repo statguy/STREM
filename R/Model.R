@@ -114,16 +114,17 @@ Model <- setRefClass(
       lengthWeights <- rep(lengthWeights, length(years))
       return(lengthWeights)
     },
-        
-    getDensityEstimates = function(weights=1, aggregate=F) {
+    
+    getDensityEstimates = function(weights=1, aggregate=F, index) {
       xy <- getUnscaledObservationCoordinates()
       xyzt <- data.frame(x=xy[,1], y=xy[,2], density=data$fittedMean * weights / offsetScale, year=data$year)
+      if (!missing(index)) xyzt <- xyzt[index,]
       if (aggregate)
         xyzt <- ddply(xyzt, .(year), function(x) data.frame(density=mean(x$density), year=x$year[1]))
       return(xyzt)
     },
     
-    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, habitatWeights=NULL, .parallel=TRUE) {
+    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, habitatWeights=NULL, index, .parallel=TRUE) {
       if (is.null(data$fittedMean))
         stop("Did you forgot to run collectEstimates() first?")
       library(raster)
@@ -136,7 +137,7 @@ Model <- setRefClass(
       }
       else 1
       
-      meanPopulationDensity <- getDensityEstimates(weights=1/effortWeights, aggregate=TRUE)
+      meanPopulationDensity <- getDensityEstimates(weights=1/effortWeights, aggregate=TRUE, index=index)
       cellArea <- prod(res(templateRaster))
       meanPopulationDensityRaster <- SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$density, layerNames=meanPopulationDensity$year, weights=cellArea, .parallel=.parallel)
       #meanPopulationDensityRaster <- SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$density, boundary=maskPolygon, layerNames=meanPopulationDensity$year, weights=cellArea, .parallel=.parallel)
@@ -145,33 +146,12 @@ Model <- setRefClass(
     },
     
     getPopulationSize = function(populationDensity, habitatWeightsRaster=NULL) {
-      if (missing(populationDensity))
-        stop("Required argument 'populationDensity' missing.")
-      if (!inherits(populationDensity, "SpatioTemporalRaster"))
-        stop("Argument 'populationDensity' must be of type 'SpatioTemporalRaster'")
-      if (!is.null(habitatWeightsRaster)) populationDensity$weight(habitatWeightsRaster)
-      
-      populationSize <- populationDensity$integrate(volume=SimulationPopulationSize(study=study, iteration=iteration, modelName=modelName))
-      populationSize$loadValidationData()
-      
-      return(invisible(populationSize))
+      stop("Unimplemented method.")
     }
-    
-    # Remove this and use *PopulationSize class instead
-    #getPopulationSize = function(populationDensity, tracks, habitatWeights) {
-    #  if (missing(populationDensity)) populationDensity <- getPopulationDensity(getSD=FALSE)$mean
-    #  if (!missing(habitatWeights)) if (!is.null(habitatWeights)) populationDensity$weight(habitatWeights)
-    #  
-    #  populationSize <- populationDensity$integrate(volume=SimulationPopulationSize(study=study, iteration=iteration, modelName=modelName))
-    #  if (missing(tracks)) populationSize$loadValidationData()
-    #  else populationSize$loadValidationData(tracks=tracks)
-    #  
-    # return(invisible(populationSize))
-    #}
   )
 )
 
-AggregatedModel <- setRefClass(
+DEPRECATED_AggregatedModel <- setRefClass(
   Class = "AggregatedModel",
   contains = "Model",
   fields = list(
@@ -202,11 +182,11 @@ AggregatedModel <- setRefClass(
       lengthWeights <- sum(weightedLengths) / sum(lengths)
       lengthWeights <- rep(lengthWeights, length(years))
       return(lengthWeights)
-    },
-    
-    getDensityEstimates = function(weights=1, aggregate=F) {
-      return(data.frame(density=data$fittedMean * weights / offsetScale, year=data$year))
     }
+    
+    #getDensityEstimates = function(weights=1, aggregate=F, index) {
+    #  return(data.frame(density=data$fittedMean * weights / offsetScale, year=data$year))
+    #}
     
     
     #getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, getSD=FALSE) {

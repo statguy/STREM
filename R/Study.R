@@ -127,19 +127,19 @@ SimulationStudy <- setRefClass(
       return(habitatWeights)
     },
         
-    getPopulationSize = function(estimates, iteration, readHabitatIntoMemory=TRUE, save=TRUE, .parallel=TRUE) {
+    getPopulationSize = function(estimates, index, readHabitatIntoMemory=TRUE, loadValidationData=TRUE, save=TRUE, .parallel=TRUE) {
       if (withHabitatWeights) {
-        habitatWeights <- getHabitatWeights(iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory)
-        populationDensity <- estimates$getPopulationDensity(habitatWeights=habitatWeights, .parallel=.parallel)
+        habitatWeights <- getHabitatWeights(iteration=estimates$iteration, readHabitatIntoMemory=readHabitatIntoMemory)
+        populationDensity <- estimates$getPopulationDensity(habitatWeights=habitatWeights, index=index, .parallel=.parallel)
         habitatWeightsRaster <- if (length(grassLocalTempDir) != 0)
           habitatWeights$getWeightsRaster(save=save, grassLocalTempDir=grassLocalTempDir)
         else habitatWeights$getWeightsRaster(save=save)
         populationSize <- estimates$getPopulationSize(populationDensity, habitatWeightsRaster=habitatWeightsRaster)
       }
       else {
-        populationSize <- SimulationPopulationSize$new(study=.self, modelName=modelName, iteration=iteration)
-        x <- estimates$getDensityEstimates()
-        populationSize$getPopulationSize(x$density, x$year, loadValidationData=TRUE)
+        populationSize <- SimulationPopulationSize$new(study=.self, modelName=modelName, iteration=estimates$iteration)
+        x <- estimates$getDensityEstimates(index=index)
+        populationSize$getPopulationSize(x$density, x$year, loadValidationData=loadValidationData)
       }
       
       if (save) populationSize$savePopulationSize()
@@ -151,7 +151,7 @@ SimulationStudy <- setRefClass(
       estimates <- getModel(modelName=modelName, iteration=iteration)
       estimates$loadEstimates()
       estimates$collectEstimates()
-      populationSize <- getPopulationSize(estimates, iteration=iteration, readHabitatIntoMemory=readHabitatIntoMemory, save=save)
+      populationSize <- getPopulationSize(estimates, readHabitatIntoMemory=readHabitatIntoMemory, save=save)
       return(invisible(populationSize))
     },
     

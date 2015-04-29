@@ -234,7 +234,7 @@ SmoothModelSpatioTemporal <- setRefClass(
       return(callSuper(n=n, index=indexObserved))
     },
     
-    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, habitatWeights=NULL, .parallel=TRUE) {
+    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, habitatWeights=NULL, index, .parallel=TRUE) {
       if (is.null(data$fittedMean))
         stop("Did you forgot to run collectEstimates() first?")
       library(raster)
@@ -247,7 +247,7 @@ SmoothModelSpatioTemporal <- setRefClass(
       }
       else 1
       
-      populationDensity <- getDensityEstimates(weights=1/effortWeights, aggregate=FALSE)
+      populationDensity <- getDensityEstimates(weights=1/effortWeights, aggregate=FALSE, index=index)
       cellArea <- prod(res(templateRaster))
       populationDensityRaster <- SpatioTemporalRaster(study=study)$interpolate(populationDensity, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, layerNames=sort(unique(populationDensity$year)), weights=cellArea, .parallel=.parallel)
       #populationDensityRaster <- SpatioTemporalRaster(study=study)$interpolate(populationDensity, templateRaster=templateRaster, transform=sqrt, inverseTransform=square, boundary=maskPolygon, layerNames=sort(unique(populationDensity$year)), weights=cellArea, .parallel=.parallel)
@@ -347,6 +347,19 @@ SimulatedSmoothModelSpatioTemporal <- setRefClass(
       if (inherits(study, "undefinedField") | length(modelName) == 0 | length(iteration) == 0)
         stop("Provide study, modelName and iteration parameters.")
       return(study$context$getLongFileName(study$context$scratchDirectory, name=modelName, response=study$response, region=study$studyArea$region, tag=iteration))
+    },
+    
+    getPopulationSize = function(populationDensity, habitatWeightsRaster=NULL) {
+      if (missing(populationDensity))
+        stop("Required argument 'populationDensity' missing.")
+      if (!inherits(populationDensity, "SpatioTemporalRaster"))
+        stop("Argument 'populationDensity' must be of type 'SpatioTemporalRaster'")
+      if (!is.null(habitatWeightsRaster)) populationDensity$weight(habitatWeightsRaster)
+      
+      populationSize <- populationDensity$integrate(volume=SimulationPopulationSize(study=study, iteration=iteration, modelName=modelName))
+      populationSize$loadValidationData()
+      
+      return(invisible(populationSize))
     }
   )
 )
