@@ -348,106 +348,83 @@ findInnercellLengths <- function(r, l) {
 
 startsWith <- function(x, y) substr(x, start=1, stop=nchar(y)) == y
 
+# Smoothed single points
 
-
-countKernel <- function(size, scale) {
-  matrix(1, ncol=2*size+1, nrow=2*size+1)
+identityKernel <- function(size, scale) {
+  k <- matrix(0, ncol=2*size+1, nrow=2*size+1)
+  k[size+1, size+1] <- 1
+  k
 }
 
 expKernel <- function(size, scale) {
   x <- matrix(-size:size, ncol=2*size+1, nrow=2*size+1)
   y <- t(x)
   k <- exp(-sqrt(x^2+y^2) / scale)
-  k / sum(k)
+  k
 }
 
-smoothSubset <- function(r, coord, kernelFun=expKernel, scale, processValues, edgeValues=c()) {
-  if (missing(r))
-    stop("Argument 'r' missing.")
-  if (!inherits(r, "RasterLayer"))
-    stop("Argument 'r' must be of type 'RasterLayer'")
-  if (missing(coord))
-    stop("Argument 'coord' missing.")
-  if (missing(scale))
-    stop("Argument 'scale' missing.")
-  
-  if (res(r)[1] != res(r)[2])
-    stop("Rasters of unequal resolution unsupported.")
-  if (nlayers(r) > 1)
-    stop("Multiband rasters unsupported. Please supply bands separately.")
-  
-  v <- extract(r, coord)
-  if (v %in% edgeValues || is.na(v)) {
-    #if (r[y,x] %in% edgeValues || is.na(r[y,x]))
-    warning("The point is outside the effective area. The smoothing cannot be proceeded.")
-    return(data.frame(x=NA, y=NA, category=NA, scale=scale, value=NA, original=NA))
-  }
-  
-  if (inherits(coord, "numeric")) {
-    x <- coord[1]
-    y <- coord[2]
-  }
-  else if (inherits(coord, "matrix")) {
-    x <- coord[1,1]
-    y <- coord[1,2]
-  }  
-  else if (inherits(coord, "data.frame")) {
-    x <- coord[[1]]
-    y <- coord[[2]]
-  }  
-  else if (inherits(coord, "SpatialPoints")) {
-    x <- coord@coords[1,1]
-    y <- coord@coords[1,2]    
-  }
-  else stop("Argument 'coord' must be of type 'numeric', 'matrix', 'data.frame' or 'SpatialPoints'.")
-  rcol <- colFromX(r, x)
-  rrow <- rowFromY(r, y)
+gaussKernel <- function(size, scale) {
+  x <- matrix(-size:size, ncol=2*size+1, nrow=2*size+1)
+  y <- t(x)
+  k <- exp(-(x^2+y^2) / scale)
+  k
+}
+
+smoothSubset <- function(r, x, y, kernelFun=expKernel, scale) {
+  if (is.na(r[y,x]))
+    stop("The point is outside the effective area. The smoothing cannot be proceeded.")  
   
   # Construct the full kernel
   resScale <- scale / res(r)[1]
   kernelSize <- round(resScale)
   k <- kernelFun(kernelSize, resScale)
   fullArea <- prod(dim(k))
+  kernelSize <- kernelSize + 1
   
   # Cut the kernel if partially outside the effective area
-  row <- max(0, rrow-kernelSize)
-  col <- max(0, rcol-kernelSize)
-  nrows <- min(dim(r)[1], rrow+kernelSize) - row + 1
-  ncols <- min(dim(r)[2], rcol+kernelSize) - col + 1
-  xmin <- row - (rrow-kernelSize) + 1
-  ymin <- col - (rcol-kernelSize) + 1
-  k <- k[ymin:nrows, xmin:ncols]
+  row <- max(0, y-kernelSize) + 1
+  col <- max(0, x-kernelSize) + 1
+  nrows <- min(dim(r)[1]+1, y+kernelSize) - row
+  ncols <- min(dim(r)[2]+1, x+kernelSize) - col
+  xmin <- row - (y-kernelSize) - 1
+  ymin <- col - (x-kernelSize) - 1
+  k <- k[1:nrows+xmin, 1:ncols+ymin]
+  k <- k / sum(k) # Scale kernel to produce smooth values between 0...1
+  effectiveArea <- prod(dim(k))
   
-  # Get the process category values around the point
+  # Get the process category values around the point that matches the size of the kernel
   rasterSubset <- getValuesBlock(r, row, nrows, col, ncols, format='matrix')
-  effectiveArea <- prod(dim(rasterSubset))
+  # Count the number of edges
+  edgeCount <- sum(is.na(rasterSubset))
+  # Smooth and do edge correction
+  smoothValue <- sum(k * rasterSubset, na.rm=T) * effectiveArea / (effectiveArea - edgeCount)
   
-  smoothPixels <- data.frame()
-  for (i in 1:length(processValues)) {
-    # Count the number of non-edge values
-    inverseEdgeCount <- effectiveArea - (sum(rasterSubset %in% edgeValues, na.rm=T) + sum(is.na(rasterSubset)))
-    # Indicate the focal process category values
-    rasterSubsetCategory <- rasterSubset %in% processValues[[i]]
-    # Smooth and do edge correction
-    smoothValue <- sum(k * rasterSubsetCategory, na.rm=T) * fullArea / inverseEdgeCount
-    originalValue <- rasterSubsetCategory[ncols * (nrows/2-.5) + ncols/2+.5]
-    smoothPixels <- rbind(smoothPixels, data.frame(x=x, y=y, category=names(processValues[i]), scale=scale, value=smoothValue, original=originalValue))
-  }
-  
-  return(smoothPixels)
+  return(data.frame(x=x, y=y, scale=scale, value=smoothValue))
 }
 
-smoothSubsets <- function(r, coords, kernelFun=expKernel, scales, processValues, edgeValues=c()) {
+smoothSubsets <- function(r, coords, kernelFun=expKernel, scales, .parallel=T) {
+  if (missing(r))
+    stop("Argument 'r' missing.")
+  if (!inherits(r, "RasterLayer"))
+    stop("Argument 'r' must be of type 'RasterLayer'")
+  if (missing(coords))
+    stop("Argument 'coords' missing.")
+  
+  if (res(r)[1] != res(r)[2])
+    stop("Rasters of unequal resolution unsupported.")
+  if (nlayers(r) > 1)
+    stop("Multiband rasters unsupported. Please supply bands separately.")
+  
   library(plyr)
   smoothPixels <- ldply(scales, function(scale, coords) {
     n.coords <- if (inherits(coords, "SpatialPoints")) length(coords)
     else nrow(coords)
     smoothPixels <- ldply(1:n.coords, function(i, coords, n.coords, scale) {
-      message("Smoothing scale = ", scale, ", for coord = ", i, "/", n.coords)
-      x <- smoothSubset(r=r, coord=coords[i,], kernelFun=kernelFun, scale=scale, processValues=processValues, edgeValues=edgeValues)
+      message("Smoothing scale = ", scale, ", for coord = ", i, "/", n.coords, " (", coords[i,1], ",", coords[i,2], ")")
+      x <- smoothSubset(r=r, x=coords[i,1], y=coords[i,2], kernelFun=kernelFun, scale=scale)
       return(x)
-    }, coords=coords, n.coords=n.coords, scale=scale, .parallel=T)
+    }, coords=coords, n.coords=n.coords, scale=scale)
     return(smoothPixels)
-  }, coords=coords)
+  }, coords=coords, .parallel=.parallel)
   return(smoothPixels)
 }
