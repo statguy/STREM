@@ -14,6 +14,7 @@ library(ggplot2)
 library(scales)
 library(grid)
 library(plyr)
+library(gridExtra)
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
 boundaryDF <- ggplot2::fortify(FinlandWTCStudy(context=context, response="canis.lupus")$studyArea$boundary)
@@ -23,10 +24,42 @@ study <- FinlandWTCStudy$new(context=context, response="canis.lupus")
 
 ```{r figure-convolution-example}
 r <- crop(study$studyArea$habitat, extent(3400000, 3410000, 7000000, 7010000))
-plot(r)
+#plot(r)
 forest <- calc(r, function(x) if (is.na(x) || x %in% c(0,45:255)) NA else x %in% 18:35)
-plot(forest)
-coords <- expand.grid(1:dim(r)[1], 1:dim(r)[2])
+#plot(forest)
+coords <- xyFromCell(r, cell=1:ncell(r))
+#x0 <- smoothSubsets(r=forest, coords=coords[1:(400*10),], kernelFun=expKernel, scales=125, .parallel=F)
 x <- smoothSubsets(r=forest, coords=coords, kernelFun=expKernel, scales=c(125, 1000), .parallel=T)
-plot(flip(rasterFromXYZ(x[,c("x","y","value")]), direction="y"), asp=1)
+#plot(flip(rasterFromXYZ(x[,c("x","y","value")]), direction="y"), asp=1)
+fileName <- study$context$getFileName(dir=study$context$processedDataDirectory, name="figure-b-1", region=study$studyArea$region)
+save(x, file=fileName)
+load(fileName)
+
+r1 <- as.data.frame(rasterToPoints(r))
+colnames(r1) <- c("x","y","value")
+r1$value <- factor(r1$value, levels=0:255)
+r2 <- as.data.frame(rasterToPoints(forest))
+colnames(r2) <- c("x","y","value")
+r2$value <- factor(r2$value, levels=0:1)
+
+labelPanel <- function(p, text, x, y) {
+  g <- tableGrob(data.frame(a=text), rows=NULL, cols=NULL, gpar.corefill=gpar(fill="white", col=NA))
+  p + annotation_custom(grob=g, xmin=x, ymin=y, xmax=x, ymax=y)
+}
+
+gray <- gray.colors(2, start=0.2, end=0.8)
+p1 <- ggplot(r1) + geom_raster(aes(x, y, fill=value)) + scale_fill_grey() + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
+p2 <- ggplot(r2) + geom_raster(aes(x, y, fill=value)) + scale_fill_grey() + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
+p3 <- ggplot(subset(x, scale==125)) + geom_raster(aes(x, y, fill=value)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
+p4 <- ggplot(subset(x, scale==1000)) + geom_raster(aes(x, y, fill=value)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
+
+p1 <- labelPanel(p1, "a)", min(r1$x), max(r1$y))
+p2 <- labelPanel(p2, "b)", min(r1$x), max(r1$y))
+p3 <- labelPanel(p3, "c)", min(r1$x), max(r1$y))
+p4 <- labelPanel(p4, "d)", min(r1$x), max(r1$y))
+
+p <- arrangeGrob(p1, p2, p3, p4, ncol=2)
+saveFigure(p, "figure-b-1.png", width=17, height=17, dpi=200)
+
+
 ```

@@ -91,7 +91,8 @@ theme_raster <- function(base_size=12, base_family="", ...) {
     axis.ticks=element_blank(),
     strip.background=element_blank(),
     #plot.margin=unit(c(0,0,-1,-1), "lines"),
-    plot.margin=unit(c(0,0,-.5,-.5), "lines"),
+    #plot.margin=unit(c(0,0,-.5,-.5), "lines"),
+    plot.margin=unit(c(0,0,0,0), "lines"),
     axis.ticks.length=unit(0,"lines"),axis.ticks.margin=unit(0,"lines"),
     #plot.margin=rep(unit(0,"null"),4),panel.margin=unit(0,"null"),axis.ticks.length=unit(0,"null"),axis.ticks.margin=unit(0,"null"),
     legend.position="none",
@@ -371,7 +372,9 @@ gaussKernel <- function(size, scale) {
 }
 
 smoothSubset <- function(r, x, y, kernelFun=expKernel, scale) {
-  if (is.na(r[y,x]))
+  col <- colFromX(r, x)
+  row <- rowFromY(r, y)  
+  if (is.na(r[row, col]))
     stop("The point is outside the effective area. The smoothing cannot be proceeded.")  
   
   # Construct the full kernel
@@ -380,20 +383,20 @@ smoothSubset <- function(r, x, y, kernelFun=expKernel, scale) {
   k <- kernelFun(kernelSize, resScale)
   fullArea <- prod(dim(k))
   kernelSize <- kernelSize + 1
-  
+    
   # Cut the kernel if partially outside the effective area
-  row <- max(0, y-kernelSize) + 1
-  col <- max(0, x-kernelSize) + 1
-  nrows <- min(dim(r)[1]+1, y+kernelSize) - row
-  ncols <- min(dim(r)[2]+1, x+kernelSize) - col
-  xmin <- row - (y-kernelSize) - 1
-  ymin <- col - (x-kernelSize) - 1
+  startRow <- max(0, row-kernelSize) + 1
+  startCol <- max(0, col-kernelSize) + 1
+  nrows <- min(dim(r)[1]+1, row+kernelSize) - startRow
+  ncols <- min(dim(r)[2]+1, col+kernelSize) - startCol
+  xmin <- startRow - (row-kernelSize) - 1
+  ymin <- startCol - (col-kernelSize) - 1
   k <- k[1:nrows+xmin, 1:ncols+ymin]
   k <- k / sum(k) # Scale kernel to produce smooth values between 0...1
   effectiveArea <- prod(dim(k))
   
   # Get the process category values around the point that matches the size of the kernel
-  rasterSubset <- getValuesBlock(r, row, nrows, col, ncols, format='matrix')
+  rasterSubset <- getValuesBlock(r, startRow, nrows, startCol, ncols, format='matrix')
   # Count the number of edges
   edgeCount <- sum(is.na(rasterSubset))
   # Smooth and do edge correction
@@ -409,6 +412,11 @@ smoothSubsets <- function(r, coords, kernelFun=expKernel, scales, .parallel=T) {
     stop("Argument 'r' must be of type 'RasterLayer'")
   if (missing(coords))
     stop("Argument 'coords' missing.")
+  
+  if (!inherits(r, "RasterLayer"))
+    stop("Argument 'r' must of class raster.")
+  if (!inherits(coords, "matrix") && !inherits(coords, "data.frame") && !inherits(coords, "SpatialPoints"))
+    stop("Argument 'coords' must of class matrix, data.frame or SpatialPoints.")
   
   if (res(r)[1] != res(r)[2])
     stop("Rasters of unequal resolution unsupported.")
@@ -428,3 +436,4 @@ smoothSubsets <- function(r, coords, kernelFun=expKernel, scales, .parallel=T) {
   }, coords=coords, .parallel=.parallel)
   return(smoothPixels)
 }
+
