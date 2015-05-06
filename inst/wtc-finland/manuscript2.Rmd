@@ -5,6 +5,7 @@ output: html_document
 
 ```{r initialize}
 #library(devtools); install_github("statguy/Winter-Track-Counts")
+#install_github("ropengov/gisfin")
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores())
@@ -20,14 +21,21 @@ context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirecto
 boundaryDF <- ggplot2::fortify(FinlandWTCStudy(context=context, response="canis.lupus")$studyArea$boundary)
 study <- FinlandWTCStudy$new(context=context, response="canis.lupus")
 #study$studyArea$loadBoundary(thin=F, tolerance=0.001)
+gray <- gray.colors(2, start=0.2, end=0.8)
+labelPanel <- function(p, text, x, y) {
+  g <- tableGrob(data.frame(a=text), rows=NULL, cols=NULL, gpar.corefill=gpar(fill="white", col=NA))
+  p + annotation_custom(grob=g, xmin=x, ymin=y, xmax=x, ymax=y)
+}
 ```
 
 ```{r figure-convolution-example}
-r <- crop(study$studyArea$habitat, extent(3400000, 3410000, 7000000, 7010000))
+# Habitat
+
+r <- raster::crop(study$studyArea$habitat, extent(3400000, 3410000, 7000000, 7010000))
 #plot(r)
-forest <- calc(r, function(x) if (is.na(x) || x %in% c(0,45:255)) NA else x %in% 18:35)
+forest <- raster::calc(r, function(x) if (is.na(x) || x %in% c(0,45:255)) NA else x %in% 18:35)
 #plot(forest)
-coords <- xyFromCell(r, cell=1:ncell(r))
+coords <- raster::xyFromCell(r, cell=1:ncell(r))
 #x0 <- smoothSubsets(r=forest, coords=coords[1:(400*10),], kernelFun=expKernel, scales=125, .parallel=F)
 x <- smoothSubsets(r=forest, coords=coords, kernelFun=expKernel, scales=c(125, 1000), .parallel=T)
 #plot(flip(rasterFromXYZ(x[,c("x","y","value")]), direction="y"), asp=1)
@@ -42,12 +50,7 @@ r2 <- as.data.frame(rasterToPoints(forest))
 colnames(r2) <- c("x","y","value")
 r2$value <- factor(r2$value, levels=0:1)
 
-labelPanel <- function(p, text, x, y) {
-  g <- tableGrob(data.frame(a=text), rows=NULL, cols=NULL, gpar.corefill=gpar(fill="white", col=NA))
-  p + annotation_custom(grob=g, xmin=x, ymin=y, xmax=x, ymax=y)
-}
 
-gray <- gray.colors(2, start=0.2, end=0.8)
 p1 <- ggplot(r1) + geom_raster(aes(x, y, fill=value)) + scale_fill_grey() + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
 p2 <- ggplot(r2) + geom_raster(aes(x, y, fill=value)) + scale_fill_grey() + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
 p3 <- ggplot(subset(x, scale==125)) + geom_raster(aes(x, y, fill=value)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
@@ -59,7 +62,51 @@ p3 <- labelPanel(p3, "c)", min(r1$x), max(r1$y))
 p4 <- labelPanel(p4, "d)", min(r1$x), max(r1$y))
 
 p <- arrangeGrob(p1, p2, p3, p4, ncol=2)
-saveFigure(p, "figure-b-1.png", width=17, height=17, dpi=200)
+saveFigure(p, "figure-b-1a.png", width=17, height=17, dpi=200)
 
 
+# Human population density
+
+library(gisfin)
+request <- gisfin::GeoStatFiWFSRequest$new()$getPopulation("vaestoruutu:vaki2005_1km")
+client <- gisfin::GeoStatFiWFSClient$new(request)
+population <- client$getLayer("vaestoruutu:vaki2005_1km")
+population <- raster::stack(sp::SpatialPixelsDataFrame(coordinates(population), population@data, proj4string=population@proj4string))
+population <- projectRaster(population$vaesto, crs="+init=epsg:2393")
+r <- raster::crop(population$vaesto, extent(3400000, 3410000, 7000000, 7010000) * 10)
+r[is.na(r)] <- 0
+r1 <- as.data.frame(rasterToPoints(r))
+colnames(r1) <- c("x","y","value")
+coords <- raster::xyFromCell(r, cell=1:ncell(r))
+x <- smoothSubsets(r=r, coords=coords, kernelFun=expKernel, scales=c(2000), .parallel=T)
+
+p5 <- ggplot(r1) + geom_raster(aes(x, y, fill=value)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
+p6 <- ggplot(x) + geom_raster(aes(x, y, fill=value)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
+
+
+# Elevation
+
+# Elevation model data: http://www.eea.europa.eu/data-and-maps/data/digital-elevation-model-of-europe
+elevation <- raster(file.path(context$rawDataDirectory, "elevation1x1_new.tif"))
+r <- raster::crop(elevation, extent(elevation, 200, 1500, 2600, 3500))
+raster::projection(r) <- "+proj=laea +lat_0=52 +lon_0=20 +x_0=5071000 +y_0=3210000 +a=6378137 +b=6378137 +units=m +no_defs"
+elevation <- raster::projectRaster(r, crs="+init=epsg:2393")
+r <- raster::crop(elevation, extent(3400000, 3410000, 7000000, 7010000) * 10)
+s <- raster(extent(3355003, 3455003, 6955246, 7055246), 100, 100, crs="+proj=laea +lat_0=52 +lon_0=20 +x_0=5071000 +y_0=3210000 +a=6378137 +b=6378137 +units=m +no_defs")
+r <- raster::resample(r, s) # Changing projection does not work perfectly. Has to resample to fix.
+r1 <- as.data.frame(rasterToPoints(r))
+colnames(r1) <- c("x","y","value")
+coords <- raster::xyFromCell(r, cell=1:ncell(r))
+x <- smoothSubsets(r=r, coords=coords, kernelFun=expKernel, scales=c(2000), .parallel=T)
+
+p7 <- ggplot(r1) + geom_raster(aes(x, y, fill=value)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
+p8 <- ggplot(x) + geom_raster(aes(x, y, fill=value)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
+
+
+p5 <- labelPanel(p5, "e)", min(r1$x), max(r1$y))
+p6 <- labelPanel(p6, "f)", min(r1$x), max(r1$y))
+p7 <- labelPanel(p7, "g)", min(r1$x), max(r1$y))
+p8 <- labelPanel(p8, "h)", min(r1$x), max(r1$y))
+p <- arrangeGrob(p5, p6, p7, p8, ncol=2)
+saveFigure(p, "figure-b-1b.png", width=17, height=17, dpi=200)
 ```
