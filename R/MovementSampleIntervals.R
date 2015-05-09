@@ -92,18 +92,21 @@ ThinnedMovementSampleIntervals <- setRefClass(
     associateCovariates = function(...) {
       library(plyr)
       covariates <- cbind(...)
-      intervals <<- dplyr::ddply(intervals, .(thin), function(x, covariates) {
-        return(dplyr::join(x, covariates))
+      intervals <<- plyr::ddply(intervals, .(thin), function(x, covariates) {
+        return(plyr::join(x, covariates))
       }, covariates=cbind(data.frame(observation=subset(intervals, thin == 1, select="observation")), covariates))
       return(invisible(.self))
     },
     
     findSampleIntervals = function(tracks) {
+      library(plyr)
+      library(adehabitatLT)
+      
       if (!inherits(tracks, "ltraj"))
         stop("Argument 'tracks' must be of class 'ltraj'.")
       
       if (length(maxDt) == 0) maxDt <<- 12 * 60 * 60 
-      x <- ld(tracks)
+      x <- adehabitatLT::ld(tracks)
       x <- x[x$dt <= maxDt,]
       x$observation <- 1:nrow(x)
       x$thin <- 1
@@ -115,7 +118,7 @@ ThinnedMovementSampleIntervals <- setRefClass(
         message("Thinning ", thinningIndex, "/", maxThinnings, ", factor = ", thinFactor)
         
         # Thin movements
-        y <- ddply(x, .(burst), function(x, thinFactor) {
+        y <- plyr::ddply(x, .(burst), function(x, thinFactor) {
           retainIndex <- seq(1, nrow(x), by=thinFactor)
           x <- x[retainIndex,]
           

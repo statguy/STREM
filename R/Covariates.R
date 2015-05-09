@@ -207,6 +207,7 @@ HumanPopulationDensityCovariates <- setRefClass(
     
     preprocess = function() {
       if (existCache() == FALSE) {
+        library(stringr)
         request <- gisfin::GeoStatFiWFSRequest$new()$getPopulationLayers()
         client <- gisfin::GeoStatFiWFSClient$new(request)
         layers <- client$listLayers()
@@ -218,7 +219,7 @@ HumanPopulationDensityCovariates <- setRefClass(
           print(request)
           client <- gisfin::GeoStatFiWFSClient$new(request)
           x <- client$getLayer(layer)
-          year <- str_match(layer, "vaki(\\d+)_")[2]
+          year <- stringr::str_match(layer, "vaki(\\d+)_")[2]
           y <- sp::spTransform(x, study$studyArea$proj4string)
           z <- sp::SpatialPixelsDataFrame(coordinates(y), y@data[,"vaesto",drop=F], proj4string=y@proj4string, tolerance=0.7)
           populationCache[year] <- z

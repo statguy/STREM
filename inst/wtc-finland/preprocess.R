@@ -1,5 +1,5 @@
 library(devtools)
-install_github("statguy/WTC")
+install_github("statguy/Winter-Track-Counts")
 install_github("ropengov/gisfin")
 install_github("ropengov/fmi")
 
@@ -25,7 +25,7 @@ if (F) {
   ###
   
   tracks <- study$loadTracks()
-  sampleIntervals <- ThinnedMovementSampleIntervals$new()
+  sampleIntervals <- ThinnedMovementSampleIntervals$new(study=study)
   sampleIntervals$findSampleIntervals(tracks=tracks$tracks)
   
   ###
@@ -40,6 +40,7 @@ if (F) {
   covariates$preprocess()
   weather <- covariates$extract(xyt)
   
+  #sampleIntervals$associateCovariates(human)
   sampleIntervals$associateCovariates(human, weather)
   sampleIntervals$save()
 }
