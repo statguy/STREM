@@ -72,18 +72,7 @@ SimulationStudy <- setRefClass(
       populationSize <- SimulationPopulationSize(study=.self, iteration=iteration, modelName=modelName)$loadPopulationSize()$loadValidationData()
       return(populationSize)
     },
-    
-    #loadSurveyRoutes = function(n=800, random=TRUE, save=FALSE, findLengths=TRUE) {
-    #  surveyRoutes <- if (random) {
-    #    surveyRoutes <- FinlandRandomWTCSurveyRoutes$new(study=.self)
-    #    if (save) surveyRoutes$randomizeSurveyRoutes(nSurveyRoutes=n, save=TRUE)
-    #    return(surveyRoutes$loadSurveyRoutes(findLengths=findLengths))
-    #  }
-    #  else {
-    #    return(FinlandWTCSurveyRoutes$new(study=.self)$loadSurveyRoutes(findLengths=findLengths))
-    #  }
-    #},
-    
+
     countIntersections = function(iteration, days=1, save=TRUE) {
       tracks <- .self$loadTracks(iteration=iteration)
       intersections <- tracks$countIntersections(surveyRoutes=surveyRoutes, days=days, save=save)
@@ -153,39 +142,8 @@ SimulationStudy <- setRefClass(
       estimates$collectEstimates()
       populationSize <- getPopulationSize(estimates, readHabitatIntoMemory=readHabitatIntoMemory, save=save)
       return(invisible(populationSize))
-    },
-    
-    ### DEPRECATED
-    getPopulationSize_DEPRECATED = function(estimates, habitatWeights, save=TRUE) {      
-      estimates <- loadEstimates(estimates)
-      estimates$collectEstimates()
-      populationSize <- estimates$getPopulationSize(habitatWeights=habitatWeights)
-      if (save) populationSize$savePopulationSize()
-      return(invisible(populationSize))
-    },
-    
-    getHabitatWeights_DEPRECATED = function(tracks, iteration, save=TRUE, readHabitatIntoMemory=TRUE) {
-      if (withHabitatWeights == FALSE) return(NULL)
-      
-      habitatWeights <- CORINEHabitatWeights$new(study=.self)
-      
-      habitatPreferences <- HabitatSelection$new(study=.self, iteration=iteration)
-      fileName <- habitatPreferences$getHabitatSelectionFileName()
-      habitatSelection <- if (file.exists(fileName)) habitatPreferences$loadHabitatSelection()
-      else {      
-        if (missing(tracks)) tracks <- loadTracks(iteration=iteration)
-        if (readHabitatIntoMemory)
-          study$studyArea$readRasterIntoMemory()
-        tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=save)
-      }
-      
-      message("Processing habitat weights raster...")
-      habitatWeights$setHabitatSelectionWeights(habitatSelection)
-      habitatWeightsRaster <- habitatWeights$getWeightsRaster(save=FALSE)
-      
-      return(habitatWeightsRaster)
     }
-  )
+   )
 )
 
 FinlandWTCStudy <- setRefClass(
@@ -198,7 +156,8 @@ FinlandWTCStudy <- setRefClass(
   methods = list(
     initialize = function(context, ...) {
       callSuper(context=context, ...)
-      studyArea <<- FinlandStudyArea$new(context=context)$setup(tolerance=0.001)
+      #studyArea <<- FinlandStudyArea$new(context=context)$setup(tolerance=0.001)
+      studyArea <<- FinlandStudyArea$new(context=context)$setup()
       return(invisible(.self))
     },
     
@@ -324,21 +283,21 @@ FinlandWTCStudy <- setRefClass(
       return(estimates)
     },
 
-    getSampleIntervals = function() {
-      return(FinlandMovementSampleIntervals$new(study=.self))
-    },
+    #getSampleIntervals = function() {
+    #  return(FinlandMovementSampleIntervals$new(study=.self))
+    #},
     
-    loadSampleIntervals = function() {
-      return(getSampleIntervals()$loadSampleIntervals())
-    },
+    #loadSampleIntervals = function() {
+    #  return(getSampleIntervals()$loadSampleIntervals())
+    #},
     
-    getDistanceCovariatesModel = function() {
-      return(distanceCovariatesModel);
-    },
+    #getDistanceCovariatesModel = function() {
+    #  return(distanceCovariatesModel);
+    #},
     
-    getTrackSampleInterval = function() {
-      return(trackSampleInterval);
-    },
+    #getTrackSampleInterval = function() {
+    #  return(trackSampleInterval);
+    #},
     
     fitDistanceCorrectionModel = function(iterations=1000, chains=1, save=TRUE) {
       tracks <- loadTracks()

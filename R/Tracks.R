@@ -37,6 +37,7 @@ Tracks <- setRefClass(
     loadTracks = function(fileName=getTracksFileName(), addColumns=TRUE, findTruePopulationSize=TRUE) {
       library(adehabitatLT)
       library(data.table)
+      message("Loading tracks from ", fileName, "...")
       load(fileName, envir=as.environment(.self))
       
       if (is.data.frame(tracks)) {
@@ -244,9 +245,7 @@ Tracks <- setRefClass(
     },
     
     getHabitatPreferences = function(habitatWeightsTemplate, nSamples=30, save=FALSE) {
-      habitatPreferences <- HabitatSelection(study=study, iteration=iteration)
-      habitatPreferences$getHabitatPreferences(tracks=.self, habitatWeightsTemplate=habitatWeightsTemplate, nSamples=nSamples, save=save)
-      return(habitatPreferences)
+      stop("Unimplemented method.")
     }
   )
 )
@@ -393,6 +392,14 @@ SimulatedTracks <- setRefClass(
         sampledIds <- base::sample(1:nIds, nSamples)
         return(subset(x, id %in% sampledIds))
       }, nSamples=nSamples)
+    },
+    
+    getHabitatPreferences = function(habitatWeightsTemplate, nSamples=30, save=FALSE) {
+      movementIntervals <- ConstantMovementSampleIntervals$new(study=study) # TODO: UNTESTED CODE
+      movementIntervals$findSampleIntervals(tracks=.self)
+      habitatPreferences <- SimulationHabitatSelection$new(study=study, iteration=iteration)
+      habitatPreferences$getHabitatPreferences(intervals=movementIntervals, habitatWeightsTemplate=habitatWeightsTemplate, nSamples=nSamples, save=save)
+      return(habitatPreferences)
     }
   )
 )
@@ -544,6 +551,14 @@ FinlandWTCTracks <- setRefClass(
       if (nrow(metadata) > 0)
         tracksSP@data <- plyr::join(tracksSP@data, metadata, by="id")
       return(tracksSP)
+    },
+    
+    getHabitatPreferences = function(habitatWeightsTemplate, nSamples=30, save=FALSE) {
+      movementIntervals <- MaxApproximateConstantMovementSampleIntervals$new(study=study)
+      movementIntervals$findSampleIntervals(tracks=.self$tracks)
+      habitatPreferences <- WTCHabitatSelection$new(study=study)
+      habitatPreferences$getHabitatPreferences(intervals=movementIntervals, habitatWeightsTemplate=habitatWeightsTemplate, nSamples=nSamples, save=save)
+      return(habitatPreferences)
     }
   )
 )

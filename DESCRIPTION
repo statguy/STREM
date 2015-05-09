@@ -23,7 +23,6 @@ Collate:
   HabitatWeights.R
   Tracks.R
   HabitatSelection.R
-  TracksCollection.R
   Intersections.R
   MovementSampleIntervals.R
   SurveyRoutes.R

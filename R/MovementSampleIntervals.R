@@ -1,4 +1,128 @@
-#setOldClass("lmerMod")
+MovementSampleIntervals <- setRefClass(
+  Class = "MovementSampleIntervals",
+  fields = list(
+    study = "ANY",
+    intervals = "data.frame",
+    maxDt = "numeric"
+  ),
+  methods = list(
+    findSampleIntervals = function(tracks) {
+      stop("Unimplemented method.")
+    },
+    
+    getSampleIntervals = function() intervals
+    
+    getSampleLocations = function() {
+      xyt <- subset(intervals, thin == 1)
+      sp::coordinates(xyt) <- ~ x+y
+      sp::proj4string(xyt) <- study$studyArea$boundary@proj4string
+      return(xyt)
+    }
+  )
+)
+
+ConstantMovementSampleIntervals <- setRefClass(
+  Class = "ConstantMovementSampleIntervals",
+  contains = "MovementSampleIntervals",
+  fields = list(
+    tracks = "ANY"
+  ),
+  methods = list(
+    findSampleIntervals = function(tracks) {
+      if (!inherits(tracks, "Tracks"))
+        stop("Argument 'tracks' must be of class 'Tracks'.")
+      
+      .self$tracks <- tracks
+      return(invisible(.self))
+    },
+    
+    getSampleIntervals = function() {
+      return(tracks$tracks)
+    }
+  )
+)
+
+MaxApproximateConstantMovementSampleIntervals <- setRefClass(
+  Class = "MaxApproximateConstantMovementSampleIntervals",
+  contains = "MovementSampleIntervals",
+  fields = list(
+    bandWidth = "numeric"
+  ),
+  methods = list(
+    findSampleIntervals = function(tracks) {
+      if (!inherits(tracks, "ltraj"))
+        stop("Argument 'tracks' must be of class 'ltraj'.")
+      
+      if (length(maxDt) == 0) maxDt <<- 24 * 60 * 60
+      x <- ld(tracks)
+      x <- x[x$dt <= maxDt & !is.na(x$dt),]
+      if (length(bandWidth) == 0) bandWidth <<- 10 * 60 # 10 minutes default bandwidth
+      d <- density(x$dt, bw=bandWidth, kernel="gaussian")
+      retainDt <- d$x[which.max(d$y)] + c(-bandWidth, bandWidth) / 2
+      
+      message("Sampling interval with max observations: min dt = ", retainDt[1], ", max dt = ", retainDt[2])
+      
+      intervals <<- x[x$dt >= retainDt[1] & x$dt <= retainDt[2],]
+      return(invisible(.self))
+    }  
+  )
+)
+
+ThinnedMovementSampleIntervals <- setRefClass(
+  Class = "ThinnedMovementSampleIntervals",
+  contains = "MovementSampleIntervals",
+  fields = list(
+    maxThinnings = "numeric"
+  ),
+  methods = list(
+    findSampleIntervals = function(tracks) {
+      if (!inherits(tracks, "ltraj"))
+        stop("Argument 'tracks' must be of class 'ltraj'.")
+      
+      if (length(maxDt) == 0) maxDt <<- 12 * 60 * 60 
+      x <- ld(tracks)
+      x <- x[x$dt <= maxDt,]
+      x$observation <- 1:nrow(x)
+      x$thin <- 1
+      intervals <<- x
+      
+      if (length(maxThinnings) == 0) maxThinnings <<- 100
+      thinFactor <- 2
+      for (thinningIndex in 1:maxThinnings) {
+        message("Thinning ", thinningIndex, "/", maxThinnings, ", factor = ", thinFactor)
+        
+        # Thin movements
+        y <- ddply(x, .(burst), function(x, thinFactor) {
+          retainIndex <- seq(1, nrow(x), by=thinFactor)
+          x <- x[retainIndex,]
+          
+          x1 <- x[-1,]
+          x2 <- x[-nrow(x),]
+          x$dist <- c(sqrt((x1$x - x2$x)^2 + (x1$y - x2$y)^2), NA)
+          x$dt <- c(unclass(x1$date) - unclass(x2$date), NA)
+          
+          x <- x[x$dt <= maxDt,]
+          if (nrow(x) <= 1) return(NULL)
+
+          x$thin <- thinFactor
+          return(x)
+        }, thinFactor=thinFactor)
+        if (length(y) == 0) break
+
+        intervals <<- rbind(intervals, y)
+        thinFactor <- thinFactor + 1
+      }
+      
+      intervals <<- intervals[!is.na(intervals$dt),]
+      return(invisible(.self))
+    }
+  )  
+)
+
+
+
+# DEPRECATED
+if (F) {
 
 MovementSampleIntervalsPredict <- function(estimationResult, predictionData, randomEffectsFormula=NA) {
   if (inherits(estimationResult, "lm")) {
@@ -11,7 +135,7 @@ MovementSampleIntervalsPredict <- function(estimationResult, predictionData, ran
   return(distanceKm)
 }
 
-MovementSampleIntervals <- setRefClass(
+DEPRECATED_MovementSampleIntervals <- setRefClass(
   Class = "MovementSampleIntervals",
   fields = list(
     study = "Study",
@@ -44,9 +168,9 @@ MovementSampleIntervals <- setRefClass(
         #return(list(intervalMin=intervalMin, distKm=distKm))
       }
       
-      x <- tracksDF %.% group_by(id, yday, year) %.%
+      x <- tracksDF %>% group_by(id, yday, year) %>%
         summarise(id2=paste(id[1], yday[1], year[1]), burst=burst[1], individualId=id[1], date=date[1],
-                  intervalMin=getInterval(dt, dist), distanceKm=sum(dist, na.rm=T) / 1e3, x=mean(x), y=mean(y)) %.%
+                  intervalMin=getInterval(dt, dist), distanceKm=sum(dist, na.rm=T) / 1e3, x=mean(x), y=mean(y)) %>%
         mutate(intervalH=intervalMin / 60, intervalSec=intervalMin * 60)
       x$id <- x$id2
       x$id2 <- NULL
@@ -301,7 +425,7 @@ MovementSampleIntervals <- setRefClass(
   )
 )
 
-FinlandMovementSampleIntervals <- setRefClass(
+DEPRECATED_FinlandMovementSampleIntervals <- setRefClass(
   Class = "FinlandMovementSampleIntervals",
   contains = c("MovementSampleIntervals", "FinlandCovariates"),
   methods = list(
@@ -378,3 +502,5 @@ FinlandMovementSampleIntervals <- setRefClass(
     }      
   )
 )
+
+}

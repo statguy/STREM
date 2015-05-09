@@ -128,7 +128,7 @@ StudyArea <- setRefClass(
     thinGADM = function(gadm, tolerance) {
       library(maptools)
       p <- findLargestPolygon(gadm)
-      return(thinnedSpatialPoly(p, tolerance=tolerance))
+      return(thinnedSpatialPoly(p, tolerance=tolerance, avoidGEOS=T))
     },    
     
     loadBoundaryGADM = function(country, level=0, subregion, mainland=FALSE, thin=FALSE, coordinateScale=as.integer(1), tolerance=0.1) {  

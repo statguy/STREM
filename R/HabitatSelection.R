@@ -2,8 +2,6 @@ HabitatSelection <- setRefClass(
   Class = "HabitatSelection",
   fields = list(
     study = "Study",
-    iteration = "integer",
-    tracks = "Tracks",
     nullModelUsage = "data.frame",
     realizedUsage = "data.frame",
     relativeUsage = "data.frame",
@@ -73,8 +71,8 @@ HabitatSelection <- setRefClass(
       return(as.data.frame(x))
     },
 
-    getMovements = function(tracks) {
-      tracks$sample(nCollaredIndividuals)
+    DEPRECATED_getMovements = function(tracks) {
+      #tracks$sample(nCollaredIndividuals)
       intervals <- tracks$getSampleIntervals()
       maxIntervalH <- as.numeric(names(which.max(table(intervals$intervals$intervalH))))
       maxIntervals <- subset(intervals$intervals, intervalH == maxIntervalH)
@@ -91,7 +89,7 @@ HabitatSelection <- setRefClass(
       return(tracksDF)
     },
     
-    getHabitatPreferences = function(tracks, habitatWeightsTemplate, nSamples=10, save=FALSE) {
+    DEPRECATED_getHabitatPreferences = function(tracks, habitatWeightsTemplate, nSamples=10, save=FALSE) {
       message("Finding tracks with highest number of samples and constant frequency...")
       tracksDF <- getMovements(tracks)
       
@@ -107,11 +105,25 @@ HabitatSelection <- setRefClass(
       return(invisible(.self))
     },
 
+    getHabitatPreferences = function(intervals, habitatWeightsTemplate, nSamples=10, save=FALSE) {
+      if (!inherits(intervals, "MovementSampleIntervals"))
+        stop("Argument 'intervals' must be of class 'MovementSampleIntervals'.")
+      tracksDF <- intervals$getSampleIntervals()
+            
+      message("Estimating potential habitat usage...")
+      nullModelUsage <<- getNullModelMovementHabitatDistributions(movements=tracksDF, habitatWeightsTemplate=habitatWeightsTemplate, nSamples=nSamples)
+      message("Counting actual habitat usage...")
+      realizedUsage <<- getRealizedMovementHabitatDistributions(movements=tracksDF, habitatWeightsTemplate=habitatWeightsTemplate)
+      relativeUsage <<- as.data.frame(as.list(colSums(realizedUsage) / colSums(nullModelUsage)))
+      #relativeUsage95 <<- 
+      
+      if (save) saveHabitatSelection()
+      
+      return(invisible(.self))
+    },
+    
     getHabitatSelectionFileName = function() {
-      if (inherits(study, "undefinedField") | length(iteration) == 0)
-        stop("Provide study and iteration parameters.")
-      return(study$context$getLongFileName(study$context$scratchDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region, tag=iteration))
-      #return(study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region))
+      return(study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region))
     },
     
     saveHabitatSelection = function() {
@@ -125,7 +137,7 @@ HabitatSelection <- setRefClass(
       return(invisible(.self))
     },
     
-    plotSampleSteps = function(tracks, plot=TRUE, index=1:5) {
+    DEPRECATED_plotSampleSteps = function(tracks, plot=TRUE, index=1:5) {
       library(sp)
       library(raster)
       library(rasterVis)
@@ -164,18 +176,31 @@ HabitatSelection <- setRefClass(
   )
 )
 
-# TODO: fix this
 SimulationHabitatSelection <- setRefClass(
   "SimulationHabitatSelection",
-  contains = "HabitatSelection"
+  contains = "HabitatSelection",
+  fields = list(
+    iteration = "integer"  
+  ),
+  methods = list(
+    getHabitatSelectionFileName = function() {
+      if (inherits(study, "undefinedField") | length(iteration) == 0)
+        stop("Provide study and iteration parameters.")
+      return(study$context$getLongFileName(study$context$scratchDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region, tag=iteration))
+      #return(study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region))
+    },
+    
+    DEPRECATED_getMovements = function(tracks) {
+      tracks$sample(nCollaredIndividuals)
+      tracksDF <- callSuper(tracks)      
+      return(tracksDF)
+    }
+  )
 )
 
 WTCHabitatSelection <- setRefClass(
   "WTCHabitatSelection",
   contains = "HabitatSelection",
   methods = list(
-    getHabitatSelectionFileName = function() {
-      return(study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region))
-    }
   )
 )
