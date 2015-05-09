@@ -42,7 +42,7 @@ if (F) {
   
   #sampleIntervals$associateCovariates(human)
   sampleIntervals$associateCovariates(human, weather)
-  sampleIntervals$save()
+  sampleIntervals$saveSampleIntervals()
 }
 else {
   study$preprocess(fmiApiKey=fmiApiKey) 
