@@ -10,13 +10,20 @@ MovementSampleIntervals <- setRefClass(
       stop("Unimplemented method.")
     },
     
-    getSampleIntervals = function() intervals
+    getSampleIntervals = function() intervals,
     
-    getSampleLocations = function() {
-      xyt <- subset(intervals, thin == 1)
-      sp::coordinates(xyt) <- ~ x+y
-      sp::proj4string(xyt) <- study$studyArea$boundary@proj4string
-      return(xyt)
+    getSampleIntervalsFileName = function() {
+      return(context$getFileName(dir=study$context$processedDataDirectory, name="MovementSampleIntervals", region=study$studyArea$region))
+    },
+    
+    saveSampleIntervals = function(fileName=getSampleIntervalsFileName()) {
+      save(intervals, file=fileName)
+      return(invisible(.self))
+    },
+    
+    loadSampleIntervals = function(fileName=getSampleIntervalsFileName()) {
+      load(fileName, env=as.environment(.self))
+      return(invisible(.self))
     }
   )
 )
@@ -75,6 +82,22 @@ ThinnedMovementSampleIntervals <- setRefClass(
     maxThinnings = "numeric"
   ),
   methods = list(
+    getSampleLocations = function() {
+      xyt <- subset(intervals, thin == 1)
+      sp::coordinates(xyt) <- ~ x+y
+      sp::proj4string(xyt) <- study$studyArea$boundary@proj4string
+      return(xyt)
+    },
+    
+    associateCovariates = function(...) {
+      library(plyr)
+      covariates <- cbind(...)
+      intervals <<- dplyr::ddply(intervals, .(thin), function(x, covariates) {
+        return(dplyr::join(x, covariates))
+      }, covariates=cbind(data.frame(observation=subset(intervals, thin == 1, select="observation")), covariates))
+      return(invisible(.self))
+    },
+    
     findSampleIntervals = function(tracks) {
       if (!inherits(tracks, "ltraj"))
         stop("Argument 'tracks' must be of class 'ltraj'.")

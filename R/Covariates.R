@@ -1,87 +1,273 @@
+.interpolateSP = function(xy, z, newXy, transFun=identity, backTransFun=identity) {
+  library(sp)
+  library(fields)
+  if (proj4string(xy) != proj4string(newXy))
+    xy <- sp::spTransform(xy, proj4string(newXy))
+  fit <- fields::Tps(sp::coordinates(xy), transFun(xy[[z]]), lambda=0)
+  newZ <- predict(fit, sp::coordinates(newXy))
+  return(backTransFun(newZ))
+}
+
+# Smoothed single points
+
+.identityKernel <- function(size, scale) {
+  k <- matrix(0, ncol=2*size+1, nrow=2*size+1)
+  k[size+1, size+1] <- 1
+  k
+}
+
+.expKernel <- function(size, scale) {
+  x <- matrix(-size:size, ncol=2*size+1, nrow=2*size+1)
+  y <- t(x)
+  k <- exp(-sqrt(x^2+y^2) / scale)
+  k
+}
+
+.gaussKernel <- function(size, scale) {
+  x <- matrix(-size:size, ncol=2*size+1, nrow=2*size+1)
+  y <- t(x)
+  k <- exp(-(x^2+y^2) / scale)
+  k
+}
+
+.smoothSubset <- function(r, x, y, kernelFun=.expKernel, scale) {
+  col <- colFromX(r, x)
+  row <- rowFromY(r, y)  
+  if (is.na(r[row, col]))
+    stop("The point is outside the effective area. The smoothing cannot be proceeded.")  
+  
+  # Construct the full kernel
+  resScale <- scale / res(r)[1]
+  kernelSize <- round(resScale)
+  k <- kernelFun(kernelSize, resScale)
+  fullArea <- prod(dim(k))
+  kernelSize <- kernelSize + 1
+  
+  # Cut the kernel if partially outside the effective area
+  startRow <- max(0, row-kernelSize) + 1
+  startCol <- max(0, col-kernelSize) + 1
+  nrows <- min(dim(r)[1]+1, row+kernelSize) - startRow
+  ncols <- min(dim(r)[2]+1, col+kernelSize) - startCol
+  xmin <- startRow - (row-kernelSize) - 1
+  ymin <- startCol - (col-kernelSize) - 1
+  k <- k[1:nrows+xmin, 1:ncols+ymin]
+  k <- k / sum(k) # Scale the kernel to produce convoluted values between 0...1
+  effectiveArea <- prod(dim(k))
+  
+  # Get the process values around the point that matches the size of the kernel
+  rasterSubset <- getValuesBlock(r, startRow, nrows, startCol, ncols, format='matrix')
+  # Count the number of edges
+  edgeCount <- sum(is.na(rasterSubset))
+  # Smooth and do edge correction
+  smoothValue <- sum(k * rasterSubset, na.rm=T) * effectiveArea / (effectiveArea - edgeCount)
+  
+  return(data.frame(x=x, y=y, scale=scale, value=smoothValue))
+}
+
+.smoothSubsets <- function(r, coords, kernelFun=expKernel, scales, .parallel=T) {
+  if (missing(r))
+    stop("Argument 'r' missing.")
+  if (!inherits(r, "RasterLayer"))
+    stop("Argument 'r' must be of type 'RasterLayer'")
+  if (missing(coords))
+    stop("Argument 'coords' missing.")
+  
+  if (!inherits(r, "RasterLayer"))
+    stop("Argument 'r' must of class raster.")
+  if (!inherits(coords, "matrix") && !inherits(coords, "data.frame") && !inherits(coords, "SpatialPoints"))
+    stop("Argument 'coords' must of class matrix, data.frame or SpatialPoints.")
+  
+  if (res(r)[1] != res(r)[2])
+    stop("Rasters of unequal resolution unsupported.")
+  if (nlayers(r) > 1)
+    stop("Multiband rasters unsupported. Please supply bands separately.")
+  
+  library(plyr)
+  smoothPixels <- ldply(scales, function(scale, coords) {
+    n.coords <- if (inherits(coords, "SpatialPoints")) length(coords)
+    else nrow(coords)
+    smoothPixels <- ldply(1:n.coords, function(i, coords, n.coords, scale) {
+      message("Smoothing scale = ", scale, ", for coord = ", i, "/", n.coords, " (", coords[i,1], ",", coords[i,2], ")")
+      x <- .smoothSubset(r=r, x=coords[i,1], y=coords[i,2], kernelFun=kernelFun, scale=scale)
+      return(x)
+    }, coords=coords, n.coords=n.coords, scale=scale)
+    return(smoothPixels)
+  }, coords=coords, .parallel=.parallel)
+  return(smoothPixels)
+}
+
 Covariates <- setRefClass(
   Class = "Covariates",
   fields = list(
     study = "Study",
-    covariatesName = "character",
-    covariates = "data.frame"
+    covariateId = "character"
   ),
   methods = list(
-    getCovariatesFileName = function() {
+    getCacheFileName = function() {
       if (inherits(study, "uninitializedField"))
-        stop("Provide study parameters.")
-      study$context$getFileName(dir=study$context$scratchDirectory, name=covariatesName, region=study$studyArea$region)
+        stop("Parameter 'study' must be provided.")
+      if (length(covariateId) == 0)
+        stop("Parameter 'covariateId' must be provided.")
+      return(context$getFileName(dir=study$context$scratchDirectory, name=paste("covariates-cache", covariateId, sep="-"), region=study$studyArea$region))
     },
     
-    saveCovariates = function(fileName=getCovariatesFileName()) {
-      save(covariates, file=fileName)
+    existCache = function() {
+      return(file.exists(getCacheFileName()))
+    },
+    
+    saveCache = function(data) {
+      save(data, file=getCacheFileName())
       return(invisible(.self))
     },
     
-    loadCovariates = function(fileName=getCovariatesFileName()) {
-      load(fileName, envir=as.environment(.self))  
-      return(invisible(.self))
+    loadCache = function() {
+      load(getCacheFileName())
+      return(data)
     },
     
-    obtain = function(save=F) {
+    preprocess = function() {
       stop("Unimplemented abstract method.")
+    },
+    
+    extract = function(xyt) {
+      stop("Unimplemented abstract method.")
+    }
+  )
+)
+
+SmoothCovariates <- setRefClass(
+  Class = "SmoothCovariates",
+  contains = "Covariates",
+  fields = list(
+    scales = "numeric"  
+  ),
+  methods = list(
+    
+    
+  )
+)
+
+WeatherCovariates <- setRefClass(
+  Class = "WeatherCovariates",
+  contains = "Covariates",
+  fields = list(
+    apiKey = "character"
+  ),
+  methods = list(
+    initialize = function(...) {
+      callSuper(...)
+      covariateId <<- "Weather"
+    },
+    
+    preprocess = function() {
+      return(invisible(.self))
+    },
+    
+    extract = function(xyt) {
+      if (length(apiKey) == 0)
+        stop("Parameter 'apiKey' must be specified.")
+      if (!inherits(xyt, "SpatialPointsDataFrame"))
+        stop("Argument 'xyt' must be of class 'SpatialPointsDataFrame'.")
+      
+      request <- fmi::FMIWFSRequest$new(apiKey=apiKey)
+      allDates <- as.Date(xyt@data[,1])
+      uniqueDates <- unique(allDates)
+      
+      covariates <- list()
+      counter <- 1
+      for (date in uniqueDates) {
+        date <- as.Date(date, origin="1970-1-1")
+        message("Finding weather covariates for date ", date, ", ", counter, "/", length(uniqueDates))
+        client <- fmi::FMIWFSClient$new(request=request)
+        response <- client$getDailyWeather(variables=c("rrday","snow","tday"), startDateTime=date, endDateTime=date, bbox=fmi::getFinlandBBox())
+        xytSubset <- xyt[as.Date(xyt$date) == date,]
+        rrday <- .interpolateSP(subset(response, variable == "rrday"), "measurement", xytSubset, sqrt, square)
+        snow <- .interpolateSP(subset(response, variable == "snow"), "measurement", xytSubset, sqrt, square)
+        tday <- .interpolateSP(subset(response, variable == "tday"), "measurement", xytSubset)
+        covariates <- rbind(covariates, data.frame(rrday=rrday, snow=snow, tday=tday))
+        counter <- counter + 1
+      }
+
+      return(covariates)
+    }
+  )
+)
+
+HumanPopulationDensityCovariates <- setRefClass(
+  Class = "HumanPopulationDensityCovariates",
+  contains = "Covariates",
+  fields = list(
+    apiKey = "character"
+  ),
+  methods = list(
+    initialize = function(...) {
+      callSuper(...)
+      covariateId <<- "HumanDensity"
+    },
+    
+    preprocess = function() {
+      if (existCache() == FALSE) {
+        request <- gisfin::GeoStatFiWFSRequest$new()$getPopulationLayers()
+        client <- gisfin::GeoStatFiWFSClient$new(request)
+        layers <- client$listLayers()
+        layers <- stringr::str_subset(layers, "_5km$")
+        populationCache <- list()
+        for (layer in layers) {
+          message("Processing layer ", layer, "...")
+          request$getPopulation(layer)
+          print(request)
+          client <- gisfin::GeoStatFiWFSClient$new(request)
+          x <- client$getLayer(layer)
+          year <- str_match(layer, "vaki(\\d+)_")[2]
+          y <- sp::spTransform(x, study$studyArea$proj4string)
+          z <- sp::SpatialPixelsDataFrame(coordinates(y), y@data[,"vaesto",drop=F], proj4string=y@proj4string, tolerance=0.7)
+          populationCache[year] <- z
+        }
+        saveCache(populationCache)
+      }      
+      return(invisible(.self))
+    },
+    
+    extract = function(xyt) {
+      if (existCache() == FALSE)
+        stop("Cache does not exist. Must run preprocess() first.")
+      populationCache <- loadCache()
+      availYears <- as.numeric(names(populationCache))
+      years <- as.POSIXlt(xyt$date)$year + 1900
+      uniqueYears <- unique(years)
+      covariates <- list()
+      counter <- 1
+      for (year in uniqueYears) {
+        message("Finding population covariates for year ", year, ", ", counter, "/", length(uniqueYears))
+        xytSubset <- xyt[years == year,]
+        closestYearIndex <- which.min(abs(availYears - year))
+        population <- xytSubset %over% populationCache[[closestYearIndex]]
+        population[is.na(population)] <- 0
+        covariates <- rbind(covariates, data.frame(human=population$vaesto))
+        counter <- counter + 1
+      }
+      
+      return(covariates)
     }
   )
 )
 
 SmoothHabitatCovariates <- setRefClass(
   Class = "SmoothHabitatCovariates",
-  contains = "Covariates",
+  contains = "SmoothCovariates",
   field = list(
-    scales = "numeric"
   ),
   methods = list(
-    obtain = function(save=F) {
+    extract = function(xyt) {
       transects <- study$loadSurveyRoutes(findLengths=F)
       habitatWeights <- study$loadHabitatWeights()
       habitatValues <- dlply(habitatWeights$weights[habitatWeights$weights$type != 0,], .(type), function(x) x$habitat)
       edgeValues <- habitatWeights$weights$habitat[habitatWeights$weights$type == 0]
-      covariates <<- smoothSubsets(study$studyArea$habitat, coords=transects$centroids, scales=scales, processValues=habitatValues, edgeValues=edgeValues)
+      covariates <- smoothSubsets(study$studyArea$habitat, coords=transects$centroids, scales=scales, processValues=habitatValues, edgeValues=edgeValues)
       if (save) saveCovariates()
     }
   )
 )
-
-PopulationDensityCovariates <- setRefClass(
-  Class = "PopulationDensityCovariates",
-  contains = "Covariates",
-  field = list(
-    years = "numeric"
-  ),
-  methods = list(
-    obtain = function(save=F) {
-      request <- gisfin::GeoStatFiWFSRequest$new()$getPopulationLayers()
-      client <- gisfin::GeoStatFiWFSClient$new(request)
-      layers <- client$listLayers()
-      
-      availableLayers <- layers[grep("vaki\\d+_5km", layers)]
-      availableYears <- as.integer(substr(availableLayers, 17, 20))
-      nearestIndex <- sapply(years, function(x) which.min(abs(x-availableYears)))
-      nearestYears <- unique(availableYears[nearestIndex])
-
-      for (i in 1:length(availableYears)) {
-        nearestYear <- availableYears[i]
-        nearestLayer <- availableLayers[i]
-        focalYears <- years[availableYears[nearestIndex] == nearestYear]
-        
-        request$getPopulation(nearestLayer)
-        client <- gisfin::GeoStatFiWFSClient$new(request)
-        populationLayer <- client$getLayer(layerName)
-        x <- sp::SpatialPixelsDataFrame(coordinates(populationLayer), populationLayer@data[,"vaesto", drop=F], proj4string=populationLayer@proj4string)
-        population <- raster::stack(x)
-                
-        for (year in focalYears) {
-          # process movements
-        }
-      }
-    }
-  )
-)
-
 
 
 
