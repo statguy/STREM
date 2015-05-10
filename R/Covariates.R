@@ -2,7 +2,7 @@
   library(sp)
   library(fields)
   if (proj4string(xy) != proj4string(newXy))
-    xy <- sp::spTransform(xy, proj4string(newXy))
+    xy <- sp::spTransform(xy, sp::CRS(sp::proj4string(newXy)))
   fit <- fields::Tps(sp::coordinates(xy), transFun(xy[[z]]), lambda=0)
   newZ <- predict(fit, sp::coordinates(newXy))
   return(backTransFun(newZ))
@@ -220,8 +220,8 @@ HumanPopulationDensityCovariates <- setRefClass(
           client <- gisfin::GeoStatFiWFSClient$new(request)
           x <- client$getLayer(layer)
           year <- stringr::str_match(layer, "vaki(\\d+)_")[2]
-          y <- sp::spTransform(x, study$studyArea$proj4string)
-          z <- sp::SpatialPixelsDataFrame(coordinates(y), y@data[,"vaesto",drop=F], proj4string=y@proj4string, tolerance=0.7)
+          y <- sp::spTransform(x, sp::CRS(study$studyArea$proj4string))
+          z <- sp::SpatialPixelsDataFrame(points=sp::coordinates(y), data=y@data[,"vaesto",drop=F], proj4string=sp::CRS(y@proj4string), tolerance=0.7)
           populationCache[year] <- z
         }
         saveCache(populationCache)
