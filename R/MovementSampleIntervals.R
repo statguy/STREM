@@ -231,14 +231,14 @@ ThinnedMovementSampleIntervals <- setRefClass(
     addCovariates = function(...) {
       library(plyr)
       covariates <- list(...)
-      values <- ldply(covariates, function(x) {
+      values <- llply(covariates, function(x) {
         if (!inherits(x, "Covariates"))
           stop("Arguments must be of class 'Covariates'.")
         x$preprocess()
         y <- x$extract(getSampleLocations())
         return(y)
       })      
-      associateCovariates(values)
+      do.call(.self$associateCovariates, values)
       return(invisible(.self))
     },
     
