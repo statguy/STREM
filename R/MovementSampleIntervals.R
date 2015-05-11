@@ -137,6 +137,11 @@ ThinnedMovementSampleIntervals <- setRefClass(
     covariateNames = "character"
   ),
   methods = list(
+    saveSampleIntervals = function(fileName=getSampleIntervalsFileName()) {
+      save(intervals, covariateNames, file=fileName)
+      return(invisible(.self))
+    },
+    
     getSampleLocations = function() {
       xyt <- subset(intervals, thin == 1)
       sp::coordinates(xyt) <- ~ x+y
@@ -252,6 +257,7 @@ ThinnedMovementSampleIntervals <- setRefClass(
     },
     
     aggregate = function() {
+      library(plyr)
       x <- ddply(intervals, .(burst, yday, thin), function(x) {
         #estDist <- sum(x$dist, na.rm=T) / sum(x$dt, na.rm=T) * 24 * 60 * 60
         estDist <- sum(x$dist, na.rm=T)
