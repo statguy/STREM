@@ -27,9 +27,10 @@ if (F) {
   tracks <- study$loadTracks()
   sampleIntervals <- ThinnedMovementSampleIntervals$new(study=study)
   sampleIntervals$findSampleIntervals(tracks=tracks$tracks)
+  si <- sampleIntervals$aggregate()
+  ggplot(si, aes(dt/3600, dist)) + geom_point()
   
-  ###
-  
+  #sampleIntervals$getSampleIntervals()
   xyt <- sampleIntervals$getSampleLocations()
   
   covariates <- HumanPopulationDensityCovariates$new(study=study)
@@ -40,9 +41,13 @@ if (F) {
   covariates$preprocess()
   weather <- covariates$extract(xyt)
   
-  #sampleIntervals$associateCovariates(human)
   sampleIntervals$associateCovariates(human, weather)
   sampleIntervals$saveSampleIntervals()
+  
+  library(ggplot2)
+  ggplot(sampleIntervals$intervals, aes(dt / 3600, dist)) + geom_point()
+  ggplot(subset(sampleIntervals$intervals, thin<=10), aes(dt / 3600, dist)) + geom_point()
+  
 }
 else {
   study$preprocess(fmiApiKey=fmiApiKey) 

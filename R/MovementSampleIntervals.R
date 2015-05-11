@@ -75,11 +75,63 @@ MaxApproximateConstantMovementSampleIntervals <- setRefClass(
   )
 )
 
+.retain24HoursBursts <- function(x) {
+  y <- ddply(x, .(burst, yday, thin), function(x) {
+    if (all(is.na(x$dt))) return(NULL)
+    interpolatedDt <- if (is.na(x$dt[length(x$dt)])) 24 * 3600 / length(x$dt) else 0
+    dt <- sum(x$dt, na.rm=T) + interpolatedDt
+    if (dt >= 23 * 3600 & dt <= 25 * 3600) return(x)
+    return(NULL)
+  })
+  message(nrow(x)-nrow(y), " of ", nrow(x), " vectors removed due to not summing up to 24 hours.")
+  return(y)
+}
+
+.retainConstantSamplingIntervalBursts <- function(x) {
+  y <- ddply(x, .(burst, yday, thin), function(x) {
+    dt <- x$dt[!is.na(x$dt)]
+    if (length(dt) <= 1) return(x)
+    if (length(x$dt) >= 48 || length(unique(nextn(dt, 2))) == 1) return(x)
+    else return(NULL)
+  })
+  message(nrow(x)-nrow(y), " of ", nrow(x), " vectors removed due to non-constant sampling interval.")
+  return(y)
+}
+
+.interpolateLastMovement <- function(x) {
+  y <- ddply(x, .(burst, yday, thin), function(x) {        
+    last <- x[nrow(x),]
+    if (is.na(last$dt)) {
+      speed <- sum(x$dist, na.rm=T) / sum(x$dt, na.rm=T)
+      diffFrom24h <- 24 * 3600 - sum(x$dt, na.rm=T)
+      if (diffFrom24h < 0) {
+        warning("There are bursts of over 24h with missing last movement.")
+        diffFrom24h <- 0
+      }
+      x[nrow(x),]$dt <- diffFrom24h
+      x[nrow(x),]$dist <- diffFrom24h * speed
+      #print(x)
+    }
+    return(x)
+  })
+  return(y)
+}
+
+.retainBurstsWithMovementsLessThan12Hours = function(x, maxDt = 12 * 3600 + .5 * 3600) {
+  y <- ddply(x, .(burst, yday, thin), function(x) {
+    if (any(x$dt > maxDt)) return(NULL)
+    else return(x)
+  })
+  message(nrow(x)-nrow(y), " of ", nrow(x), " vectors longer than 12 hours removed.")
+  return(y)
+}
+
 ThinnedMovementSampleIntervals <- setRefClass(
   Class = "ThinnedMovementSampleIntervals",
   contains = "MovementSampleIntervals",
   fields = list(
-    maxThinnings = "numeric"
+    maxThinnings = "numeric",
+    covariateNames = "character"
   ),
   methods = list(
     getSampleLocations = function() {
@@ -88,16 +140,7 @@ ThinnedMovementSampleIntervals <- setRefClass(
       sp::proj4string(xyt) <- study$studyArea$boundary@proj4string
       return(xyt)
     },
-    
-    associateCovariates = function(...) {
-      library(plyr)
-      covariates <- cbind(...)
-      intervals <<- plyr::ddply(intervals, .(thin), function(x, covariates) {
-        return(plyr::join(x, covariates))
-      }, covariates=cbind(data.frame(observation=subset(intervals, thin == 1, select="observation")), covariates))
-      return(invisible(.self))
-    },
-    
+        
     findSampleIntervals = function(tracks) {
       library(plyr)
       library(adehabitatLT)
@@ -105,11 +148,30 @@ ThinnedMovementSampleIntervals <- setRefClass(
       if (!inherits(tracks, "ltraj"))
         stop("Argument 'tracks' must be of class 'ltraj'.")
       
-      if (length(maxDt) == 0) maxDt <<- 12 * 60 * 60 
       x <- adehabitatLT::ld(tracks)
-      x <- x[x$dt <= maxDt,]
-      x$observation <- 1:nrow(x)
+      if (length(maxDt) == 0) maxDt <<- 12 * 60 * 60 + 1800 # Remove vectors of over 12 hours (with tolerance)
+      #index <- x$dt <= maxDt
+      #index[is.na(index)] <- T
+      #x <- x[index,]
+      x$yday <- as.POSIXlt(x$date)$yday
       x$thin <- 1
+      x$observation <- 1:nrow(x)
+      
+      # Retain movements that cover 24 hours
+      y <- .retain24HoursBursts(x)
+      
+      # Detect if the sampling interval is not constant and remove those bursts, but ignore cases
+      # with low intervals (as there is not much low interval data).
+      # Since missing movements cause intervals dt to increase by factor of 2 or more, we can find
+      # equal or closest number that is power of 2 to dt. If all such numbers are equal, we have no
+      # missing movements.
+      y <- .retainConstantSamplingIntervalBursts(y)
+      
+      # 24 hours activity
+      #y$hour <- as.POSIXlt(y$date)$hour
+      #ggplot(y, aes(hour, dist)) + geom_histogram(stat="identity")
+      
+      x <- y
       intervals <<- x
       
       if (length(maxThinnings) == 0) maxThinnings <<- 100
@@ -127,9 +189,13 @@ ThinnedMovementSampleIntervals <- setRefClass(
           x$dist <- c(sqrt((x1$x - x2$x)^2 + (x1$y - x2$y)^2), NA)
           x$dt <- c(unclass(x1$date) - unclass(x2$date), NA)
           
-          x <- x[x$dt <= maxDt,]
+          if (any(x$dt[!is.na(x$dt)] < 0) || any(is.na(x$dt[-length(x$dt)]))) print(x)
+          
+          index <- x$dt <= maxDt
+          index[is.na(index)] <- TRUE
+          if (any(index == FALSE)) return(NULL)
           if (nrow(x) <= 1) return(NULL)
-
+          
           x$thin <- thinFactor
           return(x)
         }, thinFactor=thinFactor)
@@ -139,8 +205,40 @@ ThinnedMovementSampleIntervals <- setRefClass(
         thinFactor <- thinFactor + 1
       }
       
-      intervals <<- intervals[!is.na(intervals$dt),]
+      # Retain movements that cover 24 hours (again)
+      y <- .retain24HoursBursts(intervals)
+      
+      # Interpolate the missing last movements by replacing with mean.
+      # However, the activity at last hours might be different from daytime and thus the estimates could be biased.
+      y <- .interpolateLastMovement(y)
+      
+      # Remove bursts with movements of over 12 hours (with tolerance)
+      intervals <<- .retainBurstsWithMovementsLessThan12Hours(y)
+
       return(invisible(.self))
+    },
+    
+    associateCovariates = function(...) {
+      library(plyr)
+      covariates <- cbind(...)
+      covariateNames <<- colnames(covariates)
+      intervals <<- plyr::ddply(intervals, .(thin), function(x, covariates) {
+        return(plyr::join(x, covariates))
+      }, covariates=cbind(data.frame(observation=subset(intervals, thin == 1, select="observation")), covariates))
+      return(invisible(.self))
+    },
+    
+    aggregate = function() {
+      x <- ddply(intervals, .(burst, yday, thin), function(x) {
+        #estDist <- sum(x$dist, na.rm=T) / sum(x$dt, na.rm=T) * 24 * 60 * 60
+        estDist <- sum(x$dist, na.rm=T)
+        y <- data.frame(id=x$id[1], thin=x$thin[1], year=as.POSIXlt(x$date[1])$year+1900, yday=x$yday[1], dt=mean(x$dt, na.rm=T), dist=estDist,
+                   dt.mean=mean(x$dt, na.rm=T), dt.sd=sd(x$dt, na.rm=T))
+        meanCovariates <- as.list(colMeans(x[,covariateNames]))
+        if (length(meanCovariates) > 0) y <- cbind(y, meanCovariates)
+        return(y)
+      })
+      return(x)      
     }
   )  
 )
