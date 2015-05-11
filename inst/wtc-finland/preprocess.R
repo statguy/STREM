@@ -29,24 +29,29 @@ if (F) {
   sampleIntervals$findSampleIntervals(tracks=tracks$tracks)
   si <- sampleIntervals$aggregate()
   ggplot(si, aes(dt/3600, dist)) + geom_point()
+
+  human <- HumanPopulationDensityCovariates$new(study=study)
+  weather <- WeatherCovariates$new(study=study, apiKey=fmiApiKey)
+  sampleIntervals$intervals <- sampleIntervals$intervals[1:2,]
+  sampleIntervals$addCovariates(human, weather)
   
-  #sampleIntervals$getSampleIntervals()
-  xyt <- sampleIntervals$getSampleLocations()
+  if (F) {
+    #sampleIntervals$getSampleIntervals()
+    xyt <- sampleIntervals$getSampleLocations()
+    
+    covariates <- HumanPopulationDensityCovariates$new(study=study)
+    covariates$preprocess()
+    human <- covariates$extract(xyt)
+    
+    covariates <- WeatherCovariates$new(study=study, apiKey=fmiApiKey)
+    covariates$preprocess()
+    weather <- covariates$extract(xyt)
+    
+    sampleIntervals$associateCovariates(human, weather)
+  }
   
-  covariates <- HumanPopulationDensityCovariates$new(study=study)
-  covariates$preprocess()
-  human <- covariates$extract(xyt)
-  
-  covariates <- WeatherCovariates$new(study=study, apiKey=fmiApiKey)
-  covariates$preprocess()
-  weather <- covariates$extract(xyt)
-  
-  sampleIntervals$associateCovariates(human, weather)
   sampleIntervals$saveSampleIntervals()
-  
-  library(ggplot2)
-  ggplot(sampleIntervals$intervals, aes(dt / 3600, dist)) + geom_point()
-  ggplot(subset(sampleIntervals$intervals, thin<=10), aes(dt / 3600, dist)) + geom_point()
+
   
 }
 else {

@@ -228,6 +228,20 @@ ThinnedMovementSampleIntervals <- setRefClass(
       return(invisible(.self))
     },
     
+    addCovariates = function(...) {
+      library(plyr)
+      covariates <- list(...)
+      values <- ldply(covariates, function(x) {
+        if (!inherits(x, "Covariates"))
+          stop("Arguments must be of class 'Covariates'.")
+        x$preprocess()
+        y <- x$extract(getSampleLocations())
+        return(y)
+      })      
+      associateCovariates(values)
+      return(invisible(.self))
+    },
+    
     aggregate = function() {
       x <- ddply(intervals, .(burst, yday, thin), function(x) {
         #estDist <- sum(x$dist, na.rm=T) / sum(x$dt, na.rm=T) * 24 * 60 * 60
