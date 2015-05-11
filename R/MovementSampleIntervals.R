@@ -87,7 +87,7 @@ MaxApproximateConstantMovementSampleIntervals <- setRefClass(
     if (dt >= 23 * 3600 & dt <= 25 * 3600) return(x)
     return(NULL)
   })
-  message(nrow(x)-nrow(y), " of ", nrow(x), " vectors removed due to not summing up to 24 hours.")
+  message(nrow(x)-nrow(y), " of ", nrow(x), " vectors removed due to not summing up to 24 hours (with tolerance).")
   return(y)
 }
 
@@ -110,11 +110,10 @@ MaxApproximateConstantMovementSampleIntervals <- setRefClass(
       diffFrom24h <- 24 * 3600 - sum(x$dt, na.rm=T)
       if (diffFrom24h < 0) {
         warning("There are bursts of over 24h with missing last movement.")
-        diffFrom24h <- 0
+        return(NULL)
       }
       x[nrow(x),]$dt <- diffFrom24h
       x[nrow(x),]$dist <- diffFrom24h * speed
-      #print(x)
     }
     return(x)
   })
@@ -217,8 +216,14 @@ ThinnedMovementSampleIntervals <- setRefClass(
       y <- .interpolateLastMovement(y)
       
       # Remove bursts with movements of over 12 hours (with tolerance)
-      intervals <<- .retainBurstsWithMovementsLessThan12Hours(y)
+      y <- .retainBurstsWithMovementsLessThan12Hours(y)
 
+      # Final corrections
+      intervals <<- ddply(y, .(burst, yday, thin), function(x) {
+        if (any(x$dist == 0)) x$dist[x$dist == 0] <- 1 # Set 1 meter if 0 meter distance (because the prediction model uses log-distances)
+        return(x)
+      })
+      
       return(invisible(.self))
     },
     
