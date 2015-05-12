@@ -15,12 +15,15 @@ study <- FinlandWTCStudy$new(context=context)
 if (F) {
   study$response <- "canis.lupus"
   
+  intersections <- study$loadIntersections(predictDistances=FALSE)
+  intersections$saveIntersections()
+  
   ###
   
   tracks <- study$loadTracks()
   habitatWeights <- CORINEHabitatWeights$new(study=study)
-  habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=F)
-  habitatWeights <- CORINEHabitatWeights$new(study=study)$setHabitatSelectionWeights(habitatSelection)
+  habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=T)
+  #habitatWeights <- CORINEHabitatWeights$new(study=study)$setHabitatSelectionWeights(habitatSelection)
   
   ###
   
@@ -34,14 +37,13 @@ if (F) {
   weather <- WeatherCovariates$new(study=study, apiKey=fmiApiKey)
   #sampleIntervals$intervals <- sampleIntervals$intervals[1:10,]
   sampleIntervals$setCovariatesId()$addCovariates(human, weather)
-  sampleIntervals$saveSampleIntervals()
+  sampleIntervals$saveCovariates()
   
   ###
   
   human <- HumanPopulationDensityCovariates$new(study=study)
   weather <- WeatherCovariates$new(study=study, apiKey=fmiApiKey)
   intersections <- study$loadIntersections(predictDistances=FALSE)
-  intersections$saveIntersections()
   intersections$setCovariatesId(tag="distance")
   intersections$addCovariates(human, weather)
   intersections$saveCovariates()
@@ -50,15 +52,23 @@ if (F) {
   
   intersections <- FinlandWTCIntersections$new(study=study)$loadIntersections()
   intersections$setCovariatesId(tag="density")
-  #intersections$loadCovariates()
-  habitat <- HabitatSmoothCovariates$new(study=study, scales=2^(1:10) * 62.5)
+  #intersections$intersections <- intersections$intersections[15:30,]
+  #habitat <- HabitatSmoothCovariates$new(study=study, scales=c(62.5,125))
+  #habitat <- HabitatSmoothCovariates$new(study=study, scales=64000)
+  habitat <- HabitatSmoothCovariates$new(study=study, scales=2^(0:10) * 62.5)
   intersections$addCovariates(habitat)
   intersections$saveCovariates()
+
+  
+  #intersections <- FinlandWTCIntersections$new(study=study)$loadIntersections()
+  #intersections$setCovariatesId(tag="density")
+  #intersections$intersections <- intersections$intersections[15:30,]
+  #habitat <- HabitatSmoothCovariates$new(study=study, scales=c(62.5,125))
+  #intersections$addCovariates(habitat)
+  #intersections$intersections@data
   
   ###
   
-  sampleIntervals <- ThinnedMovementSampleIntervals$new(study=study)$setCovariatesId()
-  sampleIntervals$loadSampleIntervals()
   
   fit <- function(covariatesFormula=~ human + rrday + snow + tday -1, iterations=1000, chains=1) {
     library(rstan)
@@ -122,6 +132,10 @@ if (F) {
     matrix[n_obs,n_fixed] fixed_model_matrix;
     int<lower=1> n_predicts;
     vector[n_predicts] predict_dt;
+    
+    int<lower=1> n_pred_observations;
+    int<lower=1> n_pred_covariates;
+    matrix[n_pred_observations,n_pred_covariates] pred_fixed_model_matrix;
     }
     parameters {
     real<lower=0> alpha;
@@ -142,23 +156,27 @@ if (F) {
     }
     generated quantities {
     vector[n_predicts] predicted_dist;
-    predicted_dist <- exp(intercept - alpha * log(predict_dt));
     
-    vector[n_pred] pred_dist_7halfmin;
-    vector[n_pred] pred_dist_15min;
-    vector[n_pred] pred_dist_30min;
-    vector[n_pred] pred_dist_1h;
-    vector[n_pred] pred_dist_2h;
-    vector[n_pred] pred_dist_4h;
-    pred_dist_7halfmin <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(7.5/60))
-    pred_dist_15min <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(15/60))
-    pred_dist_30min <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(30/60))
-    pred_dist_1h <- exp(intercept + pred_fixed_model_matrix * fixed_effect)
-    pred_dist_2h <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(2))
-    pred_dist_4h <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(4))
+    vector[n_pred_observations] pred_dist_7halfmin;
+    vector[n_pred_observations] pred_dist_15min;
+    vector[n_pred_observations] pred_dist_30min;
+    vector[n_pred_observations] pred_dist_1h;
+    vector[n_pred_observations] pred_dist_2h;
+    vector[n_pred_observations] pred_dist_4h;
+
+    predicted_dist <- exp(intercept - alpha * log(predict_dt));
+
+    pred_dist_7halfmin <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(0.125));
+    pred_dist_15min <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(0.25));
+    pred_dist_30min <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(0.50));
+    pred_dist_1h <- exp(intercept + pred_fixed_model_matrix * fixed_effect);
+    pred_dist_2h <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(2));
+    pred_dist_4h <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(4));
     }
     '
     
+    sampleIntervals <- ThinnedMovementSampleIntervals$new(study=study)$setCovariatesId()
+    sampleIntervals$loadCovariates()
     movements <- sampleIntervals$aggregate()
     movements$distKm <- movements$dist / 1000
     movements$dtH <- movements$dt / 3600
@@ -192,13 +210,16 @@ if (F) {
       n_fixed = ncol(fixed_model_matrix),
       fixed_model_matrix = fixed_model_matrix,
       
-      pred_fixed_model_matrix = pred_fixed_model_matrix,
-      n_pred = ncol(pred_fixed_model_matrix)
+      n_pred_observations = nrow(pred_fixed_model_matrix),
+      n_pred_covariates = ncol(pred_fixed_model_matrix),
+      pred_fixed_model_matrix = pred_fixed_model_matrix      
     ))
     
     estimationResult <<- stan(model_code=intercept_only_code, data=data, iter=iterations, chains=chains)
     estimationResult <<- stan(model_code=fixed_effects_code, data=data, iter=iterations, chains=chains)
     estimationResult <<- stan(model_code=mixed_effects_code, data=data, iter=iterations, chains=chains)
+    
+    extract(estimationResult, "fixed_effect")
     
     index <- stringr::str_subset(names(estimationResult@sim$samples[[1]]), "predicted_dist")
     predicted_dist <- do.call(c, lapply(estimationResult@sim$samples[[1]][index], mean))
