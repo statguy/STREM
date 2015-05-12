@@ -23,13 +23,15 @@ HabitatSelection <- setRefClass(
     
     getNullModelMovementHabitatDistributions = function(movements, habitatWeightsTemplate, nSamples) {
       library(plyr)
+      library(raster)
+      library(sp)
       
       movements <- movements[!(is.na(movements$x) | is.na(movements$y) | is.na(movements$dx) | is.na(movements$dy)),]      
       
       p <- dlply(movements, .(id, burst), function(m, habitat, habitatWeightsTemplate, nSamples) {
-        library(raster)
-        library(sp)
-        message("Burst = ", m$burst[1], ", n = ", nrow(m))
+        if (nrow(m) < 50) return(NULL)
+        
+        message("Processing burst = ", m$burst[1], ", n = ", nrow(m), " for potential movements...")
         
         locations <- m[,c("x","y")]
         p <- habitatWeightsTemplate$getHabitatFrequencies(c())
@@ -59,7 +61,9 @@ HabitatSelection <- setRefClass(
       if (nrow(movements) > maxTracks) movements <- sample_n(movements, maxTracks)
       
       p <- dlply(movements, .(id, burst), function(m, habitat, habitatWeightsTemplate) {
-        message("Processing burst = ", m$burst[1], " n = ", nrow(m), "...")
+        if (nrow(m) < 50) return(NULL)
+        
+        message("Processing burst = ", m$burst[1], " n = ", nrow(m), " for actual movements...")
         
         locations <- m[,c("x","y")]
         habitatSample <- raster::extract(habitat, SpatialPoints(locations, CRS(projection(habitat))))  
