@@ -56,10 +56,12 @@ CovariatesContainer <- setRefClass(
 .interpolateSP = function(xy, z, newXy, transFun=identity, backTransFun=identity) {
   library(sp)
   library(fields)
+  if (sum(!is.na(xy[[z]])) == 0) rep(NA, nrow(xy))
+  if (sum(!is.na(xy[[z]])) < 10) rep(mean(xy[[z]]), nrow(xy))
   if (proj4string(xy) != proj4string(newXy))
-    xy <- sp::spTransform(xy, sp::CRS(sp::proj4string(newXy)))
+    xy <- sp::spTransform(xy, sp::CRS(sp::proj4string(newXy)))  
   fit <- fields::Tps(sp::coordinates(xy), transFun(xy[[z]]), lambda=0)
-  newZ <- predict(fit, sp::coordinates(newXy))
+  newZ <- as.numeric(predict(fit, sp::coordinates(newXy)))
   return(backTransFun(newZ))
 }
 
@@ -224,8 +226,12 @@ WeatherCovariates <- setRefClass(
         client <- fmi::FMIWFSClient$new(request=request)
         response <- client$getDailyWeather(variables=c("rrday","snow","tday"), startDateTime=date, endDateTime=date, bbox=fmi::getFinlandBBox())
         xytSubset <- xyt[as.Date(xyt$date) == date,]
-        rrday <- .interpolateSP(subset(response, variable == "rrday"), "measurement", xytSubset, sqrt, square)
-        snow <- .interpolateSP(subset(response, variable == "snow"), "measurement", xytSubset, sqrt, square)
+        rrday <- subset(response, variable == "rrday")
+        rrday$measurement[rrday$measurement < 0] <- 0
+        rrday <- .interpolateSP(rrday, "measurement", xytSubset, sqrt, square)
+        snow <- subset(response, variable == "snow")
+        snow$measurement[snow$measurement < 0] <- 0       
+        snow <- .interpolateSP(snow, "measurement", xytSubset, sqrt, square)
         tday <- .interpolateSP(subset(response, variable == "tday"), "measurement", xytSubset)
         covariates <- rbind(covariates, data.frame(rrday=rrday, snow=snow, tday=tday))
         counter <- counter + 1
