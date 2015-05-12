@@ -71,10 +71,9 @@ MaxApproximateConstantMovementSampleIntervals <- setRefClass(
       if (length(bandWidth) == 0) bandWidth <<- 10 * 60 # 10 minutes default bandwidth
       d <- density(x$dt, bw=bandWidth, kernel="gaussian")
       retainDt <- d$x[which.max(d$y)] + c(-bandWidth, bandWidth) / 2
-      
       message("Sampling interval with max observations: min dt = ", retainDt[1], ", max dt = ", retainDt[2])
-      
       intervals <<- x[x$dt >= retainDt[1] & x$dt <= retainDt[2],]
+      message("Retained ", nrow(intervals), " movement vectors.")
       return(invisible(.self))
     }  
   )
