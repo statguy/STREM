@@ -29,9 +29,11 @@ HabitatSelection <- setRefClass(
       movements <- movements[!(is.na(movements$x) | is.na(movements$y) | is.na(movements$dx) | is.na(movements$dy)),]      
       
       p <- dlply(movements, .(id, burst), function(m, habitat, habitatWeightsTemplate, nSamples) {
-        if (nrow(m) < 50) return(NULL)
-        
         message("Processing burst = ", m$burst[1], ", n = ", nrow(m), " for potential movements...")
+        if (nrow(m) < 50) {
+          message("Aborted, must have at least 50 movement vectors.")
+          return(NULL)
+        }
         
         locations <- m[,c("x","y")]
         p <- habitatWeightsTemplate$getHabitatFrequencies(c())
@@ -39,8 +41,6 @@ HabitatSelection <- setRefClass(
         for (i in 1:nrow(locations)) {
           location <- locations[i,]
           randomizedLocations <- randomizeSteps(movements=m, location=location, nSamples=nSamples)
-          #randomizedSteps <- m[sample(1:nrow(m), min(nSamples, nrow(m))), c("dx","dy")]
-          #randomizedLocations <- cbind(x=location$x + randomizedSteps$dx, y=location$y + randomizedSteps$dy)
           habitatSample <- raster::extract(habitat, SpatialPoints(randomizedLocations, CRS(projection(habitat))))    
           p <- p + habitatWeightsTemplate$getHabitatFrequencies(habitatSample)
         }
@@ -61,10 +61,12 @@ HabitatSelection <- setRefClass(
       if (nrow(movements) > maxTracks) movements <- sample_n(movements, maxTracks)
       
       p <- dlply(movements, .(id, burst), function(m, habitat, habitatWeightsTemplate) {
-        if (nrow(m) < 50) return(NULL)
-        
         message("Processing burst = ", m$burst[1], " n = ", nrow(m), " for actual movements...")
-        
+        if (nrow(m) < 50) {
+          message("Aborted, must have at least 50 movement vectors.")
+          return(NULL)
+        }
+                
         locations <- m[,c("x","y")]
         habitatSample <- raster::extract(habitat, SpatialPoints(locations, CRS(projection(habitat))))  
         p <- prop.table(habitatWeightsTemplate$getHabitatFrequencies(habitatSample))
@@ -73,40 +75,6 @@ HabitatSelection <- setRefClass(
       
       x <- do.call(rbind, p)
       return(as.data.frame(x))
-    },
-
-    DEPRECATED_getMovements = function(tracks) {
-      #tracks$sample(nCollaredIndividuals)
-      intervals <- tracks$getSampleIntervals()
-      maxIntervalH <- as.numeric(names(which.max(table(intervals$intervals$intervalH))))
-      maxIntervals <- subset(intervals$intervals, intervalH == maxIntervalH)
-
-      tracksDF <- if (inherits(tracks$tracks, "ltraj")) ld(tracks$tracks) else tracks$tracks
-      tracksDF <- subset(tracksDF, burst %in% maxIntervals$burst & id %in% maxIntervals$individualId)
-      
-      #library(dplyr)
-      #tracks$tracks %.%
-      #  filter(burst %in% maxIntervals$burst, id %in% maxIntervals$individualId) %.%
-      #  group_by(burst) %.%
-      #  mutate(dx=x[2:n()] - x[1:(n()-1)], dy=y[2:n()] - y[1:(n()-1)])
-      
-      return(tracksDF)
-    },
-    
-    DEPRECATED_getHabitatPreferences = function(tracks, habitatWeightsTemplate, nSamples=10, save=FALSE) {
-      message("Finding tracks with highest number of samples and constant frequency...")
-      tracksDF <- getMovements(tracks)
-      
-      message("Estimating potential habitat usage...")
-      nullModelUsage <<- getNullModelMovementHabitatDistributions(movements=tracksDF, habitatWeightsTemplate=habitatWeightsTemplate, nSamples=nSamples)
-      message("Counting actual habitat usage...")
-      realizedUsage <<- getRealizedMovementHabitatDistributions(movements=tracksDF, habitatWeightsTemplate=habitatWeightsTemplate)
-      relativeUsage <<- as.data.frame(as.list(colSums(realizedUsage) / colSums(nullModelUsage)))
-      #relativeUsage95 <<- 
-      
-      if (save) saveHabitatSelection()
-      
-      return(invisible(.self))
     },
 
     getHabitatPreferences = function(intervals, habitatWeightsTemplate, nSamples=10, save=FALSE) {
@@ -141,34 +109,6 @@ HabitatSelection <- setRefClass(
       return(invisible(.self))
     },
     
-    DEPRECATED_plotSampleSteps = function(tracks, plot=TRUE, index=1:5) {
-      library(sp)
-      library(raster)
-      library(rasterVis)
-      library(grid)
-      
-      movements <- getMovements(tracks)
-      movements <- movements[!(is.na(movements$x) | is.na(movements$y) | is.na(movements$dx) | is.na(movements$dy)),]
-      location <- movements[index[length(index)/2],,drop=FALSE]
-      path <- movements[index,c("x","y")]
-      randomizedLocations <- randomizeSteps(movements=movements, location=location, nSamples=30)
-      randomVectors <- adply(randomizedLocations, 1, function(y, x) data.frame(x=x[1], y=x[2], xend=y[1], yend=y[2]), x=location[,c("x","y"),drop=F])
-      
-      xy <- SpatialPoints(rbind(path, randomizedLocations), proj4string=study$studyArea$proj4string)
-      habitat <- crop(study$studyArea$habitat, extent(xy) * 1.1)
-      
-      p <- gplot(habitat) + geom_raster(aes(fill=as.factor(value))) +
-        scale_fill_manual(values=habitat@legend@colortable) +
-        coord_equal() + theme_raster() +
-        geom_segment(data=randomVectors, aes(x=x, y=y, xend=xend, yend=yend), colour="darkgrey", size=2, arrow=arrow()) +
-        geom_point(data=randomVectors, aes(x=xend, y=yend), colour="darkgrey", size=6, alpha=1) +
-        geom_segment(data=path, aes(x=x, y=y, xend=c(tail(x,-1), NA), yend=c(tail(y,-1), NA) ), colour="black", size=2, arrow=arrow()) +
-        geom_point(data=path, aes(x=x, y=y), colour="black", size=6, alpha=1)
-      if (plot) print(p)
-      
-      return(p)
-    },
-    
     show = function() {
       cat("Habitat null model usage:\n")
       print(colMeans(nullModelUsage))
@@ -191,13 +131,6 @@ SimulationHabitatSelection <- setRefClass(
       if (inherits(study, "undefinedField") | length(iteration) == 0)
         stop("Provide study and iteration parameters.")
       return(study$context$getLongFileName(study$context$scratchDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region, tag=iteration))
-      #return(study$context$getFileName(dir=study$context$resultDataDirectory, name="HabitatWeights", response=study$response, region=study$studyArea$region))
-    },
-    
-    DEPRECATED_getMovements = function(tracks) {
-      tracks$sample(nCollaredIndividuals)
-      tracksDF <- callSuper(tracks)      
-      return(tracksDF)
     }
   )
 )
