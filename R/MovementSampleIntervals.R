@@ -1,5 +1,6 @@
 MovementSampleIntervals <- setRefClass(
   Class = "MovementSampleIntervals",
+  contains = "CovariatesContainer",
   fields = list(
     study = "ANY",
     intervals = "data.frame",
@@ -10,25 +11,25 @@ MovementSampleIntervals <- setRefClass(
       stop("Unimplemented method.")
     },
     
-    getSampleIntervals = function() intervals,
+    getSampleIntervals = function() intervals
     
-    getSampleIntervalsFileName = function() {
-      if (inherits(study, "uninitializedField"))
-        stop("Parameter 'study' must be provided.")
-      if (length(study$response) == 0)
-        stop("Parameter 'response' for 'study' must be defined.")
-      return(context$getFileName(dir=study$context$processedDataDirectory, name="MovementSampleIntervals", response=study$response, region=study$studyArea$region))
-    },
+    #getSampleIntervalsFileName = function() {
+    #  if (inherits(study, "uninitializedField"))
+    #    stop("Parameter 'study' must be provided.")
+    #  if (length(study$response) == 0)
+    #    stop("Parameter 'response' for 'study' must be defined.")
+    #  return(context$getFileName(dir=study$context$processedDataDirectory, name="MovementSampleIntervals", response=study$response, region=study$studyArea$region))
+    #},
     
-    saveSampleIntervals = function(fileName=getSampleIntervalsFileName()) {
-      save(intervals, file=fileName)
-      return(invisible(.self))
-    },
+    #saveSampleIntervals = function(fileName=getSampleIntervalsFileName()) {
+    #  save(intervals, file=fileName)
+    #  return(invisible(.self))
+    #},
     
-    loadSampleIntervals = function(fileName=getSampleIntervalsFileName()) {
-      load(fileName, env=as.environment(.self))
-      return(invisible(.self))
-    }
+    #loadSampleIntervals = function(fileName=getSampleIntervalsFileName()) {
+    #  load(fileName, env=as.environment(.self))
+    #  return(invisible(.self))
+    #}
   )
 )
 
@@ -131,24 +132,22 @@ MaxApproximateConstantMovementSampleIntervals <- setRefClass(
 
 ThinnedMovementSampleIntervals <- setRefClass(
   Class = "ThinnedMovementSampleIntervals",
-  contains = "MovementSampleIntervals",
+  contains = c("MovementSampleIntervals"),
   fields = list(
-    maxThinnings = "numeric",
-    covariateNames = "character"
+    maxThinnings = "numeric"
+    #covariateNames = "character"
   ),
   methods = list(
+    setCovariatesId = function(tag=study$response) {
+      covariatesId <<- paste0("MovementSampleIntervals-", tag)
+      return(invisible(.self))
+    },
+    
     saveSampleIntervals = function(fileName=getSampleIntervalsFileName()) {
       save(intervals, covariateNames, file=fileName)
       return(invisible(.self))
     },
-    
-    getSampleLocations = function() {
-      xyt <- subset(intervals, thin == 1)
-      sp::coordinates(xyt) <- ~ x+y
-      sp::proj4string(xyt) <- study$studyArea$boundary@proj4string
-      return(xyt)
-    },
-        
+            
     findSampleIntervals = function(tracks) {
       library(plyr)
       library(adehabitatLT)
@@ -232,29 +231,41 @@ ThinnedMovementSampleIntervals <- setRefClass(
       return(invisible(.self))
     },
     
+    saveCovariates = function(fileName=getCovariatesFileName()) {
+      save(intervals, covariateNames, file=fileName)
+      return(invisible(.self))
+    },
+    
+    getSampleLocations = function() {
+      xyt <- subset(intervals, thin == 1)
+      sp::coordinates(xyt) <- ~ x+y
+      sp::proj4string(xyt) <- study$studyArea$boundary@proj4string
+      return(xyt)
+    },
+    
     associateCovariates = function(...) {
       library(plyr)
       covariates <- cbind(...)
-      covariateNames <<- colnames(covariates)
+      #covariateNames <<- colnames(covariates)
       intervals <<- plyr::ddply(intervals, .(thin), function(x, covariates) {
         return(plyr::join(x, covariates))
       }, covariates=cbind(data.frame(observation=subset(intervals, thin == 1, select="observation")), covariates))
       return(invisible(.self))
     },
     
-    addCovariates = function(...) {
-      library(plyr)
-      covariates <- list(...)
-      values <- llply(covariates, function(x) {
-        if (!inherits(x, "Covariates"))
-          stop("Arguments must be of class 'Covariates'.")
-        x$preprocess()
-        y <- x$extract(getSampleLocations())
-        return(y)
-      })      
-      do.call(.self$associateCovariates, values)
-      return(invisible(.self))
-    },
+    #addCovariates = function(...) {
+    #  library(plyr)
+    #  covariates <- list(...)
+    #  values <- llply(covariates, function(x) {
+    #    if (!inherits(x, "Covariates"))
+    #      stop("Arguments must be of class 'Covariates'.")
+    #    x$preprocess()
+    #    y <- x$extract(getSampleLocations())
+    #    return(y)
+    #  })      
+    #  do.call(.self$associateCovariates, values)
+    #  return(invisible(.self))
+    #},
     
     aggregate = function() {
       library(plyr)

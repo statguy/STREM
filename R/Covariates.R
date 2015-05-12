@@ -1,3 +1,58 @@
+CovariatesContainer <- setRefClass(
+  Class = "CovariatesContainer",
+  fields = list(
+    study = "ANY",
+    covariatesId = "character",
+    covariateNames = "character"
+  ),
+  methods = list(
+    getCovariatesFileName = function() {
+      if (inherits(study, "undefinedField"))
+        stop("Parameter 'study' must be specified.")
+      if (length(covariatesId) == 0)
+        stop("Parameter 'covariatesId' must be specified.")
+      return(context$getFileName(dir=study$context$processedDataDirectory, name="Covariates", response=covariatesId, region=study$studyArea$region))
+    },
+    
+    saveCovariates = function(fileName=getCovariatesFileName()) {
+      stop("Unimplemented method.")
+    },
+    
+    loadCovariates = function(fileName=getCovariatesFileName()) {
+      load(fileName, env=as.environment(.self))
+    },
+    
+    setCovariatesId = function(tag) {
+      stop("Unimplemented method.")
+    },
+    
+    getSampleLocations = function(...) {
+      stop("Unimplemented method.")
+    },
+    
+    associateCovariates = function(...) {
+      stop("Unimplemented method.")
+    },
+    
+    addCovariates = function(...) {
+      library(plyr)
+      covariates <- list(...)
+      values <- llply(covariates, function(x) {
+        if (!inherits(x, "CovariatesObtainer"))
+          stop("Arguments must be of class 'Covariates'.")
+        x$preprocess()
+        y <- x$extract(getSampleLocations())
+        return(y)
+      })
+      covariateNames <<- do.call(c, lapply(values, colnames))
+      do.call(.self$associateCovariates, values)
+      return(invisible(.self))
+    }  
+  )
+)
+
+###
+
 .interpolateSP = function(xy, z, newXy, transFun=identity, backTransFun=identity) {
   library(sp)
   library(fields)
@@ -96,8 +151,8 @@
   return(smoothPixels)
 }
 
-Covariates <- setRefClass(
-  Class = "Covariates",
+CovariatesObtainer <- setRefClass(
+  Class = "CovariatesObtainer",
   fields = list(
     study = "Study",
     covariateId = "character"
@@ -135,21 +190,9 @@ Covariates <- setRefClass(
   )
 )
 
-SmoothCovariates <- setRefClass(
-  Class = "SmoothCovariates",
-  contains = "Covariates",
-  fields = list(
-    scales = "numeric"  
-  ),
-  methods = list(
-    
-    
-  )
-)
-
 WeatherCovariates <- setRefClass(
   Class = "WeatherCovariates",
-  contains = "Covariates",
+  contains = "CovariatesObtainer",
   fields = list(
     apiKey = "character"
   ),
@@ -195,7 +238,7 @@ WeatherCovariates <- setRefClass(
 
 HumanPopulationDensityCovariates <- setRefClass(
   Class = "HumanPopulationDensityCovariates",
-  contains = "Covariates",
+  contains = "CovariatesObtainer",
   fields = list(
     apiKey = "character"
   ),
@@ -232,9 +275,12 @@ HumanPopulationDensityCovariates <- setRefClass(
     extract = function(xyt) {
       if (existCache() == FALSE)
         stop("Cache does not exist. Must run preprocess() first.")
+      if (!inherits(xyt, "SpatialPointsDataFrame"))
+        stop("Argument 'xyt' must be of class 'SpatialPointsDataFrame'.")
+
       populationCache <- loadCache()
       availYears <- as.numeric(names(populationCache))
-      years <- as.POSIXlt(xyt$date)$year + 1900
+      years <- as.POSIXlt(xyt@data[,1])$year + 1900
       uniqueYears <- unique(years)
       covariates <- list()
       counter <- 1
@@ -255,7 +301,7 @@ HumanPopulationDensityCovariates <- setRefClass(
 
 SmoothHabitatCovariates <- setRefClass(
   Class = "SmoothHabitatCovariates",
-  contains = "SmoothCovariates",
+  contains = "CovariatesObtainer",
   field = list(
   ),
   methods = list(

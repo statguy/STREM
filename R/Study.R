@@ -234,14 +234,16 @@ FinlandWTCStudy <- setRefClass(
     loadIntersections = function(predictDistances=TRUE) {
       intersections <- FinlandWTCIntersections$new(study=.self)
       intersections$loadIntersections()
-      intersections$loadCovariates()
-      
-      if (predictDistances) intersections$predictDistances()
-      else {
+      #intersections$loadCovariates()
+      #if (predictDistances) intersections$predictDistances()
+      #else {
+      #  tracks <- loadTracks()
+      #  intersections$intersections$distance <- tracks$getMeanDistance()
+      #}
+      if (predictDistances) {
         tracks <- loadTracks()
         intersections$intersections$distance <- tracks$getMeanDistance()
       }
-      
       return(intersections)
     },
     

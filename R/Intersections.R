@@ -2,6 +2,7 @@ library(sp)
 
 Intersections <- setRefClass(
   Class = "Intersections",
+  contains = "CovariatesContainer",
   fields = list(
     study = "Study",
     intersections = "SpatialPointsDataFrame"
@@ -66,9 +67,41 @@ Intersections <- setRefClass(
       return(invisible(.self))
     },
     
-    augment = function() {
-      stop("Unimplemeted method.")
+    ###
+    saveCovariates = function(fileName=getCovariatesFileName()) {
+      save(intersections, covariateNames, file=fileName)
+      return(invisible(.self))
+    },
+    
+    setCovariatesId = function(tag="") {
+      covariatesId <<- paste0("Intersections-", tag)
+      return(invisible(.self))
+    },
+    
+    getSampleLocations = function(...) {
+      return(intersections[,"date",drop=F])
+    },
+    
+    associateCovariates = function(...) {
+      covariates <- cbind(...)
+      #covariateNames <<- colnames(covariates)
+      intersections@data <<- cbind(intersections@data, covariates)
+      return(invisible(.self))
     }
+    
+    #addCovariates = function(...) {
+    #  library(plyr)
+    #  covariates <- list(...)
+    #  values <- llply(covariates, function(x) {
+    #    if (!inherits(x, "Covariates"))
+    #      stop("Arguments must be of class 'Covariates'.")
+    #    x$preprocess()
+    #    y <- x$extract(getSampleLocations())
+    #    return(y)
+    #  })      
+    #  do.call(.self$associateCovariates, values)
+    #  return(invisible(.self))
+    #}
   )
 )
 
@@ -253,7 +286,7 @@ SimulatedIntersections <- setRefClass(
       message("Saving intersections to ", fileName)
       save(intersections, intersectionsMatrix, iteration, file=fileName)
     },
-
+    
     getIntersectionFileIterations = function() {
       if (inherits(study, "undefinedField"))
         stop("Provide study parameter.")
@@ -264,13 +297,13 @@ SimulatedIntersections <- setRefClass(
 
 FinlandWTCIntersections <- setRefClass(
   Class = "FinlandWTCIntersections",
-  contains = c("Intersections", "FinlandCovariates"),
+  contains = c("Intersections"),
   fields = list(
     maxDuration = "numeric"
   ),
   methods = list(
     initialize = function(maxDuration=Inf, ...) {
-      callSuper(covariatesName="FinlandWTCIntersectionsCovariates", ...)
+      callSuper(...)
       maxDuration <<- maxDuration
       return(invisible(.self))
     },
@@ -296,11 +329,12 @@ FinlandWTCIntersections <- setRefClass(
       wtc$response <- study$response
       wtc <- subset(wtc, response==response)
       
-      wtc$date <- strptime(wtc$date, "%Y%m%d")
-      date <- as.POSIXlt(wtc$date)
+      date <- strptime(wtc$date, "%Y%m%d", tz="EET")
+      date <- as.POSIXlt(date)
       index <- date$year == 0
       date$year[index] <- 100
       wtc$date <- as.POSIXct(date)
+      wtc <- wtc[date$year >= 80 & date$year <= 150,]
       
       wtc$x <- (wtc$x+3000)*1000
       wtc$y <- wtc$y*1000
@@ -327,11 +361,6 @@ FinlandWTCIntersections <- setRefClass(
         delete(getPolygonRectangle(c(3.31,3.684)*1e6, c(7.2,6.92)*1e6, intersections@proj4string))
       
       save(intersections, file=getIntersectionsFileName())
-      return(invisible(.self))
-    },
-    
-    predictDistances = function(formula=study$getDistanceCovariatesModel(), intervalH=study$getTrackSampleInterval()) {
-      intersections$distance <<- study$predictDistances(formula=formula, data=covariates, intervalH=intervalH)      
       return(invisible(.self))
     }
   )
