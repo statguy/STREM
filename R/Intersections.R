@@ -79,29 +79,15 @@ Intersections <- setRefClass(
     },
     
     getSampleLocations = function(...) {
-      return(intersections[,"date",drop=F])
+      return(intersections[,"date",drop=FALSE])
+      return(xyt)
     },
     
     associateCovariates = function(...) {
       covariates <- cbind(...)
-      #covariateNames <<- colnames(covariates)
       intersections@data <<- cbind(intersections@data, covariates)
       return(invisible(.self))
     }
-    
-    #addCovariates = function(...) {
-    #  library(plyr)
-    #  covariates <- list(...)
-    #  values <- llply(covariates, function(x) {
-    #    if (!inherits(x, "Covariates"))
-    #      stop("Arguments must be of class 'Covariates'.")
-    #    x$preprocess()
-    #    y <- x$extract(getSampleLocations())
-    #    return(y)
-    #  })      
-    #  do.call(.self$associateCovariates, values)
-    #  return(invisible(.self))
-    #}
   )
 )
 

@@ -68,6 +68,43 @@ CovariatesContainer <- setRefClass(
 
 # Smoothed single points
 
+
+
+.saveRawDiscreteRaster <- function(r, processValues, edgeValues, rowAdd=1000) {
+  maskFileName <- tempfile()
+  maskFile <- file(maskFileName, "wb")
+  edgeFileName <- tempfile()
+  edgeFile <- file(edgeFileName, "wb")
+  row <- 1
+  exit <- FALSE
+  while (exit == FALSE) {
+    if (row + rowAdd > nrow(r) + 1) {
+      rowAdd <- nrow(r) + 1 - row
+      exit <- TRUE
+    }
+    message("Processing row ", row-1, "/", nrow(r), ", reading ", rowAdd, " lines...")
+    scanline <- getValues(r, row, rowAdd)
+    row <- row + rowAdd
+    mask <- scanline %in% processValues
+    writeBin(object=mask, con=maskFile, size=1)
+    edge <- scanline %in% edgeValues
+    writeBin(object=edge, con=edgeFile, size=1)
+  }
+  close(maskFile)
+  close(edgeFile)
+  return(list(maskFileName=maskFileName, edgeFileName=edgeFileName))
+  #unlink(maskFileName)
+  #unlink(edgeFileName)
+}
+
+#.smoothDiscreteSubset <- function(r, x, y, kernelFun=.expKernel, scale, processValues, edgeValues) {  
+
+.smoothRaster <- function(r, maskFileName, edgeFileName, kernelFun=.expKernel, scale) {
+  rcpp_smoothRaster(maskFileName, edgeFileName, kernelFun, scale, dim(r)[1], dim(r)[2])
+}
+
+
+
 .identityKernel <- function(size, scale) {
   k <- matrix(0, ncol=2*size+1, nrow=2*size+1)
   k[size+1, size+1] <- 1
@@ -80,7 +117,7 @@ CovariatesContainer <- setRefClass(
   xy <- sqrt(x^2+y^2)
   xy[xy > size] <- Inf
   k <- exp(-xy / scale)
-  k
+  k / sum(k)
 }
 
 .gaussKernel <- function(size, scale) {
@@ -89,33 +126,44 @@ CovariatesContainer <- setRefClass(
   xy <- x^2+y^2
   xy[xy > size^2] <- Inf
   k <- exp(-xy / scale)
-  k
+  k / sum(k)
 }
 
-.smoothDiscreteSubset <- function(r, x, y, kernelFun=.expKernel, scale, processValues, edgeValues) {
+.getKernel <- function(r, scale, kernelFun=.expKernel) {
+  resScale <- scale / raster::res(r)[1]
+  kernelSize <- round(resScale)
+  k <- kernelFun(kernelSize, resScale)
+  return(k)  
+}
+
+.smoothDiscreteSubset <- function(r, x, y, k, scale, processValues, edgeValues) {
   col <- colFromX(r, x)
   row <- rowFromY(r, y)  
   if (is.na(r[row, col]))
     stop("The point is outside the effective area. The smoothing cannot be proceeded.")  
   
   # Construct the full kernel
-  resScale <- scale / raster::res(r)[1]
-  kernelSize <- round(resScale)
-  k <- kernelFun(kernelSize, resScale)
-  kernelSize <- kernelSize + 1
+  #resScale <- scale / raster::res(r)[1]
+  #kernelSize <- round(resScale)
+  #k <- kernelFun(kernelSize, resScale)
+  #kernelSize <- kernelSize + 1
   
   # Cut the kernel if partially outside the effective area
+  kernelSize <- (ncol(k)-1)/2 + 1
   startRow <- max(0, row-kernelSize) + 1
   startCol <- max(0, col-kernelSize) + 1
   nrows <- min(dim(r)[1]+1, row+kernelSize) - startRow
   ncols <- min(dim(r)[2]+1, col+kernelSize) - startCol
   xmin <- startRow - (row-kernelSize) - 1
   ymin <- startCol - (col-kernelSize) - 1
-  k <- k[1:nrows+xmin, 1:ncols+ymin]
-  # Scale the kernel to produce convoluted values between 0...1
-  k <- k / sum(k)
-  #effectiveArea <- prod(dim(k))
+  if (!(dim(k)[1] == nrows+xmin & dim(k)[2] == ncols+ymin)) {
+    message("Cut kernel ", dim(k)[1], " X ", dim(k)[2], " to ", nrows+xmin, " X ", ncols+ymin)
+    k <- k[1:nrows+xmin, 1:ncols+ymin]
+    # Rescale the kernel to produce convoluted values between 0...1
+    k <- k / sum(k)
+  }
   # Get the area of the kernel (could be arbitrarily shaped, non-zero entries indicate the kernel)
+  #effectiveArea <- prod(dim(k))
   effectiveArea <- sum(k > 0)
   
   # Get edges and process values around the specified point that matches the size of the kernel
@@ -127,7 +175,8 @@ CovariatesContainer <- setRefClass(
   # Set NA's outside the kernel to zero (edges outside the kernel are ignored too)
   edgeRaster[is.na(edgeRaster) & k == 0] <- 0
   # Get a matrix that indicates the process (that has generated the spatial patterns)
-  processRaster <- (k != 0) * matrix(edgeRaster %in% processValues, nrow=nrow(edgeRaster), ncol=ncol(edgeRaster))
+  #processRaster <- (k != 0) * matrix(edgeRaster %in% processValues, nrow=nrow(edgeRaster), ncol=ncol(edgeRaster))
+  processRaster <- (k != 0) * edgeRaster %in% processValues
   # Count the number of edges (within the area of the kernel)
   edgeCount <- sum(is.na(edgeRaster))
   # Find convolution for the specified point and do edge correction
@@ -163,15 +212,18 @@ CovariatesContainer <- setRefClass(
   if (inherits(coords, "SpatialPoints")) coords <- coordinates(coords)
   
   library(plyr)
-  smoothPixels <- plyr::ldply(scales, function(scale, coords) {
+  smoothPixels <- plyr::ldply(rev(sort(scales)), function(scale, coords) {
     n.coords <- nrow(coords)
-    smoothPixels <- ldply(1:n.coords, function(i, coords, n.coords, scale) {
+    k <- .getKernel(r=r, scale=scale, kernelFun=.expKernel)
+    message("Kernel size = ", dim(k)[1], " X ", dim(k)[2])
+    smoothPixels <- ldply(1:n.coords, function(i, coords, n.coords, scale, k) {
+    #smoothPixels <- lapply(1:n.coords, function(i, coords, n.coords, scale, k, .parallel) {
       message("Smoothing scale = ", scale, ", for coord = ", i, "/", n.coords, " (", coords[i,1], ",", coords[i,2], ")")
-      x <- .smoothDiscreteSubset(r=r, x=coords[i,1], y=coords[i,2], kernelFun=kernelFun, scale=scale, processValues=processValues, edgeValues=edgeValues)
+      x <- .smoothDiscreteSubset(r=r, x=coords[i,1], y=coords[i,2], k=k, scale, processValues=processValues, edgeValues=edgeValues)
       return(x)
-    }, coords=coords, n.coords=n.coords, scale=scale)
+    }, coords=coords, n.coords=n.coords, scale=scale, k=k, .parallel=.parallel) # Inner loop parallel strategy slower for small kernels, but faster for big kernels
     return(smoothPixels)
-  }, coords=coords, .parallel=.parallel)
+  }, coords=coords)
   
   if (wide) smoothPixels <- tidyr::spread(smoothPixels, scale, value)
   return(smoothPixels)
@@ -228,8 +280,14 @@ HabitatSmoothCovariates <- setRefClass(
     },
     
     extract = function(xyt) {
+      library(plyr)
       if (length(scales) == 0)
         stop("Parameter 'scales' must be defined.")
+      if (!inherits(xyt, "SpatialPoints"))
+        stop("Argument 'xyt' must be of class 'SpatialPoints'.")
+      
+      # As habitats do not change in time, consider only unique locations
+      xy <- as.data.frame(unique(coordinates(xyt)))
       
       habitatWeights <- study$loadHabitatWeights()
       habitatValues <- dlply(habitatWeights$weights[habitatWeights$weights$type != 0,], .(type), function(x) x$habitat)
@@ -238,13 +296,26 @@ HabitatSmoothCovariates <- setRefClass(
       
       covariates <- llply(1:length(habitatValues), function(index, edgeValues) {
         message("Processing habitat ", names(habitatValues[index]), "...")
-        covariates <- .smoothDiscreteSubsets(r=study$studyArea$habitat, coords=xyt, kernelFun=.expKernel, scales=scales, processValues=habitatValues[[index]], edgeValues=edgeValues, .parallel=T)
-        covariates <- covariates[,-(1:2)]
+        covariates <- .smoothDiscreteSubsets(r=study$studyArea$habitat, coords=xy, kernelFun=.expKernel, scales=scales, processValues=habitatValues[[index]], edgeValues=edgeValues, .parallel=T)
+        covariates <- covariates[,-(1:2),drop=F]
         colnames(covariates) <- paste0("habitat_", names(habitatValues[index]), "_", colnames(covariates))
         return(covariates)
       }, edgeValues=edgeValues)
       
+      # Covariates should sum to 1 (approximately)
       covariates <- do.call(cbind, covariates)
+      sums <- rowSums(covariates) / length(scales)
+      tolerance <- 0.01
+      if (any(sums <= 1-tolerance | sums >= 1+tolerance)) {
+        print(covariates)
+        print(sums)
+        stop("Habitat covariates do not sum to 1.")
+      }
+      
+      # Replicate covariates at unique locations over time
+      xyz <- cbind(xy, covariates)
+      covariates <- join(as.data.frame(coordinates(xyt)), xyz)[,-(1:2),drop=F]
+      
       return(covariates)
     }
   )
