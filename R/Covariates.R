@@ -20,6 +20,7 @@ CovariatesContainer <- setRefClass(
     
     loadCovariates = function(fileName=getCovariatesFileName()) {
       load(fileName, env=as.environment(.self))
+      return(invisible(.self))
     },
     
     setCovariatesId = function(tag) {
@@ -76,28 +77,31 @@ CovariatesContainer <- setRefClass(
 .expKernel <- function(size, scale) {
   x <- matrix(-size:size, ncol=2*size+1, nrow=2*size+1)
   y <- t(x)
-  k <- exp(-sqrt(x^2+y^2) / scale)
+  xy <- sqrt(x^2+y^2)
+  xy[xy > size] <- Inf
+  k <- exp(-xy / scale)
   k
 }
 
 .gaussKernel <- function(size, scale) {
   x <- matrix(-size:size, ncol=2*size+1, nrow=2*size+1)
   y <- t(x)
-  k <- exp(-(x^2+y^2) / scale)
+  xy <- x^2+y^2
+  xy[xy > size^2] <- Inf
+  k <- exp(-xy / scale)
   k
 }
 
-.smoothSubset <- function(r, x, y, kernelFun=.expKernel, scale) {
+.smoothDiscreteSubset <- function(r, x, y, kernelFun=.expKernel, scale, processValues, edgeValues) {
   col <- colFromX(r, x)
   row <- rowFromY(r, y)  
   if (is.na(r[row, col]))
     stop("The point is outside the effective area. The smoothing cannot be proceeded.")  
   
   # Construct the full kernel
-  resScale <- scale / res(r)[1]
+  resScale <- scale / raster::res(r)[1]
   kernelSize <- round(resScale)
   k <- kernelFun(kernelSize, resScale)
-  fullArea <- prod(dim(k))
   kernelSize <- kernelSize + 1
   
   # Cut the kernel if partially outside the effective area
@@ -108,20 +112,37 @@ CovariatesContainer <- setRefClass(
   xmin <- startRow - (row-kernelSize) - 1
   ymin <- startCol - (col-kernelSize) - 1
   k <- k[1:nrows+xmin, 1:ncols+ymin]
-  k <- k / sum(k) # Scale the kernel to produce convoluted values between 0...1
-  effectiveArea <- prod(dim(k))
+  # Scale the kernel to produce convoluted values between 0...1
+  k <- k / sum(k)
+  #effectiveArea <- prod(dim(k))
+  # Get the area of the kernel (could be arbitrarily shaped, non-zero entries indicate the kernel)
+  effectiveArea <- sum(k > 0)
   
-  # Get the process values around the point that matches the size of the kernel
-  rasterSubset <- getValuesBlock(r, startRow, nrows, startCol, ncols, format='matrix')
-  # Count the number of edges
-  edgeCount <- sum(is.na(rasterSubset))
-  # Smooth and do edge correction
-  smoothValue <- sum(k * rasterSubset, na.rm=T) * effectiveArea / (effectiveArea - edgeCount)
+  # Get edges and process values around the specified point that matches the size of the kernel
+  edgeRaster <- raster::getValuesBlock(r, startRow, nrows, startCol, ncols, format='matrix')
+  # Set edges to NA
+  edgeRaster[edgeRaster %in% edgeValues] <- NA
+  # Set area outside the kernel to zero
+  edgeRaster <- (k != 0) * edgeRaster
+  # Set NA's outside the kernel to zero (edges outside the kernel are ignored too)
+  edgeRaster[is.na(edgeRaster) & k == 0] <- 0
+  # Get a matrix that indicates the process (that has generated the spatial patterns)
+  processRaster <- (k != 0) * matrix(edgeRaster %in% processValues, nrow=nrow(edgeRaster), ncol=ncol(edgeRaster))
+  # Count the number of edges (within the area of the kernel)
+  edgeCount <- sum(is.na(edgeRaster))
+  # Find convolution for the specified point and do edge correction
+  smoothValue <- sum(k * processRaster, na.rm=T) * effectiveArea / (effectiveArea - edgeCount)
   
-  return(data.frame(x=x, y=y, scale=scale, value=smoothValue))
+  x <- data.frame(x=x, y=y, scale=scale, value=smoothValue)
+  return(x)
 }
 
-.smoothSubsets <- function(r, coords, kernelFun=expKernel, scales, .parallel=T) {
+.smoothDiscreteSubsets <- function(r, coords, kernelFun=.expKernel, scales, processValues, edgeValues, wide=T, .parallel=T) {
+  library(raster)
+  library(plyr)
+  library(sp)
+  library(tidyr)
+  
   if (missing(r))
     stop("Argument 'r' missing.")
   if (!inherits(r, "RasterLayer"))
@@ -139,17 +160,20 @@ CovariatesContainer <- setRefClass(
   if (nlayers(r) > 1)
     stop("Multiband rasters unsupported. Please supply bands separately.")
   
+  if (inherits(coords, "SpatialPoints")) coords <- coordinates(coords)
+  
   library(plyr)
-  smoothPixels <- ldply(scales, function(scale, coords) {
-    n.coords <- if (inherits(coords, "SpatialPoints")) length(coords)
-    else nrow(coords)
+  smoothPixels <- plyr::ldply(scales, function(scale, coords) {
+    n.coords <- nrow(coords)
     smoothPixels <- ldply(1:n.coords, function(i, coords, n.coords, scale) {
       message("Smoothing scale = ", scale, ", for coord = ", i, "/", n.coords, " (", coords[i,1], ",", coords[i,2], ")")
-      x <- .smoothSubset(r=r, x=coords[i,1], y=coords[i,2], kernelFun=kernelFun, scale=scale)
+      x <- .smoothDiscreteSubset(r=r, x=coords[i,1], y=coords[i,2], kernelFun=kernelFun, scale=scale, processValues=processValues, edgeValues=edgeValues)
       return(x)
     }, coords=coords, n.coords=n.coords, scale=scale)
     return(smoothPixels)
   }, coords=coords, .parallel=.parallel)
+  
+  if (wide) smoothPixels <- tidyr::spread(smoothPixels, scale, value)
   return(smoothPixels)
 }
 
@@ -178,7 +202,7 @@ CovariatesObtainer <- setRefClass(
     },
     
     loadCache = function() {
-      load(getCacheFileName())
+      load(getCacheFileName(), env=as.environment(.self))
       return(data)
     },
     
@@ -188,6 +212,40 @@ CovariatesObtainer <- setRefClass(
     
     extract = function(xyt) {
       stop("Unimplemented abstract method.")
+    }
+  )
+)
+
+HabitatSmoothCovariates <- setRefClass(
+  Class = "HabitatSmoothCovariates",
+  contains = "CovariatesObtainer",
+  field = list(
+    scales = "numeric"
+  ),
+  methods = list(
+    preprocess = function() {
+      return(invisible(.self))
+    },
+    
+    extract = function(xyt) {
+      if (length(scales) == 0)
+        stop("Parameter 'scales' must be defined.")
+      
+      habitatWeights <- study$loadHabitatWeights()
+      habitatValues <- dlply(habitatWeights$weights[habitatWeights$weights$type != 0,], .(type), function(x) x$habitat)
+      names(habitatValues) <- names(habitatWeights$habitatTypes)
+      edgeValues <- habitatWeights$weights$habitat[habitatWeights$weights$type == 0]
+      
+      covariates <- llply(1:length(habitatValues), function(index, edgeValues) {
+        message("Processing habitat ", names(habitatValues[index]), "...")
+        covariates <- .smoothDiscreteSubsets(r=study$studyArea$habitat, coords=xyt, kernelFun=.expKernel, scales=scales, processValues=habitatValues[[index]], edgeValues=edgeValues, .parallel=T)
+        covariates <- covariates[,-(1:2)]
+        colnames(covariates) <- paste0("habitat_", names(habitatValues[index]), "_", colnames(covariates))
+        return(covariates)
+      }, edgeValues=edgeValues)
+      
+      covariates <- do.call(cbind, covariates)
+      return(covariates)
     }
   )
 )
@@ -305,22 +363,6 @@ HumanPopulationDensityCovariates <- setRefClass(
   )
 )
 
-SmoothHabitatCovariates <- setRefClass(
-  Class = "SmoothHabitatCovariates",
-  contains = "CovariatesObtainer",
-  field = list(
-  ),
-  methods = list(
-    extract = function(xyt) {
-      transects <- study$loadSurveyRoutes(findLengths=F)
-      habitatWeights <- study$loadHabitatWeights()
-      habitatValues <- dlply(habitatWeights$weights[habitatWeights$weights$type != 0,], .(type), function(x) x$habitat)
-      edgeValues <- habitatWeights$weights$habitat[habitatWeights$weights$type == 0]
-      covariates <- smoothSubsets(study$studyArea$habitat, coords=transects$centroids, scales=scales, processValues=habitatValues, edgeValues=edgeValues)
-      if (save) saveCovariates()
-    }
-  )
-)
 
 
 
