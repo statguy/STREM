@@ -45,7 +45,7 @@ CovariatesContainer <- setRefClass(
         y <- x$extract(getSampleLocations())
         return(y)
       })
-      covariateNames <<- do.call(c, lapply(values, colnames))
+      covariateNames <<- c(covariateNames, do.call(c, lapply(values, colnames)))
       do.call(.self$associateCovariates, values)
       return(invisible(.self))
     },
