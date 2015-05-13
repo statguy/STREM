@@ -48,7 +48,11 @@ CovariatesContainer <- setRefClass(
       covariateNames <<- do.call(c, lapply(values, colnames))
       do.call(.self$associateCovariates, values)
       return(invisible(.self))
-    }  
+    },
+    
+    pca = function() {
+      
+    }
   )
 )
 
@@ -117,7 +121,7 @@ CovariatesContainer <- setRefClass(
   xy <- sqrt(x^2+y^2)
   xy[xy > size] <- Inf
   k <- exp(-xy / scale)
-  k / sum(k)
+  k
 }
 
 .gaussKernel <- function(size, scale) {
@@ -126,7 +130,7 @@ CovariatesContainer <- setRefClass(
   xy <- x^2+y^2
   xy[xy > size^2] <- Inf
   k <- exp(-xy / scale)
-  k / sum(k)
+  k
 }
 
 .getKernel <- function(r, scale, kernelFun=.expKernel) {
@@ -136,17 +140,22 @@ CovariatesContainer <- setRefClass(
   return(k)  
 }
 
+#> x
+#coords.x1 
+#3693000 
+#> y
+#coords.x2 
+#6979000 
+
+#x <- 3693000
+#y <- 6905950
+#k <- .getKernel(r=r, scale=100, kernelFun=.expKernel)
+
 .smoothDiscreteSubset <- function(r, x, y, k, scale, processValues, edgeValues) {
   col <- colFromX(r, x)
   row <- rowFromY(r, y)  
   if (is.na(r[row, col]))
     stop("The point is outside the effective area. The smoothing cannot be proceeded.")  
-  
-  # Construct the full kernel
-  #resScale <- scale / raster::res(r)[1]
-  #kernelSize <- round(resScale)
-  #k <- kernelFun(kernelSize, resScale)
-  #kernelSize <- kernelSize + 1
   
   # Cut the kernel if partially outside the effective area
   kernelSize <- (ncol(k)-1)/2 + 1
@@ -159,26 +168,43 @@ CovariatesContainer <- setRefClass(
   if (!(dim(k)[1] == nrows+xmin & dim(k)[2] == ncols+ymin)) {
     message("Cut kernel ", dim(k)[1], " X ", dim(k)[2], " to ", nrows+xmin, " X ", ncols+ymin)
     k <- k[1:nrows+xmin, 1:ncols+ymin]
-    # Rescale the kernel to produce convoluted values between 0...1
-    k <- k / sum(k)
   }
-  # Get the area of the kernel (could be arbitrarily shaped, non-zero entries indicate the kernel)
-  #effectiveArea <- prod(dim(k))
-  effectiveArea <- sum(k > 0)
   
   # Get edges and process values around the specified point that matches the size of the kernel
   edgeRaster <- raster::getValuesBlock(r, startRow, nrows, startCol, ncols, format='matrix')
+  # Set kernel zero at edges for edge correction
+  k[edgeRaster %in% edgeValues | is.na(edgeRaster)] <- 0
+  # Rescale kernel to constraint smooth values between 0...1
+  k <- k / sum(k)
+  # Get binary mask of the process (that generates the spatial patterns)
+  processRaster <- edgeRaster %in% processValues
+  # Find convolution
+  smoothValue <- sum(k * processRaster, na.rm=T)
+  x <- data.frame(x=x, y=y, scale=scale, value=smoothValue)
+  return(x)
+
+
+  # Get the area of the kernel (could be arbitrarily shaped, non-zero entries indicate the kernel)
+  #effectiveArea <- prod(dim(k))
+  #effectiveArea <- sum(k > 0)
+
+  # Get edges and process values around the specified point that matches the size of the kernel
+  edgeRaster <- raster::getValuesBlock(r, startRow, nrows, startCol, ncols, format='matrix')
+
   # Set edges to NA
   edgeRaster[edgeRaster %in% edgeValues] <- NA
   # Set area outside the kernel to zero
   edgeRaster <- (k != 0) * edgeRaster
   # Set NA's outside the kernel to zero (edges outside the kernel are ignored too)
   edgeRaster[is.na(edgeRaster) & k == 0] <- 0
-  # Get a matrix that indicates the process (that has generated the spatial patterns)
-  #processRaster <- (k != 0) * matrix(edgeRaster %in% processValues, nrow=nrow(edgeRaster), ncol=ncol(edgeRaster))
-  processRaster <- (k != 0) * edgeRaster %in% processValues
   # Count the number of edges (within the area of the kernel)
   edgeCount <- sum(is.na(edgeRaster))
+  #edgeCount + sum(edgeRaster>0, na.rm=T) == effectiveArea
+  # Get a matrix that indicates the process (that has generated the spatial patterns)
+  #processRaster <- (k != 0) * matrix(edgeRaster %in% processValues, nrow=nrow(edgeRaster), ncol=ncol(edgeRaster))
+  #processRaster <- (k != 0) * edgeRaster %in% processValues
+  processRaster <- matrix(edgeRaster %in% processValues, nrow=nrow(edgeRaster), ncol=ncol(edgeRaster))
+#plot(raster(processRaster))
   # Find convolution for the specified point and do edge correction
   smoothValue <- sum(k * processRaster, na.rm=T) * effectiveArea / (effectiveArea - edgeCount)
   
@@ -302,9 +328,10 @@ HabitatSmoothCovariates <- setRefClass(
         return(covariates)
       }, edgeValues=edgeValues)
       
-      # Covariates should sum to 1 (approximately)
+      # Covariates should sum to 1 (approximately).
+      # In fact, if all works there is no need to find the last habitat since it will be 1-sum(other habitats). TODO: fix this.
       covariates <- do.call(cbind, covariates)
-      sums <- rowSums(covariates) / length(scales)
+      sums <- rowSums(covariates, na.rm=T) / length(scales)
       tolerance <- 0.01
       if (any(sums <= 1-tolerance | sums >= 1+tolerance)) {
         print(covariates)
