@@ -140,22 +140,18 @@ CovariatesContainer <- setRefClass(
   return(k)  
 }
 
-#> x
-#coords.x1 
-#3693000 
-#> y
-#coords.x2 
-#6979000 
-
-#x <- 3693000
-#y <- 6905950
-#k <- .getKernel(r=r, scale=100, kernelFun=.expKernel)
+#x <- 3693000;y <- 6905950
+#x<-3282000;y<-6673000
+#k <- .getKernel(r=r, scale=125, kernelFun=.expKernel)
+#k <- .getKernel(r=r, scale=1250, kernelFun=.expKernel)
 
 .smoothDiscreteSubset <- function(r, x, y, k, scale, processValues, edgeValues) {
   col <- colFromX(r, x)
   row <- rowFromY(r, y)  
-  if (is.na(r[row, col]))
-    stop("The point is outside the effective area. The smoothing cannot be proceeded.")  
+  if (r[row, col] %in% edgeValues || is.na(r[row, col])) {
+    warning("The point is outside the effective area. The smoothing cannot be proceeded.")
+    return(data.frame(x=x, y=y, scale=scale, value=NA))
+  }
   
   # Cut the kernel if partially outside the effective area
   kernelSize <- (ncol(k)-1)/2 + 1
@@ -329,13 +325,11 @@ HabitatSmoothCovariates <- setRefClass(
       }, edgeValues=edgeValues)
       
       # Covariates should sum to 1 (approximately).
-      # In fact, if all works there is no need to find the last habitat since it will be 1-sum(other habitats). TODO: fix this.
+      # In fact, if all works there is no need to find the last habitat variable since it will be 1-sum(other habitats). TODO: optimize this.
       covariates <- do.call(cbind, covariates)
-      sums <- rowSums(covariates, na.rm=T) / length(scales)
+      sums <- na.omit(rowSums(covariates) / length(scales))
       tolerance <- 0.01
       if (any(sums <= 1-tolerance | sums >= 1+tolerance)) {
-        print(covariates)
-        print(sums)
         stop("Habitat covariates do not sum to 1.")
       }
       

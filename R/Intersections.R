@@ -435,6 +435,19 @@ FinlandRussiaWTCIntersections <- setRefClass(
       coords <- coordinates(z)
       intersections <<- z[point.in.polygon(coords[,1], coords[,2], window[,1], window[,2])==1,]
       
+      #Remove samples outside the study area
+      #uniqCoords <- unique(coordinates(intersections))
+      #r <- study$studyArea$habitat
+      #remove <- logical(nrow(uniqCoords))
+      #for (row in 1:nrow(uniqCoords)) {
+      #  x <- uniqCoords[row,1]
+      #  y <- uniqCoords[row,2]
+      #  rcol <- colFromX(r, x)
+      #  rrow <- rowFromY(r, y)
+      #  if (r[rrow, rcol] %in% c(0,255) | is.na(r[rrow, rcol])) remove[row] <- TRUE  
+      #}
+      #join(intersections$intersections, cbind(uniqCoords, remove)
+            
       save(intersections, file=getIntersectionsFileName())
     }
   )
