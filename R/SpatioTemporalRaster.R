@@ -30,7 +30,7 @@ SpatioTemporalRaster <- setRefClass(
     },
     
     getRasterFileName = function(name, layerName, ext=.self$ext) {
-      return(context$getFileName(dir=study$context$figuresDirectory, name=paste(name, layerName, sep="-"), response=study$response, region=study$studyArea$region, ext=paste(".", ext, sep="")))
+      return(study$context$getFileName(dir=study$context$figuresDirectory, name=paste(name, layerName, sep="-"), response=study$response, region=study$studyArea$region, ext=paste(".", ext, sep="")))
     },
     
     saveRasterFile = function(p, layer, name, layerName, ext=.self$ext, ...) {
@@ -165,7 +165,7 @@ SpatioTemporalRaster <- setRefClass(
       }
       
       message("Converting...")
-      outputFile <- context$getFileName(dir=study$context$figuresDirectory, name=name, response=study$response, region=study$studyArea$region, ext=".gif")
+      outputFile <- study$context$getFileName(dir=study$context$figuresDirectory, name=name, response=study$response, region=study$studyArea$region, ext=".gif")
       layerFileNameMask <- getRasterFileName(name=name, layerName="*", ext="png")
       cmd <- paste(convertCmd, " -loop 0 -delay ", delay, " ", layerFileNameMask, " ", outputFile, sep="")
       message(cmd)

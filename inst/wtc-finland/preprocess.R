@@ -9,8 +9,188 @@ registerDoMC(cores=round(detectCores()))
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 library(WTC)
 
-context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-study <- FinlandWTCStudy$new(context=context)
+
+preprocessIntersections <- function(response) {
+  context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+  study <- FinlandWTCStudy$new(context=context)
+  study$response <- response
+
+  intersections <- study$loadIntersections(predictDistances=FALSE)
+  intersections$saveIntersections()
+}
+
+preprocessHabitatPreferences <- function(response) {
+  context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+  study <- FinlandWTCStudy$new(context=context)
+  study$response <- response
+
+  tracks <- study$loadTracks()
+  habitatWeights <- CORINEHabitatWeights$new(study=study)
+  habitatSelection <- tracks$getHabitatPreferences(habitatWeightsTemplate=habitatWeights, nSamples=30, save=T)
+}
+
+preprocessSampleIntervals <- function(response) {
+  context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+  study <- FinlandWTCStudy$new(context=context)
+  study$response <- response
+
+  human <- HumanPopulationDensityCovariates$new(study=study)
+  weather <- WeatherCovariates$new(study=study, apiKey=fmiApiKey)
+  sampleIntervals$setCovariatesId()$addCovariates(human, weather)
+  sampleIntervals$saveCovariates()
+  
+  human <- HumanPopulationDensityCovariates$new(study=study)
+  weather <- WeatherCovariates$new(study=study, apiKey=fmiApiKey)
+  intersections <- study$loadIntersections(predictDistances=FALSE)
+  intersections$setCovariatesId(tag="distance")
+  intersections$addCovariates(human, weather)
+  intersections$saveCovariates()
+}
+
+estimateMovementDistances <- function(response) {
+  context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+  study <- FinlandWTCStudy$new(context=context)
+  study$response <- response
+  
+  covariatesFormula <- ~ rrday + snow + tday -1
+  iterations <- 1000
+  chains <- 1
+  
+  library(rstan)
+  set_cppo("fast")
+  
+  mixed_effects_code <- '
+    data {
+    int<lower=1> n_obs;
+    vector[n_obs] distKm;
+    vector[n_obs] dtH;
+    int<lower=1> n_individuals;
+    matrix[n_obs,n_individuals] individual_model_matrix;
+    int<lower=1> n_samples;
+    matrix[n_obs,n_samples] sample_model_matrix;
+    int<lower=1> n_fixed;
+    matrix[n_obs,n_fixed] fixed_model_matrix;
+    int<lower=1> n_predicts;
+    vector[n_predicts] predict_dt;
+    
+    int<lower=1> n_pred_observations;
+    int<lower=1> n_pred_covariates;
+    matrix[n_pred_observations,n_pred_covariates] pred_fixed_model_matrix;
+    }
+    parameters {
+    real<lower=0> alpha;
+    real intercept;
+    real<lower=0> error_variance;
+    vector[n_individuals] individual_effect;
+    real<lower=0> individual_variance;
+    vector[n_samples] sample_effect;
+    real<lower=0> sample_variance;
+    vector[n_fixed] fixed_effect;
+    }
+    model {
+    vector[n_obs] linear_predictor;
+    individual_effect ~ normal(0, individual_variance);
+    sample_effect ~ normal(0, sample_variance);
+    linear_predictor <- intercept + fixed_model_matrix * fixed_effect + individual_model_matrix * individual_effect + sample_model_matrix * sample_effect - alpha * log(dtH);
+    log(distKm) ~ normal(linear_predictor, error_variance);
+    }
+    generated quantities {
+    vector[n_predicts] predicted_dist;
+    
+    vector[n_pred_observations] pred_dist_7halfmin;
+    vector[n_pred_observations] pred_dist_15min;
+    vector[n_pred_observations] pred_dist_30min;
+    vector[n_pred_observations] pred_dist_1h;
+    vector[n_pred_observations] pred_dist_2h;
+    vector[n_pred_observations] pred_dist_4h;
+    
+    predicted_dist <- exp(intercept - alpha * log(predict_dt));
+    
+    pred_dist_7halfmin <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(0.125));
+    pred_dist_15min <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(0.25));
+    pred_dist_30min <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(0.50));
+    pred_dist_1h <- exp(intercept + pred_fixed_model_matrix * fixed_effect);
+    pred_dist_2h <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(2));
+    pred_dist_4h <- exp(intercept + pred_fixed_model_matrix * fixed_effect - alpha * log(4));
+    }
+    '
+    
+  sampleIntervals <- ThinnedMovementSampleIntervals$new(study=study)$setCovariatesId()
+  sampleIntervals$loadCovariates()
+  movements <- sampleIntervals$aggregate()
+  movements$distKm <- movements$dist / 1000
+  movements$dtH <- movements$dt / 3600
+  movements$burst <- as.factor(paste0(movements$burst, movements$yday))
+  movements$individual <- as.factor(as.integer(movements$id))
+  
+  fixed_model_matrix <- model.matrix(covariatesFormula, movements)
+  predict_dt <- seq(0, 12, by=0.1)
+  intersections <- FinlandWTCIntersections$new(study=study)$setCovariatesId(tag="distance")$loadCovariates()
+  pred_fixed_model_matrix <- model.matrix(covariatesFormula, intersections$intersections)
+  
+  data <- with(movements, list(
+    n_obs = length(distKm),
+    distKm = distKm,
+    dtH = dtH,
+    n_individuals = length(unique(individual)),
+    individual_model_matrix = model.matrix(~individual-1, movements),
+    n_samples = length(unique(burst)),
+    sample_model_matrix = model.matrix(~burst-1, movements),
+    predict_dt = predict_dt,
+    n_predicts = length(predict_dt),
+    n_fixed = ncol(fixed_model_matrix),
+    fixed_model_matrix = fixed_model_matrix,
+    
+    n_pred_observations = nrow(pred_fixed_model_matrix),
+    n_pred_covariates = ncol(pred_fixed_model_matrix),
+    pred_fixed_model_matrix = pred_fixed_model_matrix      
+  ))
+  
+  estimationResult <- stan(model_code=mixed_effects_code, data=data, iter=iterations, chains=chains)
+  distanceEstimatesFileName <- context$getFileName(dir=study$context$scratchDirectory, name="DistanceEstimates", response=study$response, region=study$studyArea$region)
+  save(estimationResult, file=distanceEstimatesFileName)
+  
+  summary(rstan::extract(estimationResult, "fixed_effect")[[1]])
+  distance30min <- colMeans(rstan::extract(estimationResult, "pred_dist_30min")[[1]])
+  distance1h <- colMeans(rstan::extract(estimationResult, "pred_dist_1h")[[1]])
+  distance2h <- colMeans(rstan::extract(estimationResult, "pred_dist_2h")[[1]])
+  distance4h <- colMeans(rstan::extract(estimationResult, "pred_dist_4h")[[1]])
+  
+  summary(distance30min[distance30min < 50])
+  summary(distance1h[distance1h < 50])
+  summary(distance2h[distance2h < 50])
+  summary(distance4h[distance4h < 50])
+  summary(movements$human)
+  #summary(intersections$intersections$human)
+  
+  intersections <- FinlandWTCIntersections$new(study=study)$setCovariatesId(tag="density")$loadCovariates()
+  intersections$setDistance(distance1h)$saveCovariates()
+}
+
+preprocessDensityCovariates <- function(response) {
+  context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
+  study <- FinlandWTCStudy$new(context=context)
+  study$response <- response
+  
+  intersections <- FinlandWTCIntersections$new(study=study)$loadIntersections()
+  intersections$setCovariatesId(tag="density")
+  habitat <- HabitatSmoothCovariates$new(study=study, scales=2^(0:10) * 62.5)
+  elevation <- ElevationSmoothCovariates$new(study=study, scales=2^(0:6) * 1000)
+  human <- HumanDensitySmoothCovariates$new(study=study, scales=2^(0:6) * 1000)
+  intersections$addCovariates(habitat, elevation, human)
+  intersections$saveCovariates()
+}
+
+
+response <- "canis.lupus"
+preprocessIntersections(response)
+preprocessHabitatPreferences(response)
+preprocessSampleIntervals(response)
+estimateMovementDistances(response)
+preprocessDensityCovariates(response)
+
+
+
 
 if (F) {
   study$response <- "canis.lupus"
@@ -52,20 +232,42 @@ if (F) {
   
   intersections <- FinlandWTCIntersections$new(study=study)$loadIntersections()
   intersections$setCovariatesId(tag="density")
-  #intersections$intersections <- intersections$intersections[15:30,]
-  #habitat <- HabitatSmoothCovariates$new(study=study, scales=c(62.5,125))
-  #habitat <- HabitatSmoothCovariates$new(study=study, scales=64000)
-  habitat <- HabitatSmoothCovariates$new(study=study, scales=2^(0:10) * 62.5)
+  habitat <- HabitatSmoothCovariates$new(study=study, scales=64000)
+  intersections$addCovariates(habitat)
+  intersections$saveCovariates()
+  habitat <- HabitatSmoothCovariates$new(study=study, scales=32000)
   intersections$addCovariates(habitat)
   intersections$saveCovariates()
 
+  habitat <- HabitatSmoothCovariates$new(study=study, scales=125)
+  intersections$addCovariates(habitat)
   
-  #intersections <- FinlandWTCIntersections$new(study=study)$loadIntersections()
-  #intersections$setCovariatesId(tag="density")
-  #intersections$intersections <- intersections$intersections[15:30,]
-  #habitat <- HabitatSmoothCovariates$new(study=study, scales=c(62.5,125))
-  #intersections$addCovariates(habitat)
-  #intersections$intersections@data
+  
+  habitat <- HabitatSmoothCovariates$new(study=study, scales=2^(0:10) * 62.5)
+  intersections$addCovariates(habitat)
+  intersections$saveCovariates()
+  
+  
+  ## DEBUG
+  intersections <- FinlandWTCIntersections$new(study=study)$loadIntersections()
+  intersections$setCovariatesId(tag="density")
+  intersections$intersections <- intersections$intersections[990:1001,]
+  habitat <- HabitatSmoothCovariates$new(study=study, scales=c(125))
+  intersections$addCovariates(habitat)
+  intersections$intersections@data
+  
+  which(coordinates(intersections$intersections) == c(3525000,7038000))
+  
+  # TODO: NaN values???
+  intersections$intersections <- intersections$intersections[16975,]
+  intersections$intersections@coords <- matrix(c(3693000,6900000),ncol=2)
+  habitat <- HabitatSmoothCovariates$new(study=study, scales=10000)
+  intersections$addCovariates(habitat)
+  
+  intersections$intersections <- intersections$intersections[16975,]
+  intersections$intersections@coords <- matrix(c(3693000,6905950),ncol=2)
+  habitat <- HabitatSmoothCovariates$new(study=study, scales=100)
+  intersections$addCovariates(habitat)
   
   ###
   
@@ -230,7 +432,4 @@ if (F) {
   }
   
   
-}
-else {
-  study$preprocess(fmiApiKey=fmiApiKey) 
 }

@@ -93,7 +93,7 @@ raster::projection(r) <- "+proj=laea +lat_0=52 +lon_0=20 +x_0=5071000 +y_0=32100
 elevation <- raster::projectRaster(r, crs="+init=epsg:2393")
 r <- raster::crop(elevation, extent(3400000, 3410000, 7000000, 7010000) * 10)
 s <- raster(extent(3355003, 3455003, 6955246, 7055246), 100, 100, crs="+proj=laea +lat_0=52 +lon_0=20 +x_0=5071000 +y_0=3210000 +a=6378137 +b=6378137 +units=m +no_defs")
-r <- raster::resample(r, s) # Changing projection does not work perfectly. Have to resample to fix.
+r <- raster::resample(r, s) # Changing projection does not work good enough. Have to resample to fix.
 r1 <- as.data.frame(rasterToPoints(r))
 colnames(r1) <- c("x","y","value")
 coords <- raster::xyFromCell(r, cell=1:ncell(r))

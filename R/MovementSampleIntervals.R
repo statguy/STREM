@@ -12,24 +12,6 @@ MovementSampleIntervals <- setRefClass(
     },
     
     getSampleIntervals = function() intervals
-    
-    #getSampleIntervalsFileName = function() {
-    #  if (inherits(study, "uninitializedField"))
-    #    stop("Parameter 'study' must be provided.")
-    #  if (length(study$response) == 0)
-    #    stop("Parameter 'response' for 'study' must be defined.")
-    #  return(context$getFileName(dir=study$context$processedDataDirectory, name="MovementSampleIntervals", response=study$response, region=study$studyArea$region))
-    #},
-    
-    #saveSampleIntervals = function(fileName=getSampleIntervalsFileName()) {
-    #  save(intervals, file=fileName)
-    #  return(invisible(.self))
-    #},
-    
-    #loadSampleIntervals = function(fileName=getSampleIntervalsFileName()) {
-    #  load(fileName, env=as.environment(.self))
-    #  return(invisible(.self))
-    #}
   )
 )
 

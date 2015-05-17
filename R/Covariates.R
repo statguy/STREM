@@ -11,7 +11,7 @@ CovariatesContainer <- setRefClass(
         stop("Parameter 'study' must be specified.")
       if (length(covariatesId) == 0)
         stop("Parameter 'covariatesId' must be specified.")
-      return(context$getFileName(dir=study$context$processedDataDirectory, name="Covariates", response=covariatesId, region=study$studyArea$region))
+      return(study$context$getFileName(dir=study$context$processedDataDirectory, name="Covariates", response=covariatesId, region=study$studyArea$region))
     },
     
     saveCovariates = function(fileName=getCovariatesFileName()) {
@@ -35,6 +35,10 @@ CovariatesContainer <- setRefClass(
       stop("Unimplemented method.")
     },
     
+    getCovariates = function() {
+      stop("Unimplemented method.")
+    },
+    
     addCovariates = function(...) {
       library(plyr)
       covariates <- list(...)
@@ -50,8 +54,33 @@ CovariatesContainer <- setRefClass(
       return(invisible(.self))
     },
     
-    pca = function() {
+    compressCovariates = function(minExplainedVariance=0.75) {
+      library(stringr)
       
+      if (any(complete.cases(self$getCovariates()) == FALSE))
+        stop("Missing data in covariates not allowed.")
+      
+      # TODO: add continuous variables properly (center and scale, etc.)
+      # PCA for categorical variables by scale (continuous are not affected)
+      pc <- list()
+      scales <- stringr::str_match(covariateNames, "_([0-9.]+)$")[,2]
+      for (scale in unique(scales)) {
+        variables <- stringr::str_match(covariateNames, "^([a-zA-Z0-9]+)_")[,2]
+        for (variable in unique(variables)) {
+          group <- covariateNames[variables == variable & scales == scale]
+          message("Processing varibles ", paste(group, collapse=", "), "...")
+          data <- self$getCovariates()[,group]
+          #data <- intersections$intersections@data[,group]
+          pcSubset <- prcomp(reformulate(group), data, scale.=TRUE)
+          index <- which(cumsum(pcSubset$sdev^2) / sum(pcSubset$sdev^2) <= minExplainedVariance)
+          x <- pcSubset$x[,index,drop=F]
+          colnames(x) <- paste(colnames(x), variable, scale, sep="_")
+          pc <- cbind(pc, x)
+        }
+      }
+      
+      x <- cbind(self$getCovariates(), pc)
+      return(x)
     }
   )
 )
@@ -71,44 +100,6 @@ CovariatesContainer <- setRefClass(
 }
 
 # Smoothed single points
-
-
-
-.saveRawDiscreteRaster <- function(r, processValues, edgeValues, rowAdd=1000) {
-  maskFileName <- tempfile()
-  maskFile <- file(maskFileName, "wb")
-  edgeFileName <- tempfile()
-  edgeFile <- file(edgeFileName, "wb")
-  row <- 1
-  exit <- FALSE
-  while (exit == FALSE) {
-    if (row + rowAdd > nrow(r) + 1) {
-      rowAdd <- nrow(r) + 1 - row
-      exit <- TRUE
-    }
-    message("Processing row ", row-1, "/", nrow(r), ", reading ", rowAdd, " lines...")
-    scanline <- getValues(r, row, rowAdd)
-    row <- row + rowAdd
-    mask <- scanline %in% processValues
-    writeBin(object=mask, con=maskFile, size=1)
-    edge <- scanline %in% edgeValues
-    writeBin(object=edge, con=edgeFile, size=1)
-  }
-  close(maskFile)
-  close(edgeFile)
-  return(list(maskFileName=maskFileName, edgeFileName=edgeFileName))
-  #unlink(maskFileName)
-  #unlink(edgeFileName)
-}
-
-#.smoothDiscreteSubset <- function(r, x, y, kernelFun=.expKernel, scale, processValues, edgeValues) {  
-
-.smoothRaster <- function(r, maskFileName, edgeFileName, kernelFun=.expKernel, scale) {
-  rcpp_smoothRaster(maskFileName, edgeFileName, kernelFun, scale, dim(r)[1], dim(r)[2])
-}
-
-
-
 .identityKernel <- function(size, scale) {
   k <- matrix(0, ncol=2*size+1, nrow=2*size+1)
   k[size+1, size+1] <- 1
@@ -133,10 +124,12 @@ CovariatesContainer <- setRefClass(
   k
 }
 
+.getKernelRadius <- function(r, scale) round(scale / raster::res(r)[1])
+
 .getKernel <- function(r, scale, kernelFun=.expKernel) {
-  resScale <- scale / raster::res(r)[1]
-  kernelSize <- round(resScale)
-  k <- kernelFun(kernelSize, resScale)
+  rasterScale <- scale / raster::res(r)[1]
+  radius <- .getKernelRadius(r, scale)
+  k <- kernelFun(radius, rasterScale)
   return(k)  
 }
 
@@ -144,6 +137,27 @@ CovariatesContainer <- setRefClass(
 #x<-3282000;y<-6673000
 #k <- .getKernel(r=r, scale=125, kernelFun=.expKernel)
 #k <- .getKernel(r=r, scale=1250, kernelFun=.expKernel)
+
+.getRasterValues <- function(r, col, row, scale) {
+  kernelRadius1 <- .getKernelRadius(r, scale) + 1
+  startRow <- max(0, row-kernelRadius1) + 1
+  startCol <- max(0, col-kernelRadius1) + 1
+  nrows <- min(dim(r)[1]+1, row+kernelRadius1) - startRow
+  ncols <- min(dim(r)[2]+1, col+kernelRadius1) - startCol
+  return(raster::getValuesBlock(r, startRow, nrows, startCol, ncols))
+}
+
+.cutKernel <- function(k, r, col, row, scale) {
+  kernelRadius1 <- .getKernelRadius(r, scale) + 1
+  startRow <- max(0, row-kernelRadius1) + 1
+  startCol <- max(0, col-kernelRadius1) + 1
+  nrows <- min(dim(r)[1]+1, row+kernelRadius1) - startRow
+  ncols <- min(dim(r)[2]+1, col+kernelRadius1) - startCol
+  centerRow <- max(kernelRadius1-col, 0)
+  centerCol <- max(kernelRadius1-row, 0)
+  return(k[1:nrows+centerRow, 1:ncols+centerRow])
+  #min(min(0, kernelRadius1-row) + dim(r)[1], min(row, kernelRadius1) + kernelRadius1 - 1)
+}
 
 .smoothDiscreteSubset <- function(r, x, y, k, scale, processValues, edgeValues) {
   col <- colFromX(r, x)
@@ -154,20 +168,20 @@ CovariatesContainer <- setRefClass(
   }
   
   # Cut the kernel if partially outside the effective area
-  kernelSize <- (ncol(k)-1)/2 + 1
-  startRow <- max(0, row-kernelSize) + 1
-  startCol <- max(0, col-kernelSize) + 1
-  nrows <- min(dim(r)[1]+1, row+kernelSize) - startRow
-  ncols <- min(dim(r)[2]+1, col+kernelSize) - startCol
-  xmin <- startRow - (row-kernelSize) - 1
-  ymin <- startCol - (col-kernelSize) - 1
+  kernelRadius1 <- .getKernelRadius(r, scale) + 1
+  startRow <- max(0, row-kernelRadius1) + 1
+  startCol <- max(0, col-kernelRadius1) + 1
+  nrows <- min(dim(r)[1]+1, row+kernelRadius1) - startRow
+  ncols <- min(dim(r)[2]+1, col+kernelRadius1) - startCol
+  xmin <- startRow - (row-kernelRadius1) - 1
+  ymin <- startCol - (col-kernelRadius1) - 1
   if (!(dim(k)[1] == nrows+xmin & dim(k)[2] == ncols+ymin)) {
     message("Cut kernel ", dim(k)[1], " X ", dim(k)[2], " to ", nrows+xmin, " X ", ncols+ymin)
     k <- k[1:nrows+xmin, 1:ncols+ymin]
   }
   
   # Get edges and process values around the specified point that matches the size of the kernel
-  edgeRaster <- raster::getValuesBlock(r, startRow, nrows, startCol, ncols, format='matrix')
+  edgeRaster <- raster::getValuesBlock(r, startRow, nrows, startCol, ncols) #, format='matrix')
   # Set kernel zero at edges for edge correction
   k[edgeRaster %in% edgeValues | is.na(edgeRaster)] <- 0
   # Rescale kernel to constraint smooth values between 0...1
@@ -176,34 +190,6 @@ CovariatesContainer <- setRefClass(
   processRaster <- edgeRaster %in% processValues
   # Find convolution
   smoothValue <- sum(k * processRaster, na.rm=T)
-  x <- data.frame(x=x, y=y, scale=scale, value=smoothValue)
-  return(x)
-
-
-  # Get the area of the kernel (could be arbitrarily shaped, non-zero entries indicate the kernel)
-  #effectiveArea <- prod(dim(k))
-  #effectiveArea <- sum(k > 0)
-
-  # Get edges and process values around the specified point that matches the size of the kernel
-  edgeRaster <- raster::getValuesBlock(r, startRow, nrows, startCol, ncols, format='matrix')
-
-  # Set edges to NA
-  edgeRaster[edgeRaster %in% edgeValues] <- NA
-  # Set area outside the kernel to zero
-  edgeRaster <- (k != 0) * edgeRaster
-  # Set NA's outside the kernel to zero (edges outside the kernel are ignored too)
-  edgeRaster[is.na(edgeRaster) & k == 0] <- 0
-  # Count the number of edges (within the area of the kernel)
-  edgeCount <- sum(is.na(edgeRaster))
-  #edgeCount + sum(edgeRaster>0, na.rm=T) == effectiveArea
-  # Get a matrix that indicates the process (that has generated the spatial patterns)
-  #processRaster <- (k != 0) * matrix(edgeRaster %in% processValues, nrow=nrow(edgeRaster), ncol=ncol(edgeRaster))
-  #processRaster <- (k != 0) * edgeRaster %in% processValues
-  processRaster <- matrix(edgeRaster %in% processValues, nrow=nrow(edgeRaster), ncol=ncol(edgeRaster))
-#plot(raster(processRaster))
-  # Find convolution for the specified point and do edge correction
-  smoothValue <- sum(k * processRaster, na.rm=T) * effectiveArea / (effectiveArea - edgeCount)
-  
   x <- data.frame(x=x, y=y, scale=scale, value=smoothValue)
   return(x)
 }
@@ -251,6 +237,82 @@ CovariatesContainer <- setRefClass(
   return(smoothPixels)
 }
 
+
+.smoothContinuousSubset <- function(r, x, y, k, scale, edgeValues=c()) {
+  col <- colFromX(r, x)
+  row <- rowFromY(r, y)  
+  if (r[row, col] %in% edgeValues || is.na(r[row, col])) {
+    warning("The point is outside the effective area. The smoothing cannot be proceeded.")
+    return(data.frame(x=x, y=y, scale=scale, value=NA))
+  }
+  
+  # Cut the kernel if partially outside the effective area
+  kernelRadius1 <- .getKernelRadius(r, scale) + 1
+  startRow <- max(0, row-kernelRadius1) + 1
+  startCol <- max(0, col-kernelRadius1) + 1
+  nrows <- min(dim(r)[1]+1, row+kernelRadius1) - startRow
+  ncols <- min(dim(r)[2]+1, col+kernelRadius1) - startCol
+  xmin <- startRow - (row-kernelRadius1) - 1
+  ymin <- startCol - (col-kernelRadius1) - 1
+  if (!(dim(k)[1] == nrows+xmin & dim(k)[2] == ncols+ymin)) {
+    message("Cut kernel ", dim(k)[1], " X ", dim(k)[2], " to ", nrows+xmin, " X ", ncols+ymin)
+    k <- k[1:nrows+xmin, 1:ncols+ymin]
+  }
+  
+  # Get edges and process values around the specified point that matches the size of the kernel
+  processRaster <- raster::getValuesBlock(r, startRow, nrows, startCol, ncols) #, format='matrix')
+  # Set kernel zero at edges for edge correction
+  k[processRaster %in% edgeValues | is.na(processRaster)] <- 0
+  # Rescale kernel to constraint smooth values between 0...1
+  k <- k / sum(k)
+  # Find convolution
+  smoothValue <- sum(k * processRaster, na.rm=T)
+  x <- data.frame(x=x, y=y, scale=scale, value=smoothValue)
+  return(x)
+}
+
+.smoothContinuousSubsets <- function(r, coords, kernelFun=.expKernel, scales, edgeValues=c(), wide=T, .parallel=T) {
+  library(raster)
+  library(plyr)
+  library(sp)
+  library(tidyr)
+  
+  if (missing(r))
+    stop("Argument 'r' missing.")
+  if (!inherits(r, "RasterLayer"))
+    stop("Argument 'r' must be of type 'RasterLayer'")
+  if (missing(coords))
+    stop("Argument 'coords' missing.")
+  
+  if (!inherits(r, "RasterLayer"))
+    stop("Argument 'r' must of class raster.")
+  if (!inherits(coords, "matrix") && !inherits(coords, "data.frame") && !inherits(coords, "SpatialPoints"))
+    stop("Argument 'coords' must of class matrix, data.frame or SpatialPoints.")
+  
+  if (res(r)[1] != res(r)[2])
+    stop("Rasters of unequal resolution unsupported.")
+  if (nlayers(r) > 1)
+    stop("Multiband rasters unsupported. Please supply bands separately.")
+  
+  if (inherits(coords, "SpatialPoints")) coords <- coordinates(coords)
+  
+  library(plyr)
+  smoothPixels <- plyr::ldply(rev(sort(scales)), function(scale, coords) {
+    n.coords <- nrow(coords)
+    k <- .getKernel(r=r, scale=scale, kernelFun=.expKernel)
+    message("Kernel size = ", dim(k)[1], " X ", dim(k)[2])
+    smoothPixels <- ldply(1:n.coords, function(i, coords, n.coords, scale, k) {
+      message("Smoothing scale = ", scale, ", for coord = ", i, "/", n.coords, " (", coords[i,1], ",", coords[i,2], ")")
+      x <- .smoothContinuousSubset(r=r, x=coords[i,1], y=coords[i,2], k=k, scale, edgeValues=edgeValues)
+      return(x)
+    }, coords=coords, n.coords=n.coords, scale=scale, k=k, .parallel=.parallel)
+    return(smoothPixels)
+  }, coords=coords)
+  
+  if (wide) smoothPixels <- tidyr::spread(smoothPixels, scale, value)
+  return(smoothPixels)
+}
+
 CovariatesObtainer <- setRefClass(
   Class = "CovariatesObtainer",
   fields = list(
@@ -263,7 +325,7 @@ CovariatesObtainer <- setRefClass(
         stop("Parameter 'study' must be provided.")
       if (length(covariateId) == 0)
         stop("Parameter 'covariateId' must be provided.")
-      return(context$getFileName(dir=study$context$scratchDirectory, name=paste("covariates-cache", covariateId, sep="-"), region=study$studyArea$region))
+      return(study$context$getFileName(dir=study$context$scratchDirectory, name=paste("covariates-cache", covariateId, sep="-"), region=study$studyArea$region))
     },
     
     existCache = function() {
@@ -309,7 +371,7 @@ HabitatSmoothCovariates <- setRefClass(
         stop("Argument 'xyt' must be of class 'SpatialPoints'.")
       
       # As habitats do not change in time, consider only unique locations
-      xy <- as.data.frame(unique(coordinates(xyt)))
+      xy <- as.data.frame(unique(sp::coordinates(xyt)))
       
       habitatWeights <- study$loadHabitatWeights()
       habitatValues <- dlply(habitatWeights$weights[habitatWeights$weights$type != 0,], .(type), function(x) x$habitat)
@@ -335,8 +397,103 @@ HabitatSmoothCovariates <- setRefClass(
       
       # Replicate covariates at unique locations over time
       xyz <- cbind(xy, covariates)
-      covariates <- join(as.data.frame(coordinates(xyt)), xyz)[,-(1:2),drop=F]
+      covariates <- plyr::join(as.data.frame(sp::coordinates(xyt)), xyz)[,-(1:2),drop=F]
       
+      return(covariates)
+    }
+  )
+)
+  
+ElevationSmoothCovariates <- setRefClass(
+  Class = "ElevationSmoothCovariates",
+  contains = "CovariatesObtainer",
+  fields = list(
+    elevation = "ANY",
+    scales = "numeric"
+  ),
+  methods = list(
+    initialize = function(...) {
+      callSuper(...)
+      covariateId <<- "Topography"
+    },
+    
+    getCacheFileName = function() {
+      return(study$context$getFileName(dir=study$context$processedDataDirectory, name="Elevation", region=study$studyArea$region, ext=".grd"))
+    },
+    
+    saveCache = function(fileName=getCacheFileName()) {
+      stop("Use preprocess().")
+    },
+    
+    loadCache = function(fileName=getCacheFileName()) {
+      elevation <<- raster(fileName)
+      return(invisible(.self))
+    },
+        
+    preprocess = function() {
+      if (!existCache()) {
+        library(raster)
+      
+        elevation <<- raster(file.path(study$context$rawDataDirectory, "elevation1x1_new.tif"))
+        elevation <<- raster::crop(elevation, extent(elevation, 250, 1450, 2690, 3290))
+        raster::projection(elevation) <<- "+proj=laea +lat_0=52 +lon_0=20 +x_0=5071000 +y_0=3210000 +a=6378137 +b=6378137 +units=m +no_defs"
+        elevation <<- raster::projectRaster(elevation, crs="+init=epsg:2393")
+        template <- study$studyArea$habitat
+        res(template) <- c(1000,1000)
+        elevation <<- 10 * elevation
+        elevation <<- raster::resample(elevation, template, filename=getCacheFileName(), overwrite=TRUE)
+        
+        #study$studyArea$loadBoundary(thin=TRUE, tolerance=0.005)
+        #mask(elevation, boundary, filename=getCacheFileName()        
+        #plot(elevation)
+        #plot(study$studyArea$boundary, add=T)
+        #study$studyArea$loadBoundary()
+      }
+            
+      return(invisible(.self))  
+    },
+    
+    extract = function(xyt) {
+      library(plyr)
+      library(stringr)
+      if (length(scales) == 0)
+        stop("Parameter 'scales' must be defined.")
+      if (!inherits(xyt, "SpatialPoints"))
+        stop("Argument 'xyt' must be of class 'SpatialPoints'.")
+      if (existCache() == FALSE)
+        stop("Run preprocess() first.")
+      loadCache()
+      
+      xy <- as.data.frame(unique(sp::coordinates(xyt)))
+      
+      covariates <- .smoothContinuousSubsets(r=elevation, coords=xy, kernelFun=.expKernel, scales=scales, .parallel=T)
+      colnames(covariates)[-(1:2)] <- paste0("topography_abs_", colnames(covariates[,-(1:2)]))
+      
+      # Find mean within the kernel area and subtract the smoothed values for each scale
+      for (scale in scales) {
+        message("Finding mean elevation for scale ", scale, "...")
+        
+        radius <- .getKernelRadius(elevation, scale)
+        x <- seq(-radius, radius, 1)
+        mask <- outer(x, x, function(x, y) sqrt(x^2 + y^2) <= radius)
+        mask[mask == FALSE] <- NA
+        meanElevation <- numeric(nrow(covariates))
+        
+        for (i in 1:nrow(covariates)) {
+          col <- colFromX(elevation, covariates[i,1])
+          row <- rowFromY(elevation, covariates[i,2])
+          maskCut <- .cutKernel(mask, elevation, col, row, scale)
+          elevationValues <- .getRasterValues(elevation, col, row, scale)
+          meanElevation[i] <- mean(maskCut * elevationValues, na.rm=T)
+        }
+        
+        index <- which(as.numeric(stringr::str_match(colnames(covariates[-c(1:2)]), "^topography_abs_([\\d.]+)$")[,2]) == scale) + 2
+        covariates[,paste0("topography_rel_", scale)] <- meanElevation - covariates[,index]
+      }
+      
+      coords <- as.data.frame(sp::coordinates(xyt))
+      colnames(coords) <- c("x","y")
+      covariates <- plyr::join(coords, covariates)[,-(1:2),drop=F]
       return(covariates)
     }
   )

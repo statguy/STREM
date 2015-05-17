@@ -15,6 +15,10 @@ Intersections <- setRefClass(
     
     getCoordinates = function() return(coordinates(intersections)),
     getData = function() return(intersections@data),
+    setDistance = function(distance) {
+      intersections$distance <<- distance
+      return(invisible(.self))
+    },
     
     getIntersectionsFileName = function(tag) {
       if (inherits(study, "undefinedField"))
@@ -87,7 +91,9 @@ Intersections <- setRefClass(
       covariates <- cbind(...)
       intersections@data <<- cbind(intersections@data, covariates)
       return(invisible(.self))
-    }
+    },
+    
+    getCovariates = function() return(intersections@data)
   )
 )
 
