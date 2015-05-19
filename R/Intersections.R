@@ -93,7 +93,12 @@ Intersections <- setRefClass(
       return(invisible(.self))
     },
     
-    getCovariates = function() return(intersections@data)
+    getCovariates = function() return(intersections@data[,covariateNames]),
+    
+    removeMissingCovariates = function() {
+      intersections <<- intersections[complete.cases(.self$getCovariates()),]
+      return(invisible(.self))
+    }
   )
 )
 

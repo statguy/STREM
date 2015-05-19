@@ -18,33 +18,35 @@ library(WTC)
 source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
 
 if (test == "test") {
-  # For testing
-
   context <- Context(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-  study <- FinlandWTCStudy(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
+  study <- FinlandWTCStudy(context=context, response=response)
   
-  intersections <- study$loadIntersections()
-  model <- FinlandFMPModel(study=study)
-  model$setup(intersections=intersections, params=NULL)
+  intersections <- FinlandWTCIntersections$new(study=study)$setCovariatesId(tag="density")$loadCovariates()$removeMissingCovariates()
+  covariates <- intersections$compressCovariates()
+  #cor(covariates[,fitCovariates]) > .5
+  fitCovariates <- stringr::str_subset(colnames(covariates), "^PC\\d+_habitat_+|^topography_rel_+")
+  #covariatesModel <- reformulate(fitCovariates, intercept=FALSE)
+  covariatesModel <- ~ PC1_habitat_62.5 + PC2_habitat_62.5 + topography_rel_1000
+  intersections$intersections@data <- cbind(intersections$getData(), covariates[,fitCovariates])
+  model <- SmoothModelSpatioTemporal$new(study=study)
+  modelParams <- study$getModelParams(modelName="SmoothModel-nbinomial-matern-ar1")
+  modelParams$meshParams$cutOff <- 600000
+  modelParams$maxEdge <- c(4e5,5e5)
+  model$setup(intersections=intersections, params=modelParams, covariatesModel=covariatesModel, tag="full")
   model$estimate()
-  model$collectEstimates()
-  #model$collectHyperparameters()
-  #summary(model$result)
-  model$getEstimatesFileName()
+  summary(model$result)
   
-  #model <- FinlandSmoothModelTemporal$new(study=study)
-  #model$setModelName("nbinomial", timeModels[task_id])
-  #model$loadEstimates()
   
-  model$collectEstimates()
-  #model$collectHyperparameters()
-  populationDensity <- model$getPopulationDensity(templateRaster=habitatWeightsRaster, getSD=FALSE)
-  populationSize <- FinlandPopulationSize(study=study, modelName=modelName)$getPopulationSize(populationDensity=populationDensity$mean)
-  populationSize
+  covariatesModel <- ~ PC1_habitat_1000 + PC2_habitat_1000 + topography_rel_4000
+  model$setup(intersections=intersections, params=modelParams, covariatesModel=covariatesModel, tag="full")
+  model$estimate()
+  summary(model$result)
+ 
+  
 } else {
   estimate <- function(response, modelName) {
     context <- Context(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
-    study <- FinlandWTCStudy(context=context, response=response, distanceCovariatesModel=~populationDensity+rrday+snow+tday-1, trackSampleInterval=2)
+    study <- FinlandWTCStudy(context=context, response=response)
     model <- study$getModel(modelName=modelName)
     modelParams <- study$getModelParams(modelName=modelName)    
     model <- study$estimate(model=model, params=modelParams, save=T)

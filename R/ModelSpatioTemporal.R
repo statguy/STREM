@@ -75,11 +75,11 @@ SmoothModelSpatioTemporal <- setRefClass(
       return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years)) / offsetScale)
     },
     
-    setup = function(intersections, params, tag) {
+    setup = function(intersections, params, covariatesModel=~1, tag) {
       library(INLA)
       library(R.utils)
       
-      callSuper(intersections=intersections, params=params)
+      callSuper(intersections=intersections, params=params, covariatesModel=covariatesModel, tag=tag)
       setModelName(family=params$family, randomEffect=paste("matern", params$timeModel, sep="-"), tag=tag)
       
       if (!hasMember(params, "meshParams"))
@@ -100,10 +100,6 @@ SmoothModelSpatioTemporal <- setRefClass(
                                                        cutoff=params$meshParams$cutOff * coordsScale),
                                timeout=10, onTimeout="error")
       message("Mesh nodes = ", mesh$n)
-      #mesh <<- inla.mesh.create.helper(points.domain=locations,
-      #                                 min.angle=params$meshParams$minAngle,
-      #                                 max.edge=params$meshParams$maxEdge * coordsScale,
-      #                                 cutoff=params$meshParams$cutOff * coordsScale)
       
       nYears <- length(years)
       groupYears <- as.integer(data$year - min(years) + 1)
@@ -112,8 +108,16 @@ SmoothModelSpatioTemporal <- setRefClass(
       else inla.spde2.matern(mesh, B.tau=spdeParams$B.tau, B.kappa=spdeParams$B.kappa, theta.prior.mean=spdeParams$theta.prior.mean, theta.prior.prec=spdeParams$theta.prior.prec, constr=spdeParams$constr)
       index <<- inla.spde.make.index("st", n.spde=spde$n.spde, n.group=nYears)
       
-      model <<- if (length(rhoPrior) == 0) response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))
-      else response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1", hyper=rhoPrior))
+
+      modelMatrix <- getINLAModelMatrix(covariatesModel, intersections$getData())
+      covTerms <- terms(covariatesModel, data=intersections$getData())
+      covariates <- colnames(modelMatrix)
+      intercept <- if (attr(covTerms, "intercept")[1] == 0) NULL else "intercept"
+      randomEffect <- if (length(rhoPrior) == 0) "f(st, model=spde, group=st.group, control.group=list(model='ar1'))"
+      else "f(st, model=spde, group=st.group, control.group=list(model='ar1', hyper=rhoPrior))"
+      model <<- reformulate(termlabels=c(intercept, covariates, randomEffect), response="response", intercept=FALSE)
+      #model <<- if (length(rhoPrior) == 0) response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1"))
+      #else response ~ -1 + intercept + f(st, model=spde, group=st.group, control.group=list(model="ar1", hyper=rhoPrior))
       A <<- inla.spde.make.A(mesh, loc=locations, group=groupYears, n.group=nYears)
       
       message("Number of nodes in the mesh = ", mesh$n)
@@ -121,33 +125,39 @@ SmoothModelSpatioTemporal <- setRefClass(
       message("Average count duration = ", mean(data$duration))
       message("Average animal track length = ", mean(data$distance))
       
+      effects <- if (!is.null(intercept)) list(c(index, list(intercept=1))) else list(index)
+      AList <- if (!is.null(modelMatrix)) {
+        effects[[2]] <- modelMatrix
+        list(A, 1)
+      }
+      else list(A)
       obsStack <<- inla.stack(data=list(response=data$intersections,
                                         E=getObservedOffset(),
                                         link=1),
-                              A=list(A),
-                              effects=list(c(index, list(intercept=1))),
+                              A=AList,
+                              effects=effects,
                               tag="observed")
       
-      boundarySamples <- study$studyArea$sampleBoundary()
-      if (!is.null(boundarySamples)) {
-        coords <- repeatMatrix(coordinates(boundarySamples), length(years)) * coordsScale
-        yearsData <- rep(years, each=length(boundarySamples))      
-        groupYears <- as.integer(yearsData - min(yearsData) + 1)
-        augA <<- inla.spde.make.A(mesh, loc=coords, group=groupYears, n.group=nYears)
-        augStack <<- inla.stack(data=list(response=NA,
-                                          E=1,
-                                          link=1),
-                                A=list(augA),
-                                effects=list(c(index, list(intercept=1))),
-                                tag="augmented")
-      }
+      #boundarySamples <- study$studyArea$sampleBoundary()
+      #if (!is.null(boundarySamples)) {
+      #  coords <- repeatMatrix(coordinates(boundarySamples), length(years)) * coordsScale
+      #  yearsData <- rep(years, each=length(boundarySamples))      
+      #  groupYears <- as.integer(yearsData - min(yearsData) + 1)
+      #  augA <<- inla.spde.make.A(mesh, loc=coords, group=groupYears, n.group=nYears)
+      #  augStack <<- inla.stack(data=list(response=NA,
+      #                                    E=1,
+      #                                    link=1),
+      #                          A=list(augA),
+      #                          effects=list(c(index, list(intercept=1))),
+      #                          tag="augmented")
+      #}
       
-      predStack <<- inla.stack(data=list(response=NA,
-                                         E=1,
-                                         link=1),
-                               A=list(1),
-                               effects=list(c(index, list(intercept=1))),
-                               tag="predicted")
+      #predStack <<- inla.stack(data=list(response=NA,
+      #                                   E=1,
+      #                                   link=1),
+      #                         A=list(1),
+      #                         effects=list(c(index, list(intercept=1))),
+      #                         tag="predicted")
       
       return(invisible(.self))
     },
@@ -155,8 +165,9 @@ SmoothModelSpatioTemporal <- setRefClass(
     estimate = function(save=FALSE, fileName=getEstimatesFileName(), verbose=TRUE) {
       library(INLA)
       
-      fullStack <<- if (is.null(augStack)) inla.stack(obsStack, predStack)
-      else inla.stack(obsStack, augStack, predStack)
+      #fullStack <<- if (is.null(augStack)) inla.stack(obsStack, predStack)
+      #else inla.stack(obsStack, augStack, predStack)
+      fullStack <<- inla.stack(obsStack)
       stackData <- inla.stack.data(fullStack, spde=spde)
       
       control.fixed <- if (length(interceptPrior) > 0)
@@ -361,71 +372,5 @@ SimulatedSmoothModelSpatioTemporal <- setRefClass(
       
       return(invisible(populationSize))
     }
-  )
-)
-
-FinlandSmoothModelSpatioTemporal <- setRefClass(
-  Class = "FinlandSmoothModelSpatioTemporal",
-  contains = c("SmoothModelSpatioTemporal", "FinlandCovariates"),
-  fields = list(
-  ),
-  methods = list(
-    initialize = function(...) {
-      callSuper(covariatesName="FinlandSmoothModelCovariates", ...)
-      return(invisible(.self))
-    },
-    
-    getPredictedOffset = function(distance=covariates$distance) {
-      if (length(distance) == 0) {
-        saveMeshNodeCovariates()
-        distance <- covariates$distance
-        #tracks <- study$loadTracks()
-        #distance <- tracks$getMeanDistance()
-      }
-      #if (length(distance) == 1) distance <- rep(distance, mesh$n * length(years))
-      return(2/pi * 12000 * 1 * distance * offsetScale)
-    },
-    
-    saveMeshNodeCovariates = function(save=FALSE) {
-      meshNodeLocationsSP <- associateMeshLocationsWithDate()
-      saveCovariates(meshNodeLocationsSP, impute=TRUE, save=save)
-      covariates$distance <<- predictDistances()
-      return(invisible(.self))
-    },
-    
-    predictDistances = function(formula=study$getDistanceCovariatesModel(), intervalH=study$getTrackSampleInterval()) {
-      distances <- study$predictDistances(formula=formula, data=covariates, intervalH=intervalH)
-      return(distances)
-    }
-  )
-)
-
-FinlandSmoothModelSpatioTemporalNoDistances <- setRefClass(
-  Class = "FinlandSmoothModelSpatioTemporalNoDistances",
-  contains = c("SmoothModelSpatioTemporal", "FinlandCovariates"),
-  fields = list(
-  ),
-  methods = list(
-    initialize = function(...) {
-      callSuper(covariatesName="FinlandSmoothModelCovariates", ...)
-      return(invisible(.self))
-    },
-    
-    getObservedOffset = function(distance) {
-      return(rep(1, nrow(data)))
-    },
-    
-    getPredictedOffset = function(distance) {
-      return(rep(1, mesh$n * length(years)))
-    }
-  )
-)
-
-FinlandRussiaSmoothModelSpatioTemporal <- setRefClass(
-  Class = "FinlandRussiaSmoothModelSpatioTemporal",
-  contains = c("SmoothModelSpatioTemporal"),
-  fields = list(
-  ),
-  methods = list(
   )
 )

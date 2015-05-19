@@ -97,8 +97,8 @@ SmoothModelMeanTemporal <- setRefClass(
       return(rhoPrior)
     },
     
-    setup = function(intersections, params, tag) {
-      callSuper(intersections, params, tag)
+    setup = function(intersections, params, covariatesModel=~1, tag) {
+      callSuper(intersections, params, covariatesModel, tag)
       #.self$aggregate()
       return(invisible(.self)) 
     },

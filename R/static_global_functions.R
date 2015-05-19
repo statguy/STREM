@@ -348,3 +348,30 @@ findInnercellLengths <- function(r, l) {
 }
 
 startsWith <- function(x, y) substr(x, start=1, stop=nchar(y)) == y
+
+getINLAModelMatrix = function(covariatesModel, covariates) {
+  if (missing(covariatesModel) || is.null(covariatesModel))
+    stop("Required argument 'covariatesModel' missing.")
+  
+  x <- if (missing(covariates) || is.null(covariates)) terms(covariatesModel)
+  else terms(covariatesModel, data=covariates)
+  
+  if (length(attr(x, "term.labels")) > 0) {
+    if (missing(covariates) || is.null(covariates))
+      stop("Covariates data do not match with covariates model.")
+    
+    modelMatrix <- as.data.frame(model.matrix(covariatesModel, data=covariates))
+    terms <- colnames(modelMatrix)
+    interceptIndex <- terms %in% "(Intercept)"
+    if (any(interceptIndex)) {
+      terms <- terms[!interceptIndex]
+      modelMatrix <- modelMatrix[,!interceptIndex]
+    }
+    
+    if (any(is.na(modelMatrix)))
+      stop("Covariates contain missing values which are not allowed.")
+    
+    return(modelMatrix)
+  }
+  else return(NULL)
+}

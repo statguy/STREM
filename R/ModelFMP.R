@@ -5,7 +5,7 @@ FMPModel <- setRefClass(
   fields = list(
   ),
   methods = list(
-    setup = function(intersections, params, tag) {
+    setup = function(intersections, params, covariatesModel=~1, tag) {
       coordsScale <<- 1
       offsetScale <<- 1000^2
       modelName <<- if (missing(tag)) "FMPModel" else paste("FMPModel", tag, sep="-")

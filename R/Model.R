@@ -64,27 +64,28 @@ Model <- setRefClass(
       return(2/pi * data$length * data$duration * distance / offsetScale)
     },
     
-    setup = function(intersections, params, tag) {
+    setup = function(intersections, params, covariatesModel=~1, tag) {
       library(INLA)
       library(plyr)
-      
+            
       if (missing(params))
         stop("Missing params argument.")
       if (!hasMember(params, "family"))
         stop("Missing family parameter.")
       if (!hasMember(params, "timeModel"))
         stop("Missing timeModel parameter.")
+      if (!inherits(intersections, "Intersections"))
+        stop("Argument 'intersections' must be of class 'Intersections'.")
       coordsScale <<- if (!hasMember(params, "coordsScale")) 1 else params$coordScale
       offsetScale <<- if (!hasMember(params, "offsetScale")) 1000^2 else params$offsetScale
       family <<- if (!hasMember(params, "family")) "nbinomial" else params$family
-      
+            
       setModelName(family=family, randomEffect=params$timeModel, tag=tag)
       data <<- intersections$getData()
       data$response <<- data$intersections
       locations <<- intersections$getCoordinates() * coordsScale
       years <<- as.integer(sort(unique(data$year)))
       if (hasMember(params, "model")) model <<- params$model
-
       
       return(invisible(.self))      
     },

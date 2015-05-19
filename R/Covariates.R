@@ -23,20 +23,24 @@ CovariatesContainer <- setRefClass(
       return(invisible(.self))
     },
     
+    existCovariates = function(fileName=getCovariatesFileName()) {
+      return(file.exists(fileName))
+    },
+    
     setCovariatesId = function(tag) {
-      stop("Unimplemented method.")
+      stop("Unimplemented abstract method.")
     },
     
     getSampleLocations = function(...) {
-      stop("Unimplemented method.")
+      stop("Unimplemented abstract method.")
     },
     
     associateCovariates = function(...) {
-      stop("Unimplemented method.")
+      stop("Unimplemented abstract method.")
     },
     
     getCovariates = function() {
-      stop("Unimplemented method.")
+      stop("Unimplemented abstract method.")
     },
     
     addCovariates = function(...) {
@@ -57,30 +61,39 @@ CovariatesContainer <- setRefClass(
     compressCovariates = function(minExplainedVariance=0.75) {
       library(stringr)
       
-      if (any(complete.cases(self$getCovariates()) == FALSE))
+      if (any(complete.cases(.self$getCovariates()) == FALSE))
         stop("Missing data in covariates not allowed.")
       
-      # TODO: add continuous variables properly (center and scale, etc.)
-      # PCA for categorical variables by scale (continuous are not affected)
-      pc <- list()
-      scales <- stringr::str_match(covariateNames, "_([0-9.]+)$")[,2]
+      # PCA for categorical variables by scale
+      categoricalVariables <- covariateNames[stringr::str_detect(covariateNames, "^[a-zA-Z0-9]+\\[[a-zA-Z0-9]+\\]_[0-9.]+$")]
+      pc <- data.frame()
+      scales <- stringr::str_match(categoricalVariables, "^[a-zA-Z0-9]+\\[[a-zA-Z0-9]+\\]_([0-9.]+)$")[,2]
       for (scale in unique(scales)) {
-        variables <- stringr::str_match(covariateNames, "^([a-zA-Z0-9]+)_")[,2]
+        variables <- stringr::str_match(categoricalVariables, "^([a-zA-Z0-9]+)\\[[a-zA-Z0-9]+\\]_[0-9.]+$")[,2]
         for (variable in unique(variables)) {
-          group <- covariateNames[variables == variable & scales == scale]
+          group <- categoricalVariables[variables == variable & scales == scale]
           message("Processing varibles ", paste(group, collapse=", "), "...")
-          data <- self$getCovariates()[,group]
-          #data <- intersections$intersections@data[,group]
-          pcSubset <- prcomp(reformulate(group), data, scale.=TRUE)
+          data <- .self$getCovariates()[,group,drop=F]
+          colnames(data) <- paste0("v", 1:ncol(data))
+          pcSubset <- prcomp(reformulate(colnames(data)), data, scale.=TRUE)
           index <- which(cumsum(pcSubset$sdev^2) / sum(pcSubset$sdev^2) <= minExplainedVariance)
-          x <- pcSubset$x[,index,drop=F]
+          x <- as.data.frame(pcSubset$x[,index,drop=F])
           colnames(x) <- paste(colnames(x), variable, scale, sep="_")
-          pc <- cbind(pc, x)
+          pc <- if (ncol(pc) == 0) x else cbind(pc, x)
         }
       }
       
-      x <- cbind(self$getCovariates(), pc)
-      return(x)
+      # Continuous variables are ignored for PCA, only scaled
+      continuousVariables <- covariateNames[!stringr::str_detect(covariateNames, "^[a-zA-Z0-9]+\\[[a-zA-Z0-9]+\\]_[0-9.]+$")]
+      data <- .self$getCovariates()[,continuousVariables,drop=F]
+      scaled <- base::scale(data)
+      covariates <- if (ncol(pc) == 0) scaled else cbind(pc, scaled)
+      
+      return(covariates)
+    },
+    
+    removeMissingCovariates = function() {
+      stop("Unimplemented abstract method.")
     }
   )
 )
@@ -382,7 +395,7 @@ HabitatSmoothCovariates <- setRefClass(
         message("Processing habitat ", names(habitatValues[index]), "...")
         covariates <- .smoothDiscreteSubsets(r=study$studyArea$habitat, coords=xy, kernelFun=.expKernel, scales=scales, processValues=habitatValues[[index]], edgeValues=edgeValues, .parallel=T)
         covariates <- covariates[,-(1:2),drop=F]
-        colnames(covariates) <- paste0("habitat_", names(habitatValues[index]), "_", colnames(covariates))
+        colnames(covariates) <- paste0("habitat[", names(habitatValues[index]), "]_", colnames(covariates))
         return(covariates)
       }, edgeValues=edgeValues)
       

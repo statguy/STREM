@@ -174,13 +174,13 @@ preprocessDensityCovariates <- function(response) {
   
   intersections <- FinlandWTCIntersections$new(study=study)$loadIntersections()
   intersections$setCovariatesId(tag="density")
+  if (intersections$existCovariates()) intersections$loadCovariates()
   habitat <- HabitatSmoothCovariates$new(study=study, scales=2^(0:10) * 62.5)
   elevation <- ElevationSmoothCovariates$new(study=study, scales=2^(0:6) * 1000)
   human <- HumanDensitySmoothCovariates$new(study=study, scales=2^(0:6) * 1000)
   intersections$addCovariates(habitat, elevation, human)
   intersections$saveCovariates()
 }
-
 
 response <- "canis.lupus"
 preprocessIntersections(response)
