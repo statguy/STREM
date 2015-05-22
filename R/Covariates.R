@@ -47,49 +47,45 @@ CovariatesContainer <- setRefClass(
       library(plyr)
       covariates <- list(...)
       values <- llply(covariates, function(x) {
-        if (!inherits(x, "CovariatesObtainer"))
-          stop("Arguments must be of class 'Covariates'.")
-        x$preprocess()
-        y <- x$extract(getSampleLocations())
-        return(y)
+        if (inherits(x, "CovariatesObtainer")) {
+          x$preprocess()
+          y <- x$extract(.self$getSampleLocations())
+          return(y)
+        }
+        else return(x)
       })
       covariateNames <<- c(covariateNames, do.call(c, lapply(values, colnames)))
       do.call(.self$associateCovariates, values)
       return(invisible(.self))
     },
     
-    compressCovariates = function(minExplainedVariance=0.75) {
+    compressCovariates = function(variables, minExplainedVariance=0.75, name) {
       library(stringr)
       
-      if (any(complete.cases(.self$getCovariates()) == FALSE))
+      if (any(complete.cases(.self$getCovariates()[,variables,drop=F]) == FALSE))
         stop("Missing data in covariates not allowed.")
       
-      # PCA for categorical variables by scale
-      categoricalVariables <- covariateNames[stringr::str_detect(covariateNames, "^[a-zA-Z0-9]+\\[[a-zA-Z0-9]+\\]_[0-9.]+$")]
-      pc <- data.frame()
-      scales <- stringr::str_match(categoricalVariables, "^[a-zA-Z0-9]+\\[[a-zA-Z0-9]+\\]_([0-9.]+)$")[,2]
-      for (scale in unique(scales)) {
-        variables <- stringr::str_match(categoricalVariables, "^([a-zA-Z0-9]+)\\[[a-zA-Z0-9]+\\]_[0-9.]+$")[,2]
-        for (variable in unique(variables)) {
-          group <- categoricalVariables[variables == variable & scales == scale]
-          message("Processing varibles ", paste(group, collapse=", "), "...")
-          data <- .self$getCovariates()[,group,drop=F]
-          colnames(data) <- paste0("v", 1:ncol(data))
-          pcSubset <- prcomp(reformulate(colnames(data)), data, scale.=TRUE)
-          index <- which(cumsum(pcSubset$sdev^2) / sum(pcSubset$sdev^2) <= minExplainedVariance)
-          x <- as.data.frame(pcSubset$x[,index,drop=F])
-          colnames(x) <- paste(colnames(x), variable, scale, sep="_")
-          pc <- if (ncol(pc) == 0) x else cbind(pc, x)
-        }
-      }
+      data <- .self$getCovariates()[,variables,drop=F]
+      colnames(data) <- paste0("v", 1:ncol(data))
+      pcSubset <- prcomp(reformulate(colnames(data)), data, scale.=TRUE)
+      index <- which(cumsum(pcSubset$sdev^2) / sum(pcSubset$sdev^2) <= minExplainedVariance)
+      pc <- as.data.frame(pcSubset$x[,index,drop=F])
+      colnames(pc) <- paste(colnames(pc), name, sep=".")
+      .self$addCovariates(pc)
       
-      # Continuous variables are ignored for PCA, only scaled
-      continuousVariables <- covariateNames[!stringr::str_detect(covariateNames, "^[a-zA-Z0-9]+\\[[a-zA-Z0-9]+\\]_[0-9.]+$")]
-      data <- .self$getCovariates()[,continuousVariables,drop=F]
-      scaled <- base::scale(data)
-      covariates <- if (ncol(pc) == 0) scaled else cbind(pc, scaled)
+      return(invisible(.self))
+    },
+    
+    scaleCovariates = function(variables, name=".scaled") {
+      if (any(complete.cases(.self$getCovariates()[,variables,drop=F]) == FALSE))
+        stop("Missing data in covariates not allowed.")
       
-      return(covariates)
+      data <- .self$getCovariates()[,variables,drop=F]
+      scaledCovariates <- base::scale(data)
+      colnames(scaledCovariates) <- paste0(colnames(scaledCovariates), name)
+      .self$addCovariates(scaledCovariates)
+      
+      return(invisible(.self))
     },
     
     removeMissingCovariates = function() {
