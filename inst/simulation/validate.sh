@@ -41,4 +41,6 @@ free_mem=$6
 if [ "$model" != "FMPModel" ]
 then
   python "$exec_path"/parallel_r.py -p 15 -t "$iterations" -n "$max_nodes" -l 20.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/validate.R notest "$scenario" "$model"
+else
+  python "$exec_path"/parallel_r.py -p 15 -t "$iterations" -n "$max_nodes" -l 20.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/validate_boot_ci.R notest "$scenario" "$model"
 fi
