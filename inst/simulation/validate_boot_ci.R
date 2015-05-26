@@ -9,6 +9,7 @@ library(boot)
 
 parseArguments()
 modelName <- extraArgs[1]
+iteration <- as.integer(task_id)
 #modelName <- "FMPModel"
 #scenario <- "A"
 #iteration <- as.integer(1)

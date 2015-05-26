@@ -44,3 +44,6 @@ then
 else
   python "$exec_path"/parallel_r.py -p 15 -t "$iterations" -n "$max_nodes" -l 20.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/validate_boot_ci.R notest "$scenario" "$model"
 fi
+
+# ./validate.sh ~/git/RParallelScreen/ A 1 1 FMPModel 0
+# ./validate.sh ~/git/RParallelScreen/ A 1:50 60 FMPModel 0
