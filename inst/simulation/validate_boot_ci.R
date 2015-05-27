@@ -11,9 +11,11 @@ library(boot)
 parseArguments()
 modelName <- extraArgs[1]
 iteration <- as.integer(task_id)
-#modelName <- "FMPModel"
-#scenario <- "A"
-#iteration <- as.integer(1)
+if (F) {
+modelName <- "FMPModel"
+scenario <- "A"
+iteration <- as.integer(1)
+}
 mss <- getMSS(scenario=scenario)
 study <- mss$study
 context <- study$context
@@ -46,10 +48,10 @@ findCI <- function(fitted, iteration, model, modelName) {
     b <- boot(data=x$density, statistic=getPopulationSize, R=1000, model=model, readHabitatIntoMemory=F, parallel="multicore")
     #ci95 <- quantile(b$t, c(.025,.975))
     #ci50 <- quantile(b$t, c(.25,.75))
-    bci <- boot.ci(b, conf=c(.95, .50), ype=c("basic"))
+    bci <- boot.ci(b, conf=c(.95, .50), type=c("bca"))
     if (!is.null(bci)) {      
-      ci95 <- bci$basic[1,4:5]
-      ci50 <- bci$basic[2,4:5]
+      ci95 <- bci$bca[1,4:5]
+      ci50 <- bci$bca[2,4:5]
       p95 <- ci95[1] <= true & ci95[2] >= true
       p50 <- ci50[1] <= true & ci50[2] >= true
       return(data.frame(year=year, p95=p95, p50=p50))
@@ -66,3 +68,9 @@ bootCI <- llply(1:nSamples, function(i) {
 
 bootCI <- do.call(rbind, bootCI)
 save(bootCI, file=validation$getCredibilityIntervalsValidationFileName(modelName=modelName, iteration=iteration))
+
+if (F) {
+load(file=validation$getCredibilityIntervalsValidationFileName(modelName=modelName, iteration=iteration))
+mean(bootCI$p95)
+mean(bootCI$p50)
+}
