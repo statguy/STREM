@@ -48,8 +48,8 @@ findCI <- function(fitted, iteration, model, modelName) {
     b <- boot(data=x$density, statistic=getPopulationSize, R=1000, model=model, readHabitatIntoMemory=F, parallel="multicore")
     #ci95 <- quantile(b$t, c(.025,.975))
     #ci50 <- quantile(b$t, c(.25,.75))
-    bci <- boot.ci(b, conf=c(.95, .50), type=c("bca"))
-    if (!is.null(bci)) {      
+    bci <- try(boot.ci(b, conf=c(.95, .50), type=c("bca")))
+    if (!is.null(bci) & !inherits(bci, "try-error")) {
       ci95 <- bci$bca[1,4:5]
       ci50 <- bci$bca[2,4:5]
       p95 <- ci95[1] <= true & ci95[2] >= true
