@@ -32,6 +32,11 @@ iterations=$3
 max_nodes=$4
 model=$5
 
+if [ ! "$exec_path"/git_uptodate.sh ]
+then
+  exit
+fi
+
 if [ ! -z "$6" ]
 then
   count_days=$6

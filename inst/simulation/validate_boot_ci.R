@@ -13,6 +13,8 @@ modelName <- extraArgs[1]
 iteration <- as.integer(task_id)
 if (F) {
 modelName <- "FMPModel"
+scenario <- "A"
+iteration <- as.integer(1)
 scenario <- "E"
 iteration <- as.integer(10)
 }
@@ -35,6 +37,7 @@ fitted <- model$getDensityEstimates()
 
 getPopulationSize <- function(fitted, index, year, model, readHabitatIntoMemory) {
   populationSize <- study$getPopulationSize(model, index=index, year=year, readHabitatIntoMemory=readHabitatIntoMemory, loadValidationData=F, save=F)
+  #print(populationSize)
   return(populationSize$sizeData$Estimated)
 }
 

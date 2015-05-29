@@ -38,6 +38,11 @@ max_nodes=$4
 model=$5
 free_mem=$6
 
+if [ ! "$exec_path"/git_uptodate.sh ]
+then
+  exit
+fi
+
 if [ "$model" != "FMPModel" ]
 then
   python "$exec_path"/parallel_r.py -p 15 -t "$iterations" -n "$max_nodes" -l 20.0 -b ~/tmp/blacklist.txt -v ~/git/Winter-Track-Counts/inst/simulation/validate.R notest "$scenario" "$model"
