@@ -116,16 +116,17 @@ Model <- setRefClass(
       return(lengthWeights)
     },
     
-    getDensityEstimates = function(weights=1, aggregate=F, index) {
+    getDensityEstimates = function(weights=1, aggregate=F, index, year) {
       xy <- getUnscaledObservationCoordinates()
       xyzt <- data.frame(x=xy[,1], y=xy[,2], density=data$fittedMean * weights / offsetScale, year=data$year)
+      if (!missing(year)) xyzt <- xyzt[xyzt$year==year,]
       if (!missing(index)) xyzt <- xyzt[index,]
       if (aggregate)
         xyzt <- ddply(xyzt, .(year), function(x) data.frame(density=mean(x$density), year=x$year[1]))
       return(xyzt)
     },
     
-    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, habitatWeights=NULL, index, .parallel=TRUE) {
+    getPopulationDensity = function(templateRaster=study$getTemplateRaster(), maskPolygon=study$studyArea$boundary, habitatWeights=NULL, index, year, .parallel=TRUE) {
       if (is.null(data$fittedMean))
         stop("Did you forgot to run collectEstimates() first?")
       library(raster)
@@ -138,7 +139,7 @@ Model <- setRefClass(
       }
       else 1
       
-      meanPopulationDensity <- getDensityEstimates(weights=1/effortWeights, aggregate=TRUE, index=index)
+      meanPopulationDensity <- getDensityEstimates(weights=1/effortWeights, aggregate=TRUE, index=index, year=year)
       cellArea <- prod(res(templateRaster))
       meanPopulationDensityRaster <- SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$density, layerNames=meanPopulationDensity$year, weights=cellArea, .parallel=.parallel)
       #meanPopulationDensityRaster <- SpatioTemporalRaster(study=study)$fill(z=meanPopulationDensity$density, boundary=maskPolygon, layerNames=meanPopulationDensity$year, weights=cellArea, .parallel=.parallel)

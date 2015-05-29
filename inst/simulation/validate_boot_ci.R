@@ -33,20 +33,20 @@ fitted <- model$getDensityEstimates()
 #fitted$id <- rep(1:n, times=t)
 #fitted <- dcast(fitted, year ~ id, value.var="density")
 
-getPopulationSize <- function(fitted, index, model, readHabitatIntoMemory) {
-  populationSize <- study$getPopulationSize(model, index=index, readHabitatIntoMemory=readHabitatIntoMemory, loadValidationData=F, save=F)
+getPopulationSize <- function(fitted, index, year, model, readHabitatIntoMemory) {
+  populationSize <- study$getPopulationSize(model, index=index, year=year, readHabitatIntoMemory=readHabitatIntoMemory, loadValidationData=F, save=F)
   return(populationSize$sizeData$Estimated)
 }
 
 findCI <- function(fitted, iteration, model, modelName) {
   populationSize <- study$loadPopulationSize(iteration, modelName)
   
-  # x <- subset(fitted, year=2001)
+  # x <- subset(fitted, year==2001)
   b <- ddply(fitted, .(year), function(x, iteration, model, populationSize) {
     message("Resampling year ", x$year[1], "...")
     year <- as.integer(x$year[1])
     true <- subset(populationSize$sizeData, Year == year)$Observed
-    b <- boot(data=x$density, statistic=getPopulationSize, R=1000, model=model, readHabitatIntoMemory=F, parallel="multicore")
+    b <- boot(data=x$density, statistic=getPopulationSize, R=1000, year=year, model=model, readHabitatIntoMemory=F, parallel="multicore")
     #ci95 <- quantile(b$t, c(.025,.975))
     #ci50 <- quantile(b$t, c(.25,.75))
     bci <- try(boot.ci(b, conf=c(.95, .50), type=c("bca")))

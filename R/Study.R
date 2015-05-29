@@ -116,7 +116,7 @@ SimulationStudy <- setRefClass(
       return(habitatWeights)
     },
         
-    getPopulationSize = function(estimates, index, readHabitatIntoMemory=TRUE, loadValidationData=TRUE, save=TRUE, .parallel=TRUE) {
+    getPopulationSize = function(estimates, index, year, readHabitatIntoMemory=TRUE, loadValidationData=TRUE, save=TRUE, .parallel=TRUE) {
       if (withHabitatWeights) {
         habitatWeights <- getHabitatWeights(iteration=estimates$iteration, readHabitatIntoMemory=readHabitatIntoMemory)
         populationDensity <- estimates$getPopulationDensity(habitatWeights=habitatWeights, index=index, .parallel=.parallel)
@@ -127,7 +127,7 @@ SimulationStudy <- setRefClass(
       }
       else {
         populationSize <- SimulationPopulationSize$new(study=.self, modelName=modelName, iteration=estimates$iteration)
-        x <- estimates$getDensityEstimates(index=index)
+        x <- estimates$getDensityEstimates(index=index, year=year)
         populationSize$getPopulationSize(x$density, x$year, loadValidationData=loadValidationData)
       }
       
