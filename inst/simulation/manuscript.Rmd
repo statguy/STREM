@@ -965,9 +965,32 @@ saveFigure(p3, "manuscript-figure-4c.pdf", dpi=300)
 getCIProportions <- function(scenarios, modelNames, panel, scenarioNames, cutoff=Inf) {
   study <- getStudy(scenario="A")
   validation <- Validation(study=study, populationSizeCutoff=cutoff)
+  credibilityIntervals <- list()
+  
+  if ("FMPModel" %in% modelNames) {
+    modelNames <- modelNames[!modelNames %in% "FMPModel"]
+    
+    for (scenario in scenarios) {
+      study <- getStudy(scenario=scenario)
+      validation <- Validation(study=study, populationSizeCutoff=cutoff)
+      iterations <- validation$getCredibilityIntervalsValidationIterations("FMPModel")
+      p95 <- c()
+      p50 <- c()
+      for (i in iterations) {
+        load(file=validation$getCredibilityIntervalsValidationFileName(modelName=modelName, iteration=i))
+        p95 <- c(p95, bootCI$p95)
+        p50 <- c(p50, bootCI$p50)
+      }
+      a <- data.frame(scenario=scenario, Proportion=mean(p95, na.rm=T), n=NA, True=NA, Estimated=NA, Estimated.q1=NA, Estimated.q2=NA, modelName="FMPModel", Interval="95%")
+      b <- data.frame(scenario=scenario, Proportion=mean(p50, na.rm=T), n=NA, True=NA, Estimated=NA, Estimated.q1=NA, Estimated.q2=NA, modelName="FMPModel", Interval="50%")
+      credibilityIntervals <- rbind(credibilityIntervals, rbind(a, b))
+    }
+  }
+  
   a <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames)
   b <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames, probs=c(.25, .75), probsName="50%")
-  credibilityIntervals <- rbind(a, b)
+  #credibilityIntervals <- rbind(a, b)
+  credibilityIntervals <- rbind(credibilityIntervals, rbind(a, b))
   credibilityIntervals$panel <- panel
   credibilityIntervals$scenario <- rep(scenarioNames, times=2, each=length(modelNames))
   return(credibilityIntervals)  

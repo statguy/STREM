@@ -13,8 +13,8 @@ modelName <- extraArgs[1]
 iteration <- as.integer(task_id)
 if (F) {
 modelName <- "FMPModel"
-scenario <- "A"
-iteration <- as.integer(1)
+scenario <- "E"
+iteration <- as.integer(10)
 }
 mss <- getMSS(scenario=scenario)
 study <- mss$study
@@ -41,6 +41,7 @@ getPopulationSize <- function(fitted, index, model, readHabitatIntoMemory) {
 findCI <- function(fitted, iteration, model, modelName) {
   populationSize <- study$loadPopulationSize(iteration, modelName)
   
+  # x <- subset(fitted, year=2001)
   b <- ddply(fitted, .(year), function(x, iteration, model, populationSize) {
     message("Resampling year ", x$year[1], "...")
     year <- as.integer(x$year[1])
@@ -57,7 +58,7 @@ findCI <- function(fitted, iteration, model, modelName) {
       return(data.frame(year=year, p95=p95, p50=p50))
     }
     else return(data.frame(year=year, p95=NA, p50=NA))
-  }, iteration=iteration, model=model, populationSize)
+  }, iteration=iteration, model=model, populationSize=populationSize)
   return(b)
 }
 
@@ -70,7 +71,14 @@ bootCI <- do.call(rbind, bootCI)
 save(bootCI, file=validation$getCredibilityIntervalsValidationFileName(modelName=modelName, iteration=iteration))
 
 if (F) {
-load(file=validation$getCredibilityIntervalsValidationFileName(modelName=modelName, iteration=iteration))
-mean(bootCI$p95)
-mean(bootCI$p50)
+  iterations <- validation$getCredibilityIntervalsValidationIterations(modelName)
+  p95 <- c()
+  p50 <- c()
+  for (i in iterations) {
+    load(file=validation$getCredibilityIntervalsValidationFileName(modelName=modelName, iteration=i))
+    p95 <- c(p95, bootCI$p95)
+    p50 <- c(p50, bootCI$p50)
+  }
+  mean(p95, na.rm=T)
+  mean(p50, na.rm=T)
 }
