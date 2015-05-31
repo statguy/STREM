@@ -41,10 +41,10 @@ SurveyRoutes <- setRefClass(
     cutSurveyRoutes = function() {
       library(rgeos)
       
-      contains <- gContains(study$studyArea$boundary, surveyRoutes, byid=T)
-      crosses <- gCrosses(study$studyArea$boundary, surveyRoutes, byid=T)
+      contains <- rgeos::gContains(study$studyArea$boundary, surveyRoutes, byid=T)
+      crosses <- rgeos::gCrosses(study$studyArea$boundary, surveyRoutes, byid=T)
       index <- c(which(contains), which(crosses))
-      intersection <- gIntersection(study$studyArea$boundary, surveyRoutes[index], byid=T, id=names(surveyRoutes[index]))
+      intersection <- rgeos::gIntersection(study$studyArea$boundary, surveyRoutes[index], byid=T, id=names(surveyRoutes[index]))
       
       return(intersection)
     },
