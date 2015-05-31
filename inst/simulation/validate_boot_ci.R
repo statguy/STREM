@@ -74,6 +74,11 @@ bootCI <- do.call(rbind, bootCI)
 save(bootCI, file=validation$getCredibilityIntervalsValidationFileName(modelName=modelName, iteration=iteration))
 
 if (F) {
+  modelName <- "FMPModel"
+  scenario <- "B"
+  mss <- getMSS(scenario=scenario)
+  study <- mss$study
+  validation <- Validation(study=study, populationSizeCutoff=Inf)
   iterations <- validation$getCredibilityIntervalsValidationIterations(modelName)
   p95 <- c()
   p50 <- c()
