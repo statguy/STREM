@@ -1,13 +1,15 @@
-.weightsRasterCache <- environment()
+
 
 HabitatWeights <- setRefClass(
   Class = "HabitatWeights",
   fields = list(
-    study = "Study"
+    study = "Study",
+    weightsRasterCache = "ANY",
   ),
   methods = list(
     initialize = function(...) {
       callSuper(...)
+      weightsRasterCache <- environment()
       return(invisible(.self))
     },
     
@@ -34,11 +36,11 @@ HabitatWeights <- setRefClass(
     loadWeightsRaster = function(fileName=getWeightsRasterFileName(), cache=T) {
       library(raster)
       if (cache) {
-        if (exists(".weightRaster", envir=.weightsRasterCache))
-          return(get(".weightRaster", envir=.weightsRasterCache))
+        if (exists(".weightRaster", envir=.self$weightsRasterCache))
+          return(get(".weightRaster", envir=.self$weightsRasterCache))
         else {
           r <- raster(fileName)
-          assign(".weightRaster", r, envir=.weightsRasterCache)
+          assign(".weightRaster", r, envir=.self$weightsRasterCache)
           return(r)
         }
       }
