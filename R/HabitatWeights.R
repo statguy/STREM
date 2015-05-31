@@ -33,7 +33,7 @@ HabitatWeights <- setRefClass(
     
     loadWeightsRaster = function(fileName=getWeightsRasterFileName(), cache=T) {
       if (cache) {
-        if (exist(.weightsRasterCache, "raster")) return(get("raster", envir=.weightsRasterCache))
+        if (exists("raster", envir=.weightsRasterCache)) return(get("raster", envir=.weightsRasterCache))
         else {
           r <- raster(fileName)
           assign("raster", r, envir=.weightsRasterCache)
