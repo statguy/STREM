@@ -32,11 +32,13 @@ HabitatWeights <- setRefClass(
     },
     
     loadWeightsRaster = function(fileName=getWeightsRasterFileName(), cache=T) {
+      library(raster)
       if (cache) {
-        if (exists("raster", envir=.weightsRasterCache)) return(get("raster", envir=.weightsRasterCache))
+        if (exists(".weightRaster", envir=.weightsRasterCache))
+          return(get(".weightRaster", envir=.weightsRasterCache))
         else {
           r <- raster(fileName)
-          assign("raster", r, envir=.weightsRasterCache)
+          assign(".weightRaster", r, envir=.weightsRasterCache)
           return(r)
         }
       }
@@ -138,7 +140,7 @@ CORINEHabitatWeights <- setRefClass(
       
       if (file.exists(weightsRasterFileName)) {
         message("Reading habitat weights raster from ", weightsRasterFileName)
-        return(.self$loadWeightsRaster(fileName=weightsRasterFileName, cache=T)) # cache=T here for bootstrap estimates
+        return(.self$loadWeightsRaster(fileName=weightsRasterFileName, cache=T)) # FIXME: ad-hoc cache=T here for bootstrap estimates
       }
       
       message("Aggregating habitat weights raster...")
