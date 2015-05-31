@@ -4,7 +4,7 @@ HabitatWeights <- setRefClass(
   Class = "HabitatWeights",
   fields = list(
     study = "Study",
-    weightsRasterCache = "ANY",
+    weightsRasterCache = "ANY"
   ),
   methods = list(
     initialize = function(...) {
