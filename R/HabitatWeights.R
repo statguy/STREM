@@ -9,7 +9,7 @@ HabitatWeights <- setRefClass(
   methods = list(
     initialize = function(...) {
       callSuper(...)
-      weightsRasterCache <- environment()
+      weightsRasterCache <<- environment()
       return(invisible(.self))
     },
     
