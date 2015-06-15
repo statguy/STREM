@@ -29,7 +29,7 @@ prettyModelName <- function(x) {
 }
 
 boundaryDF <- ggplot2::fortify(FinlandWTCStudy(context=context, response="canis.lupus")$studyArea$boundary)
-
+cutoff <- c(1,1000)
 ```
 
 ```{r figures}
@@ -456,7 +456,7 @@ populationSizes <- getPopulationSizes(scenarios=scenarios, modelNames=modelNames
 #populationSizes2000 <- getPopulationSizes(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[c(1,3,4,5)])
 #populationSizes10Days <- getPopulationSizes(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(1,3,4,5)])
 
-cutoff <- c(1,1000)
+
 
 meanPopulationSizes  <- getMeanPopulationSizes(cutoffPopulationSizes(populationSizes, cutoff, models=modelNames[c(1,3,5)]))
 logPopulationSizes <- getLogPopulationSizes(cutoffPopulationSizes(populationSizes, cutoff, models=modelNames[c(1,3,5)]))
@@ -968,8 +968,6 @@ getCIProportions <- function(scenarios, modelNames, panel, scenarioNames, cutoff
   credibilityIntervals <- list()
   
   if ("FMPModel" %in% modelNames) {
-    modelNames <- modelNames[!modelNames %in% "FMPModel"]
-    
     for (scenario in scenarios) {
       study <- getStudy(scenario=scenario)
       validation <- Validation(study=study, populationSizeCutoff=cutoff)
@@ -977,7 +975,7 @@ getCIProportions <- function(scenarios, modelNames, panel, scenarioNames, cutoff
       p95 <- c()
       p50 <- c()
       for (i in iterations) {
-        load(file=validation$getCredibilityIntervalsValidationFileName(modelName=modelName, iteration=i))
+        load(file=validation$getCredibilityIntervalsValidationFileName(modelName="FMPModel", iteration=i))
         p95 <- c(p95, bootCI$p95)
         p50 <- c(p50, bootCI$p50)
       }
@@ -986,17 +984,18 @@ getCIProportions <- function(scenarios, modelNames, panel, scenarioNames, cutoff
       credibilityIntervals <- rbind(credibilityIntervals, rbind(a, b))
     }
   }
-  
-  a <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames)
-  b <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames, probs=c(.25, .75), probsName="50%")
-  #credibilityIntervals <- rbind(a, b)
+
+  a <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames[!modelNames %in% "FMPModel"])
+  b <- validation$getValidatedCredibilityIntervalsProportions(scenarios=scenarios, modelNames=modelNames[!modelNames %in% "FMPModel"], probs=c(.25, .75), probsName="50%")
   credibilityIntervals <- rbind(credibilityIntervals, rbind(a, b))
   credibilityIntervals$panel <- panel
-  credibilityIntervals$scenario <- rep(scenarioNames, times=2, each=length(modelNames))
-  return(credibilityIntervals)  
+  #credibilityIntervals$scenario <- rep(scenarioNames, times=2, each=length(modelNames))
+  return(credibilityIntervals)
+  
+  #scenario=rep(scenarioNames, times=2, each=length(modelNames[!modelNames %in% "FMPModel"])))
 }
 
-cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames[c(1,3,5)], panel="Case 1", scenarioNames=scenarios, cutoff=cutoff)
+cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames[c(1,3,4,5)], panel="Case 1", scenarioNames=scenarios, cutoff=cutoff)
 #cip2 <- getCIProportions(scenarios=paste0(scenarios, "combined"), modelNames=modelNames[c(1,3,5)], panel="Case 2", scenarioNames=scenarios, cutoff=10*cutoff)
 #cip3 <- getCIProportions(scenarios=paste0(scenarios, "10days"), modelNames=modelNames[c(1,3,5)], panel="Case 3", scenarioNames=scenarios, cutoff=cutoff)
 
@@ -1009,20 +1008,31 @@ plotCIProportions <- function(credibilityIntervals) {
     geom_hline(aes(yintercept=.5), color="darkgrey") +
     geom_hline(aes(yintercept=.95), color="darkgrey") +
     geom_point(aes(shape=Model, group=Model), position=position_dodge(width=.7)) +
-    scale_shape_manual("Model", values=c(17,15,3)) +
-    scale_colour_manual("CI", values=c("gray", "black")) +
-    #scale_colour_manual("Model", values=c("blue", "green", "red"), labels=modelLabels) +
+    scale_colour_manual("CI", values=c("black", "grey")) +
     theme_minimal(base_size=10) + theme(panel.border=element_rect(fill="transparent")) +
     xlab("Scenario") + ylab("Proportion") + ylim(0, 1) +
     #facet_wrap(~panel) +
     theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
           plot.margin=unit(c(0.2, 0.2, 0, 0), units="line"),
-          #legend.background=element_rect(fill="transparent"),
-          legend.margin=unit(-2, units="line"),
           panel.margin=unit(0, units="line"),
-          legend.position="bottom",
+          legend.margin=unit(-1, units="line"),
+          #legend.position="bottom",
+          legend.direction="horizontal",
+          #legend.direction="vertical",
           legend.box="horizontal",
-          legend.key.width=unit(.7, "line"))
+          legend.key.width=unit(.7, "line"),
+          legend.key.height=unit(0, "line"))
+
+  library(gridExtra)
+  g_legend <- function(a.gplot) {
+    tmp <- ggplot_gtable(ggplot_build(a.gplot))
+    leg <- which(sapply(tmp$grobs, function(x) x$name) == "guide-box")
+    legend <- tmp$grobs[[leg]]
+    legend
+  }
+
+  legend <- g_legend(p)
+  p <- arrangeGrob(p + theme(legend.position="none"), legend, heights=c(9/10,1/10))
   return(p)
 }
 
@@ -1032,4 +1042,6 @@ cip <- cip1
 p <- plotCIProportions(cip)
 saveFigure(p, "manuscript-figure-5.png", height=7.87/2)
 saveFigure(p, "manuscript-figure-5.pdf", height=7.87/2, dpi=300)
+
+
 ```

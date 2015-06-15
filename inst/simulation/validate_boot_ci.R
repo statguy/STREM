@@ -75,7 +75,7 @@ save(bootCI, file=validation$getCredibilityIntervalsValidationFileName(modelName
 
 if (F) {
   modelName <- "FMPModel"
-  scenario <- "B"
+  scenario <- "A"
   mss <- getMSS(scenario=scenario)
   study <- mss$study
   validation <- Validation(study=study, populationSizeCutoff=Inf)
