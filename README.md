@@ -52,7 +52,7 @@ fmiApiKey <- "XYZ" # Replace with your FMI API key
 where `wd` is the base directory for input and output data and `wd.scratch` is a scratch directory
 for storing large files. `grassLocalTempDir` is a temporary directory for processing rasters with
 GRASS in a HPC cluster. Replace `fmiApiKey` with your API key to the
-[FMI open data](https://en.ilmatieteenlaitos.fi/open-data).
+[FMI open data](https://en.ilmatieteenlaitos.fi/open-data) (not required for simulated data).
 
 WTC uses HPC (=high-performance computing) cluster for parallel computations.
 There are [a bunch of scripts](https://github.com/statguy/Parallel-R-SSH) that should be installed
