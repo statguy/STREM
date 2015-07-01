@@ -29,7 +29,7 @@ Intersections <- setRefClass(
         return(study$context$getLongFileName(dir=study$context$resultDataDirectory, name="Intersections", response=study$response, region=study$studyArea$region, tag=tag))
     },
     
-    saveIntersections = function(fileName) {
+    saveIntersections = function(fileName=getIntersectionsFileName()) {
       stop("Override saveIntersections() method.")
     },
     
@@ -305,7 +305,7 @@ FinlandWTCIntersections <- setRefClass(
       return(invisible(.self))
     },
     
-    saveIntersections = function() {
+    saveIntersections = function(fileName=getIntersectionsFileName()) {
       library(gdata)
       library(sp)
       
@@ -357,7 +357,7 @@ FinlandWTCIntersections <- setRefClass(
       if (study$response == "rangifer.tarandus.fennicus")
         delete(getPolygonRectangle(c(3.31,3.684)*1e6, c(7.2,6.92)*1e6, intersections@proj4string))
       
-      save(intersections, file=getIntersectionsFileName())
+      save(intersections, file=fileName)
       return(invisible(.self))
     }
   )
@@ -372,7 +372,7 @@ RussiaWTCIntersections <- setRefClass(
       return(invisible(.self))
     },
     
-    saveIntersections = function() {
+    saveIntersections = function(fileName=getIntersectionsFileName()) {
       library(sp)
       library(dplyr)
       
@@ -395,7 +395,7 @@ RussiaWTCIntersections <- setRefClass(
       proj4string(xy) <- study$studyArea$proj4string
       intersections <<- xy
       
-      save(intersections, file=getIntersectionsFileName())
+      save(intersections, file=fileName)
     }
 
   )
@@ -410,7 +410,7 @@ FinlandRussiaWTCIntersections <- setRefClass(
       return(invisible(.self))
     },
     
-    saveIntersections = function() {
+    saveIntersections = function(fileName=getIntersectionsFileName()) {
       library(sp)
       library(rgdal)
       library(plyr)
@@ -459,7 +459,7 @@ FinlandRussiaWTCIntersections <- setRefClass(
       #}
       #join(intersections$intersections, cbind(uniqCoords, remove)
             
-      save(intersections, file=getIntersectionsFileName())
+      save(intersections, file=fileName)
     }
   )
 )

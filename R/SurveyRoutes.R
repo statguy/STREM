@@ -197,8 +197,15 @@ FinlandWTCSurveyRoutes <- setRefClass(
     },
     
     loadSurveyRoutes = function(context, fileName=getSurveyRoutesFileName(), findLengths=TRUE, nSurveyRoutes) {
-      study0 <- FinlandWTCStudy$new(context=context, response="canis.lupus")
-      intersections <- FinlandWTCIntersections$new(study=study0)$loadIntersections()
+      #study0 <- FinlandWTCStudy$new(context=context, response="canis.lupus")
+      #intersections <- FinlandWTCIntersections$new(study=study0)$loadIntersections()
+      #intersections$intersections@data <- intersections$intersections@data[,"id",drop=F]
+      fileName <- study$context$getFileName(dir=study$context$processedDataDirectory, name="Intersections", response="simulation", region=study$studyArea$region)
+      ##intersections$saveIntersections(fileName=fileName)
+      #intersections <- intersections$intersections
+      #save(intersections, file=fileName)
+      intersections <- FinlandWTCIntersections$new(study=study)$loadIntersections(fileName=fileName)
+      
       centroids <<- intersections$getSurveyLocations()
       # Angles are unknown, randomize. TODO: Find the most likely angles given the landscape.
       angles <- runif(length(centroids), 0, 2 * pi)
