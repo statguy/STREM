@@ -7,9 +7,13 @@ Supplementary code for the Jousimo et al. paper
 Requirements
 -------------
 
+To speed up the computations, the WTC framework is designed to support HPC clusters.
+However, the cluster requirements are recommendations and the code can be run in
+non-distributed systems as well.
+
 * Linux (or possibly other UNIX alike) system HPC cluster
-* 32 GB of main memory in each HPC cluster node (recommended)
-* 16 CPUs in each HPC cluster (recommended)
+* 32 GB of main memory in each HPC cluster node
+* 16 CPUs in each HPC cluster
 * 500 GB of shared disk space in the HPC cluster
 * 50 GB of local disk space in each HPC cluster node
 * R
