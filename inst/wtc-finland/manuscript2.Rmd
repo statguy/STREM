@@ -4,8 +4,10 @@ output: html_document
 ---
 
 ```{r initialize}
-#library(devtools); install_github("statguy/Winter-Track-Counts")
+#library(devtools)
+#install_github("statguy/WTC")
 #install_github("ropengov/gisfin")
+#install_github("statguy/SpaceTimeModels")
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores())
@@ -16,6 +18,7 @@ library(scales)
 library(grid)
 library(plyr)
 library(gridExtra)
+library(SpaceTimeModels)
 
 context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
 boundaryDF <- ggplot2::fortify(FinlandWTCStudy(context=context, response="canis.lupus")$studyArea$boundary)
@@ -30,18 +33,28 @@ labelPanel <- function(p, text, x, y) {
 
 ```{r figure-convolution-example}
 # Habitat
-
 r <- raster::crop(study$studyArea$habitat, extent(3400000, 3410000, 7000000, 7010000))
 #plot(r)
 forest <- raster::calc(r, function(x) if (is.na(x) || x %in% c(0,45:255)) NA else x %in% 18:35)
 #plot(forest)
 coords <- raster::xyFromCell(r, cell=1:ncell(r))
-#x0 <- smoothSubsets(r=forest, coords=coords[1:(400*10),], kernelFun=expKernel, scales=125, .parallel=F)
-x <- smoothSubsets(r=forest, coords=coords, kernelFun=expKernel, scales=c(125, 1000), .parallel=T)
+x <- SpaceTimeModels::smoothContinuousSubsets(r=forest, coords=coords, kernel=SpaceTimeModels::ExponentialKernel$new(), scales=c(125, 1000), .parallel=T)
 #plot(flip(rasterFromXYZ(x[,c("x","y","value")]), direction="y"), asp=1)
 fileName <- study$context$getFileName(dir=study$context$processedDataDirectory, name="figure-b-1", region=study$studyArea$region)
 save(x, file=fileName)
 load(fileName)
+
+# Tests:
+if (F) {
+r <- crop(forest, extent(forest, 10, 20, 10, 20))
+x <- smoothContinuousSubsets(r=r, coords=xyFromCell(r, cell=1:ncell(r)), kernel=ExponentialKernel$new(), scales=125, .parallel=F)
+p <- ggplot(x) + geom_raster(aes(x, y, fill=`125`)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
+plot(r)
+print(p)
+xy <- xyFromCell(r, cell=1:ncell(r)); x=xy[1,1]; y=xy[1,2]
+kernel <- ExponentialKernel$new()$constructKernel(r, 125)
+smoothContinuousSubset(r=r, x=x, y=y, scale=125, kernel=kernel)
+}
 
 r1 <- as.data.frame(rasterToPoints(r))
 colnames(r1) <- c("x","y","value")
@@ -50,17 +63,15 @@ r2 <- as.data.frame(rasterToPoints(forest))
 colnames(r2) <- c("x","y","value")
 r2$value <- factor(r2$value, levels=0:1)
 
-
 p1 <- ggplot(r1) + geom_raster(aes(x, y, fill=value)) + scale_fill_grey() + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
 p2 <- ggplot(r2) + geom_raster(aes(x, y, fill=value)) + scale_fill_grey() + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
-p3 <- ggplot(subset(x, scale==125)) + geom_raster(aes(x, y, fill=value)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
-p4 <- ggplot(subset(x, scale==1000)) + geom_raster(aes(x, y, fill=value)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
+p3 <- ggplot(x) + geom_raster(aes(x, y, fill=`125`)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
+p4 <- ggplot(x) + geom_raster(aes(x, y, fill=`1000`)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
 
 p1 <- labelPanel(p1, "a)", min(r1$x), max(r1$y))
 p2 <- labelPanel(p2, "b)", min(r1$x), max(r1$y))
 p3 <- labelPanel(p3, "c)", min(r1$x), max(r1$y))
 p4 <- labelPanel(p4, "d)", min(r1$x), max(r1$y))
-
 p <- arrangeGrob(p1, p2, p3, p4, ncol=2)
 saveFigure(p, "figure-b-1a.png", width=17, height=17, dpi=200)
 
@@ -78,10 +89,10 @@ r[is.na(r)] <- 0
 r1 <- as.data.frame(rasterToPoints(r))
 colnames(r1) <- c("x","y","value")
 coords <- raster::xyFromCell(r, cell=1:ncell(r))
-x <- smoothSubsets(r=r, coords=coords, kernelFun=expKernel, scales=c(2000), .parallel=T)
+x <- SpaceTimeModels::smoothContinuousSubsets(r=r, coords=coords, kernel=SpaceTimeModels::ExponentialKernel$new(), scales=c(2000), .parallel=T)
 
 p5 <- ggplot(r1) + geom_raster(aes(x, y, fill=value)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
-p6 <- ggplot(x) + geom_raster(aes(x, y, fill=value)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
+p6 <- ggplot(x) + geom_raster(aes(x, y, fill=`2000`)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
 
 
 # Elevation
@@ -97,10 +108,10 @@ r <- raster::resample(r, s) # Changing projection does not work good enough. Hav
 r1 <- as.data.frame(rasterToPoints(r))
 colnames(r1) <- c("x","y","value")
 coords <- raster::xyFromCell(r, cell=1:ncell(r))
-x <- smoothSubsets(r=r, coords=coords, kernelFun=expKernel, scales=c(2000), .parallel=T)
+x <- SpaceTimeModels::smoothContinuousSubsets(r=r, coords=coords, kernel=SpaceTimeModels::ExponentialKernel$new(), scales=c(2000), .parallel=T)
 
 p7 <- ggplot(r1) + geom_raster(aes(x, y, fill=value)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
-p8 <- ggplot(x) + geom_raster(aes(x, y, fill=value)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
+p8 <- ggplot(x) + geom_raster(aes(x, y, fill=`2000`)) + scale_fill_gradient(low=gray[1], high=gray[2]) + theme_raster() + labs(x=NULL, y=NULL) + scale_x_continuous(expand=c(0,0)) + scale_y_continuous(expand=c(0,0))
 
 
 p5 <- labelPanel(p5, "e)", min(r1$x), max(r1$y))
