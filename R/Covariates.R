@@ -175,7 +175,7 @@ HabitatSmoothCovariates <- setRefClass(
       
       covariates <- llply(1:length(habitatValues), function(index, edgeValues) {
         message("Processing habitat ", names(habitatValues[index]), "...")
-        covariates <- .smoothDiscreteSubsets(r=study$studyArea$habitat, coords=xy, kernelFun=.expKernel, scales=scales, processValues=habitatValues[[index]], edgeValues=edgeValues, .parallel=T)
+        covariates <- Blur::smoothDiscreteSubsets(r=study$studyArea$habitat, coords=xy, kernel=Blur::ExponentialKernel$new(), scales=scales, processValues=habitatValues[[index]], edgeValues=edgeValues, .parallel=T)
         covariates <- covariates[,-(1:2),drop=F]
         colnames(covariates) <- paste0("habitat[", names(habitatValues[index]), "]_", colnames(covariates))
         return(covariates)
@@ -261,7 +261,7 @@ ElevationSmoothCovariates <- setRefClass(
       
       xy <- as.data.frame(unique(sp::coordinates(xyt)))
       
-      covariates <- .smoothContinuousSubsets(r=elevation, coords=xy, kernelFun=.expKernel, scales=scales, .parallel=T)
+      covariates <- Blur::smoothContinuousSubsets(r=elevation, coords=xy, kernel=Blur::ExponentialKernel$new(), scales=scales, .parallel=T)
       colnames(covariates)[-(1:2)] <- paste0("topography_abs_", colnames(covariates[,-(1:2)]))
       
       # Find mean within the kernel area and subtract the smoothed values for each scale

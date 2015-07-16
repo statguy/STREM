@@ -75,7 +75,7 @@ SmoothModelSpatioTemporal <- setRefClass(
       return(rep(2/pi * 12000 * 1 * distance, mesh$n * length(years)) / offsetScale)
     },
     
-    setup = function(intersections, params, covariatesModel=~1, tag) {
+    setup = function(intersections, params, covariatesModel=~1, tag, timeout=30) {
       library(INLA)
       library(R.utils)
       
@@ -98,7 +98,7 @@ SmoothModelSpatioTemporal <- setRefClass(
                                                        min.angle=params$meshParams$minAngle,
                                                        max.edge=params$meshParams$maxEdge * coordsScale,
                                                        cutoff=params$meshParams$cutOff * coordsScale),
-                               timeout=10, onTimeout="error")
+                               timeout=timeout, onTimeout="error")
       message("Mesh nodes = ", mesh$n)
       
       nYears <- length(years)

@@ -1,7 +1,9 @@
 library(devtools)
-install_github("statguy/Winter-Track-Counts")
+install_github("statguy/WTC")
 install_github("ropengov/gisfin")
 install_github("ropengov/fmi")
+install_github("statguy/Blur")
+install_github("statguy/SpatioTemporalModels")
 
 library(parallel)
 library(doMC)
