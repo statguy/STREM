@@ -36,17 +36,14 @@ preprocessSampleIntervals <- function(response) {
   study <- FinlandWTCStudy$new(context=context)
   study$response <- response
 
+  tracks <- study$loadTracks()
+  sampleIntervals <- ThinnedMovementSampleIntervals$new(study=study)
+  sampleIntervals$findSampleIntervals(tracks=tracks$tracks)
+  
   human <- HumanPopulationDensityCovariates$new(study=study)
   weather <- WeatherCovariates$new(study=study, apiKey=fmiApiKey)
   sampleIntervals$setCovariatesId()$addCovariates(human, weather)
   sampleIntervals$saveCovariates()
-  
-  human <- HumanPopulationDensityCovariates$new(study=study)
-  weather <- WeatherCovariates$new(study=study, apiKey=fmiApiKey)
-  intersections <- study$loadIntersections(predictDistances=FALSE)
-  intersections$setCovariatesId(tag="distance")
-  intersections$addCovariates(human, weather)
-  intersections$saveCovariates()
 }
 
 estimateMovementDistances <- function(response) {
@@ -188,8 +185,8 @@ preprocessAll <- function(response) {
   preprocessIntersections(response)
   preprocessHabitatPreferences(response)
   preprocessSampleIntervals(response)
-  estimateMovementDistances(response)
   preprocessDensityCovariates(response)
+  estimateMovementDistances(response)
 }
 
 preprocessAll("canis.lupus")
