@@ -180,7 +180,7 @@ HabitatSmoothCovariates <- setRefClass(
       
       covariates <- llply(1:length(habitatValues), function(index, edgeValues) {
         message("Processing habitat ", names(habitatValues[index]), "...")
-        covariates <- Blur::smoothDiscreteSubsets(r=study$studyArea$habitat, coords=xy, kernel=Blur::ExponentialKernel$new(), scales=scales, processValues=habitatValues[[index]], edgeValues=edgeValues, .parallel=T)
+        covariates <- Blur::smoothDiscreteSubsets(r=study$studyArea$habitat, coords=xy, kernel=Blur::ExponentialKernel$new(), scales=scales, smoothValues=habitatValues[[index]], edgeValues=edgeValues, .parallel=T)
         covariates <- covariates[,-(1:2),drop=F]
         colnames(covariates) <- paste0("habitat[", names(habitatValues[index]), "]_", colnames(covariates))
         return(covariates)
