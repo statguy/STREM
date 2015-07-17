@@ -172,7 +172,6 @@ HabitatSmoothCovariates <- setRefClass(
       
       # Habitats are assumed to be time invariant, thus only unique locations are considered
       xy <- as.data.frame(unique(sp::coordinates(xyt)))
-      
       habitatWeights <- study$loadHabitatWeights()
       habitatValues <- dlply(habitatWeights$weights[habitatWeights$weights$type != 0,], .(type), function(x) x$habitat)
       names(habitatValues) <- names(habitatWeights$habitatTypes)

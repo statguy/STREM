@@ -185,7 +185,7 @@ preprocessAll <- function(response) {
   preprocessIntersections(response)
   preprocessHabitatPreferences(response)
   preprocessSampleIntervals(response)
-  preprocessDensityCovariates(response)
+  preprocessDensityCovariates(response) # FIXME: These are the same for all response, could just preprocess once and copy the rest
   estimateMovementDistances(response)
 }
 
