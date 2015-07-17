@@ -184,13 +184,17 @@ preprocessDensityCovariates <- function(response) {
   intersections$saveCovariates()
 }
 
-response <- "canis.lupus"
-preprocessIntersections(response)
-preprocessHabitatPreferences(response)
-preprocessSampleIntervals(response)
-estimateMovementDistances(response)
-preprocessDensityCovariates(response)
+preprocessAll <- function(response) {
+  preprocessIntersections(response)
+  preprocessHabitatPreferences(response)
+  preprocessSampleIntervals(response)
+  estimateMovementDistances(response)
+  preprocessDensityCovariates(response)
+}
 
+preprocessAll("canis.lupus")
+preprocessAll("lynx.lynx")
+preprocessAll("rangifer.tarandus.fennicus")
 
 
 
