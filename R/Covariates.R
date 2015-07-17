@@ -154,6 +154,11 @@ HabitatSmoothCovariates <- setRefClass(
     scales = "numeric"
   ),
   methods = list(
+    initialize = function(...) {
+      callSuper(...)
+      covariateId <<- "Habitat"
+    },
+    
     preprocess = function() {
       return(invisible(.self))
     },
@@ -302,10 +307,11 @@ HumanDensitySmoothCovariates <- setRefClass(
     scales = "numeric"
   ),
   methods = list(
-    preprocess = function() {
-      return(invisible(.self))
+    initialize = function(...) {
+      callSuper(...)
+      covariateId <<- "HumanPopulationDensity"
     },
-    
+
     preprocess = function() {
       library(gisfin)
       request <- gisfin::GeoStatFiWFSRequest$new()$getPopulation("vaestoruutu:vaki2005_1km")
