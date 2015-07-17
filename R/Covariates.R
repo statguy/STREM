@@ -165,7 +165,7 @@ HabitatSmoothCovariates <- setRefClass(
       if (!inherits(xyt, "SpatialPoints"))
         stop("Argument 'xyt' must be of class 'SpatialPoints'.")
       
-      # As habitats do not change in time, consider only unique locations
+      # Habitats are assumed to be time invariant, thus only unique locations are considered
       xy <- as.data.frame(unique(sp::coordinates(xyt)))
       
       habitatWeights <- study$loadHabitatWeights()
@@ -268,7 +268,7 @@ ElevationSmoothCovariates <- setRefClass(
       for (scale in scales) {
         message("Finding mean elevation for scale ", scale, "...")
         
-        radius <- .getKernelRadius(elevation, scale)
+        radius <- .getKernelRadius(elevation, scale) # FIXME
         x <- seq(-radius, radius, 1)
         mask <- outer(x, x, function(x, y) sqrt(x^2 + y^2) <= radius)
         mask[mask == FALSE] <- NA
@@ -277,8 +277,8 @@ ElevationSmoothCovariates <- setRefClass(
         for (i in 1:nrow(covariates)) {
           col <- colFromX(elevation, covariates[i,1])
           row <- rowFromY(elevation, covariates[i,2])
-          maskCut <- .cutKernel(mask, elevation, col, row, scale)
-          elevationValues <- .getRasterValues(elevation, col, row, scale)
+          maskCut <- .cutKernel(mask, elevation, col, row, scale) # FIXME
+          elevationValues <- .getRasterValues(elevation, col, row, scale) # FIXME
           meanElevation[i] <- mean(maskCut * elevationValues, na.rm=T)
         }
         
@@ -289,6 +289,51 @@ ElevationSmoothCovariates <- setRefClass(
       coords <- as.data.frame(sp::coordinates(xyt))
       colnames(coords) <- c("x","y")
       covariates <- plyr::join(coords, covariates)[,-(1:2),drop=F]
+      return(covariates)
+    }
+  )
+)
+
+HumanDensitySmoothCovariates <- setRefClass(
+  Class = "HumanDensitySmoothCovariates",
+  contains = "CovariatesObtainer",
+  field = list(
+    humans = "ANY",
+    scales = "numeric"
+  ),
+  methods = list(
+    preprocess = function() {
+      return(invisible(.self))
+    },
+    
+    preprocess = function() {
+      library(gisfin)
+      request <- gisfin::GeoStatFiWFSRequest$new()$getPopulation("vaestoruutu:vaki2005_1km")
+      client <- gisfin::GeoStatFiWFSClient$new(request)
+      population <- client$getLayer("vaestoruutu:vaki2005_1km")
+      population <- raster::stack(sp::SpatialPixelsDataFrame(coordinates(population), population@data, proj4string=population@proj4string))
+      humans <<- projectRaster(population$vaesto, crs="+init=epsg:2393")
+      humans[is.na(humans)] <<- 0
+      return(invisible(.self))
+    },
+    
+    extract = function(xyt) {
+      library(plyr)
+      if (length(scales) == 0)
+        stop("Parameter 'scales' must be defined.")
+      if (!inherits(xyt, "SpatialPoints"))
+        stop("Argument 'xyt' must be of class 'SpatialPoints'.")
+      
+      # Human density is assumed to be time invariant, thus only unique locations are considered
+      xy <- as.data.frame(unique(sp::coordinates(xyt)))
+      covariates <- Blur::smoothContinuousSubsets(r=humans, coords=xy, kernel=Blur::ExponentialKernel$new(), scales=scales, .parallel=T)
+      covariates <- covariates[,-(1:2),drop=F]
+      colnames(covariates) <- paste0("human_", colnames(covariates))
+
+      # Replicate covariates at unique locations over time
+      xyz <- cbind(xy, covariates)
+      covariates <- plyr::join(as.data.frame(sp::coordinates(xyt)), xyz)[,-(1:2),drop=F]
+
       return(covariates)
     }
   )
