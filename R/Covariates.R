@@ -284,7 +284,7 @@ ElevationSmoothCovariates <- setRefClass(
           col <- colFromX(elevation, covariates[i,1])
           row <- rowFromY(elevation, covariates[i,2])
           
-          maskCut <- kernel$asMatrix()
+          maskCut <- mask
           # Cut the kernel if partially outside the effective area
           kernelRadius1 <- kernel$getScaledRadius() + 1
           startRow <- max(0, row-kernelRadius1) + 1
