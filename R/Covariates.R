@@ -272,7 +272,9 @@ ElevationSmoothCovariates <- setRefClass(
       for (scale in scales) {
         message("Finding mean elevation for scale ", scale, "...")
         
-        radius <- .getKernelRadius(elevation, scale) # FIXME
+        # FIXME: quickfix
+        kernel <- Blur::IdentityKernel$new()$constructKernel(elevation, scale)
+        radius <- kernel$getScaledRadius()
         x <- seq(-radius, radius, 1)
         mask <- outer(x, x, function(x, y) sqrt(x^2 + y^2) <= radius)
         mask[mask == FALSE] <- NA
@@ -281,8 +283,25 @@ ElevationSmoothCovariates <- setRefClass(
         for (i in 1:nrow(covariates)) {
           col <- colFromX(elevation, covariates[i,1])
           row <- rowFromY(elevation, covariates[i,2])
-          maskCut <- .cutKernel(mask, elevation, col, row, scale) # FIXME
-          elevationValues <- .getRasterValues(elevation, col, row, scale) # FIXME
+          
+          maskCut <- kernel$asMatrix()
+          # Cut the kernel if partially outside the effective area
+          kernelRadius1 <- kernel$getScaledRadius() + 1
+          startRow <- max(0, row-kernelRadius1) + 1
+          startCol <- max(0, col-kernelRadius1) + 1
+          nrows <- min(dim(elevation)[1]+1, row+kernelRadius1) - startRow
+          ncols <- min(dim(elevation)[2]+1, col+kernelRadius1) - startCol
+          xmin <- startRow - (row-kernelRadius1) - 1
+          ymin <- startCol - (col-kernelRadius1) - 1
+          if (!(dim(maskCut)[1] == nrows & dim(maskCut)[2] == ncols)) {
+            #message("Cut kernel ", dim(k)[1], " X ", dim(k)[2], " to ", nrows, " X ", ncols)
+            maskCut <- maskCut[1:nrows+xmin, 1:ncols+ymin]
+          }
+          
+          elevationValues <- raster::getValuesBlock(elevation, startRow, nrows, startCol, ncols, format='matrix')
+          
+          #maskCut <- .cutKernel(mask, elevation, col, row, scale) # FIXME
+          #elevationValues <- .getRasterValues(elevation, col, row, scale) # FIXME
           meanElevation[i] <- mean(maskCut * elevationValues, na.rm=T)
         }
         
