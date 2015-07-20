@@ -358,6 +358,10 @@ FinlandWTCIntersections <- setRefClass(
         delete(getPolygonRectangle(c(3.31,3.684)*1e6, c(7.2,6.92)*1e6, intersections@proj4string))
       
       save(intersections, file=fileName)
+      
+      message("Saved ", nrow(intersections), " rows to file ", fileName)
+      message("Total intersections = ", sum(intersections$intersections))
+      
       return(invisible(.self))
     }
   )
