@@ -324,7 +324,7 @@ FinlandWTCIntersections <- setRefClass(
       wtc <- wtc[,c(1:9,responseIndex)]
       colnames(wtc)[ncol(wtc)] <- "intersections"
       wtc$response <- study$response
-      wtc <- subset(wtc, response==response)
+      #wtc <- subset(wtc, response==response)
       
       date <- strptime(wtc$date, "%Y%m%d", tz="EET")
       date <- as.POSIXlt(date)

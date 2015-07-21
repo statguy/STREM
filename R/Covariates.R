@@ -59,7 +59,7 @@ CovariatesContainer <- setRefClass(
       return(invisible(.self))
     },
     
-    compressCovariates = function(variables, minExplainedVariance=0.75, name) {
+    compressCovariates = function(variables, prefix="PC", minExplainedVariance=0.75, name) {
       library(stringr)
       
       if (any(complete.cases(.self$getCovariates()[,variables,drop=F]) == FALSE))
@@ -70,7 +70,7 @@ CovariatesContainer <- setRefClass(
       pcSubset <- prcomp(reformulate(colnames(data)), data, scale.=TRUE)
       index <- which(cumsum(pcSubset$sdev^2) / sum(pcSubset$sdev^2) <= minExplainedVariance)
       pc <- as.data.frame(pcSubset$x[,index,drop=F])
-      colnames(pc) <- paste(colnames(pc), name, sep=".")
+      colnames(pc) <- paste(prefix, colnames(pc), name, sep=".")
       .self$addCovariates(pc)
       
       return(invisible(.self))
