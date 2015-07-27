@@ -1,5 +1,5 @@
-WTC
-===
+STREM
+=====
 
 Supplementary code for the Jousimo et al. paper
 "A spatio-temporally explicit random encounter model for large-scale population surveys".
@@ -7,7 +7,7 @@ Supplementary code for the Jousimo et al. paper
 Requirements
 -------------
 
-To speed up the computations, the WTC framework is designed to support HPC clusters.
+To speed up the computations, the STREM framework is designed to support HPC clusters.
 However, the cluster requirements are recommendations and the code can be run in
 non-distributed systems as well.
 
@@ -29,27 +29,27 @@ Installation
 
 Run R and install the `devtools` package with
 `install.packages("devtools")`
-and the WTC R package with
-`install_github("statguy/WTC")`,
+and the STREM R package with
+`install_github("statguy/STREM")`,
 FMI API package with
-`install_github("statguy/WTC")` and
+`install_github("statguy/STREM")` and
 follow the installation instructions for the testing version R-INLA [here](http://www.r-inla.org/download).
 For the rest of the dependencies, consult the installation instructions of the respective libraries.
 
 Setup
 -----
 
-Create configuration file to your git-directory `~/git/WTC/setup/WTC-boot.R` and
+Create configuration file to your git-directory `~/git/STREM/setup/WTC-boot.R` and
 add the following lines:
 ```
-wd <- "~/wtc" # Replace with data directory
+wd <- "~/STREM" # Replace with data directory
 wd.figures <- file.path(wd, "figures")
 wd.data <- file.path(wd, "data")
 wd.data.raw <- file.path(wd.data, "raw")
 wd.data.processed <- file.path(wd.data, "processed")
 wd.data.results <- file.path(wd.data, "results")
 wd.scratch <- file.path("/tmp/scratch") # Replace with scratch directory for large files
-grassLocalTempDir <- "/tmp/wtc" # Temporary directory for GRASS
+grassLocalTempDir <- "/tmp/STREM" # Temporary directory for GRASS
 fmiApiKey <- "XYZ" # Replace with your FMI API key
 ```
 
@@ -58,7 +58,7 @@ for storing large files. `grassLocalTempDir` is a temporary directory for proces
 GRASS in a HPC cluster. Replace `fmiApiKey` with your API key to the
 [FMI open data](https://en.ilmatieteenlaitos.fi/open-data) (not required for simulated data).
 
-WTC uses HPC (=high-performance computing) cluster for parallel computations.
+STREM uses HPC (=high-performance computing) cluster for parallel computations.
 There are [a bunch of scripts](https://github.com/statguy/Parallel-R-SSH) that should be installed
 from Github to use HPC. The scripts are configured for the author's HPC cluster and a custom module
 for your HPC cluster should be provided.
@@ -66,7 +66,7 @@ for your HPC cluster should be provided.
 External data installation
 --------------------------
 
-* Survey routes: copy file from `WTC/data/inst/Intersections-simulation-Finland.RData` to the directory
+* Survey routes: copy file from `STREM/data/inst/Intersections-simulation-Finland.RData` to the directory
 pointed by the variable `wd.data.processed`.
 * CORINE land cover: Download the raster from http://wwwd3.ymparisto.fi/d3/Static_rs/spesific/clc2006_fi25m.zip,
 unzip the file and copy the TIFF file to the directory pointed by the variable `wd.scratch` as
@@ -77,7 +77,7 @@ Usage
 -----
 
 Scripts to generate simulation data, estimate models and verify estimations
-are found in the directory `WTC/inst/simulations`.
+are found in the directory `STREM/inst/simulations`.
 
 Author
 ------
