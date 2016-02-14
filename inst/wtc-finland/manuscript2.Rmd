@@ -5,14 +5,14 @@ output: html_document
 
 ```{r initialize}
 #library(devtools)
-#install_github("statguy/WTC")
+#install_github("statguy/STREM")
 #install_github("ropengov/gisfin")
 #install_github("statguy/Blur")
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores())
-library(WTC)
-source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+library(STREM)
+source("~/git/STREM/setup/WTC-Boot.R")
 library(ggplot2)
 library(scales)
 library(grid)
@@ -120,4 +120,23 @@ p7 <- labelPanel(p7, "g)", min(r1$x), max(r1$y))
 p8 <- labelPanel(p8, "h)", min(r1$x), max(r1$y))
 p <- arrangeGrob(p5, p6, p7, p8, ncol=2)
 saveFigure(p, "figure-b-1b.png", width=17, height=17, dpi=200)
+```
+
+```{r table-1}
+writeTable <- function(df, filename, context) {
+  library(ReporteRs)
+  doc <- docx()
+  flextable <- FlexTable(df)
+  addFlexTable(doc, flextable)
+  dir <- normalizePath(context$figuresDirectory)
+  writeDoc(doc, file=file.path(dir, filename))
+}
+
+models <- data.frame(Species=c("Canis Lupus"), Model=c("Intercept-only"), WAIC=c("1074.72"))
+models <- rbind(models, data.frame(Species=c("Canis Lupus", "Canis Lupus"), Model=c("All PCs", "PC1 habitat 250 + PC2 all 64000"), WAIC=c("1074.78", "1072.57")))
+models <- rbind(models, data.frame(Species=c("Canis Lupus", "Canis Lupus"), Model=c("All non-PCs 32000", "All non-PCs 16000"), WAIC=c("1061.45", "1067.00")))
+models <- rbind(models, data.frame(Species=c("Lynx Lynx"), Model=c("Intercept-only"), WAIC=c("3922.51")))
+models <- rbind(models, data.frame(Species=c("Lynx Lynx", "Lynx Lynx"), Model=c("All PCs", "PC3 all 8000"), WAIC=c("3930.95", "3914.81")))
+models <- rbind(models, data.frame(Species=c("Lynx Lynx", "Lynx Lynx"), Model=c("All non-PCs 2000", "All non-PCs 8000"), WAIC=c("3917.34", "3917.35")))
+writeTable(models, "table-b-1.docx", context)
 ```

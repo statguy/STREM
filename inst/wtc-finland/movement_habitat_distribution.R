@@ -1,8 +1,8 @@
 library(parallel)
 library(doMC)
 registerDoMC(cores=round(detectCores()))
-source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
-library(WTC)
+library(STREM)
+source("~/git/STREM/setup/WTC-Boot.R")
 library(ggplot2)
 
 plotMovementHabitatDistribution <- function(response) {

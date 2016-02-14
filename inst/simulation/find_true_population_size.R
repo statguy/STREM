@@ -3,8 +3,8 @@
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores())
-library(WTC)
-source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+library(STREM)
+source("~/git/STREM/setup/WTC-Boot.R")
 library(plyr)
 
 scenarios <- c("A","B","C","D","E","F")

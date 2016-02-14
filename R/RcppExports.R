@@ -2,6 +2,6 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 internal_countIntersections <- function(track, surveyRoute) {
-    .Call('WTC_internal_countIntersections', PACKAGE = 'WTC', track, surveyRoute)
+    .Call('STREM_internal_countIntersections', PACKAGE = 'STREM', track, surveyRoute)
 }
 

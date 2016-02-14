@@ -7,7 +7,7 @@ using namespace Rcpp;
 
 // internal_countIntersections
 SEXP internal_countIntersections(Rcpp::NumericMatrix track, Rcpp::NumericMatrix surveyRoute);
-RcppExport SEXP WTC_internal_countIntersections(SEXP trackSEXP, SEXP surveyRouteSEXP) {
+RcppExport SEXP STREM_internal_countIntersections(SEXP trackSEXP, SEXP surveyRouteSEXP) {
 BEGIN_RCPP
     Rcpp::RObject __result;
     Rcpp::RNGScope __rngScope;

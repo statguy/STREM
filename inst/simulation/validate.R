@@ -6,8 +6,8 @@
 library(parallel)
 library(doMC)
 registerDoMC(cores=round(detectCores() * 3/4)) # let's take it easier, otherwise nodes might get stuck under too heavy load / memory consuption
-library(WTC)
-source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+library(STREM)
+source("~/git/STREM/setup/WTC-Boot.R")
 
 parseArguments()
 modelName <- extraArgs[1]

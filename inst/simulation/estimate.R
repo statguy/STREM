@@ -78,8 +78,8 @@ estimateSpatioTemporal <- function(scenario, modelName, iteration, isTest=FALSE,
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores())
-library(WTC)
-source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+library(STREM)
+source("~/git/STREM/setup/WTC-Boot.R")
 
 parseArguments()
 modelName <- extraArgs[1]

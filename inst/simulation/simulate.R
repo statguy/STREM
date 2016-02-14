@@ -13,8 +13,8 @@ simulate = function(scenario, iteration, nAgents=as.integer(200), nYears=as.inte
                     isTest=FALSE,
                     plot=FALSE,
                     returnMSS=FALSE) {
-  library(WTC)
-  source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+  library(STREM)
+  source("~/git/STREM/setup/WTC-Boot.R")
   
   context <- Context$new(resultDataDirectory=wd.data.results, processedDataDirectory=wd.data.processed, rawDataDirectory=wd.data.raw, scratchDirectory=wd.scratch, figuresDirectory=wd.figures)
   mss <- {
@@ -46,8 +46,8 @@ print(args)
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores())
-library(WTC)
-source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+library(STREM)
+source("~/git/STREM/setup/WTC-Boot.R")
 
 #for (task_id in 1:100)
 {

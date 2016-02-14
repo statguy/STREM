@@ -15,8 +15,8 @@ countIntersections <- function(scenario, iteration, nSurveyRoutes=as.integer(500
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores())
-library(WTC)
-source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+library(STREM)
+source("~/git/STREM/setup/WTC-Boot.R")
 
 parseArguments()
 countDays <- if (!is.null(extraArgs)) as.integer(extraArgs[1]) else as.integer(1)

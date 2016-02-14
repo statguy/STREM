@@ -21,8 +21,8 @@ if (F) {
 library(parallel)
 library(doMC)
 registerDoMC(cores=round(detectCores()) * 3/4)
-library(WTC)
-source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+library(STREM)
+source("~/git/STREM/setup/WTC-Boot.R")
 
 parseArguments()
 
@@ -90,8 +90,8 @@ population_size <- function(scenario, modelName, iteration, isTest, otherTest=F)
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores() * 1/2)
-library(WTC)
-source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+library(STREM)
+source("~/git/STREM/setup/WTC-Boot.R")
 
 parseArguments()
 modelName <- extraArgs[1]

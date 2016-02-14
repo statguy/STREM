@@ -1,5 +1,5 @@
 library(devtools)
-install_github("statguy/WTC")
+install_github("statguy/STREM")
 install_github("ropengov/gisfin")
 install_github("ropengov/fmi")
 install_github("statguy/Blur")
@@ -8,8 +8,12 @@ install_github("statguy/SpatioTemporalModels")
 library(parallel)
 library(doMC)
 registerDoMC(cores=round(detectCores()))
-source("~/git/Winter-Track-Counts/setup/WTC-Boot.R")
+source("~/git/STREM/setup/WTC-Boot.R")
 library(WTC)
+
+
+#intersections <- FinlandWTCIntersections$new(study = study)
+#intersections$loadIntersections()
 
 
 preprocessIntersections <- function(response) {
@@ -185,13 +189,16 @@ preprocessAll <- function(response) {
   preprocessIntersections(response)
   preprocessHabitatPreferences(response)
   preprocessSampleIntervals(response)
-  preprocessDensityCovariates(response) # FIXME: These are the same for all response, could just preprocess once and copy the rest
-  estimateMovementDistances(response)
+  preprocessDensityCovariates(response) # FIXME: Environmental covariates are the same for all response, could just preprocess once and copy the rest
+  #estimateMovementDistances(response)
 }
 
 preprocessAll("canis.lupus")
 preprocessAll("lynx.lynx")
 preprocessAll("rangifer.tarandus.fennicus")
+preprocessAll("odocoileus.virginianus")
+preprocessAll("capreolus.capreolus")
+preprocessAll("alces.alces")
 
 
 
