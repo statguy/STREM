@@ -86,6 +86,20 @@ theme_ms <- theme_raster <- function(base_size=12, base_family="", ...) {
     )
 }
 
+theme_ms2 <- theme_raster <- function(base_size=12, base_family="", ...) {
+  library(grid)
+  theme_minimal(base_size=base_size, base_family=base_family) %+replace%
+    theme(
+      panel.background=element_rect(fill="transparent", colour=NA),
+      plot.background=element_rect(fill="transparent", colour=NA),
+      panel.border=element_blank(),
+      panel.margin=unit(0, "lines"),
+      strip.background=element_blank(),
+      plot.margin=unit(c(0.1,0,0,0), "lines"), # top, right, bottom, and left margins
+      ...
+    )
+}
+
 theme_raster <- function(base_size=12, base_family="", ...) {
   library(grid)
   theme_minimal(base_size=base_size, base_family=base_family) %+replace%

@@ -582,7 +582,6 @@ writeTable(subset(logTablePretty, Model != "VT"), "table-1.docx", context)
 ```
 
 ```{r figure-3sample}
-#xlim <- log10(c(30,800)); ylim <- xlim
 logPopulationSizesSample <- subset(logPopulationSizes, scenario == "A")
 logPopulationSizesSample <- cutoffPopulationSizes(logPopulationSizesSample, cutoff, models=modelNames[c(1,3,5)])
 logPopulationSizesSample$modelName <- prettyModelName(logPopulationSizesSample$modelName)
@@ -604,7 +603,7 @@ plotLogPopulationSizeSample <- function(size, modelName, case, xlim, ylim) {
   meanSize$Scenario <- prettyScenario(meanSize$Scenario)
   
   p <- ggplot(size, aes(Observed, Estimated, colour=modelName)) +
-    geom_point(size=1, colour="darkgray", alpha=.5) +
+    geom_point(size=1, colour="gray40", alpha=.5) +
     geom_abline(colour="black", linetype="longdash") + 
     geom_point(data=meanSize, aes(True, Estimated), size=2, shape=15, colour="black")
 
@@ -617,7 +616,7 @@ plotLogPopulationSizeSample <- function(size, modelName, case, xlim, ylim) {
     scale_x_continuous(limits=xlim, labels=trans_format("identity", math_format(10^.x))) +
     scale_y_continuous(limits=ylim, labels=trans_format("identity", math_format(10^.x))) +
     xlab("True population size") + ylab("Estimated population size") +
-    theme_ms() + theme(panel.border=element_rect(fill="transparent"),
+    theme_ms2() + theme(panel.border=element_rect(fill="transparent"),
                                         plot.title=element_text(size=10),
                                         legend.margin=unit(0, units="line"),
                                         panel.margin=unit(0, units="line"))
@@ -625,7 +624,7 @@ plotLogPopulationSizeSample <- function(size, modelName, case, xlim, ylim) {
   return(p)
 }
 
-p <- plotLogPopulationSizeSample(subset(logPopulationSizesSample, modelName %in% c("ST","T1","T2","FMP")), modelName=c("ST","T1","T2","FMP"), "a", xlim=xlim, ylim=ylim)
+p <- plotLogPopulationSizeSample(subset(logPopulationSizesSample, modelName %in% c("ST","T1","T2","FMP")), modelName=c("ST","T1","T2","FMP"), "a", xlim=log10(c(1, 10^3)), ylim=log10(c(1,10^3)))
 saveFigure(p, "manuscript-figure-3sample.png", height=7.87, width=17) # draft quality
 saveFigure(p, "manuscript-figure-3sample.pdf", height=7.87, width=17, dpi=300)
 ```
@@ -641,7 +640,7 @@ plotLogPopulationSize <- function(size, modelName, case, xlim, ylim) {
   meanSize$Scenario <- prettyScenario(meanSize$Scenario)
   
   p <- ggplot(size, aes(Observed, Estimated, colour=modelName)) +
-    geom_point(size=1, colour="darkgray", alpha=.5) +
+    geom_point(size=1, colour="gray40", alpha=.5) +
     geom_abline(colour="black", linetype="longdash") + 
     geom_point(data=meanSize, aes(True, Estimated), size=2, shape=15, colour="black")
 
@@ -652,7 +651,7 @@ plotLogPopulationSize <- function(size, modelName, case, xlim, ylim) {
     scale_x_continuous(limits=xlim, labels=trans_format("identity", math_format(.x))) +
     scale_y_continuous(limits=ylim, labels=trans_format("identity", math_format(.x))) +
     xlab(expression(paste(Log[10], " true population size"))) + ylab(expression(paste(Log[10], " estimated population size"))) + ggtitle(paste("Model:", prettyModelName(modelName[1]))) +
-    theme_ms() + theme(panel.border=element_rect(fill="transparent"),
+    theme_ms2() + theme(panel.border=element_rect(fill="transparent"),
                                         legend.margin=unit(0, units="line"),
                                         panel.margin=unit(0, units="line"))
 
