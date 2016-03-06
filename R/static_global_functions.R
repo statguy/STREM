@@ -111,7 +111,7 @@ theme_presentation <- function(base_size=20, base_family="", ...) {
 }
 
 # full width = 2*7.87+1.25=17
-saveFigure <- function(p, filename, width=7.87, height=7.87, units="cm", dpi=200, dimensions, ...) {
+saveFigure <- function(p, filename, width=7.87, height=7.87, units="cm", dpi=200, dimensions, copy=T, ...) {
   library(ggplot2)
   if (missing(p) | missing(filename))
     stop("Argument p or filename missing.")
@@ -122,6 +122,10 @@ saveFigure <- function(p, filename, width=7.87, height=7.87, units="cm", dpi=200
     height <- width * aspectRatio
   }
   ggsave(p, filename=filename, width=width, height=height, units=units, ...)
+  if (copy) {
+    system(paste("scp", filename, paste0(context$figuresHost, ":", filename)))
+    system(paste("ssh", context$figuresHost, "\"chmod 644", filename, "\""))
+  }
 }
 
 addDtDist <- function(tracksDF) {

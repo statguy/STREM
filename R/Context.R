@@ -6,11 +6,12 @@ Context <- setRefClass(
     rawDataDirectory = "ANY",
     scratchDirectory = "ANY",
     figuresDirectory = "ANY",
+    figuresHost = "ANY",
     verbose = "logical"
   ),
   methods = list(
-    initialize = function(resultDataDirectory=NA, processedDataDirectory=NA, rawDataDirectory=NA, scratchDirectory=NA, figuresDirectory=NA, verbose=FALSE) {
-      callSuper(resultDataDirectory=resultDataDirectory, processedDataDirectory=processedDataDirectory, rawDataDirectory=rawDataDirectory, scratchDirectory=scratchDirectory, figuresDirectory=figuresDirectory, verbose=verbose)
+    initialize = function(resultDataDirectory=NA, processedDataDirectory=NA, rawDataDirectory=NA, scratchDirectory=NA, figuresDirectory=NA, figuresHost=NA, verbose=FALSE) {
+      callSuper(resultDataDirectory=resultDataDirectory, processedDataDirectory=processedDataDirectory, rawDataDirectory=rawDataDirectory, scratchDirectory=scratchDirectory, figuresDirectory=figuresDirectory, figuresHost=figuresHost, verbose=verbose)
     },
     
     getFileName = function(dir, name, response, region, ext=".RData") {
