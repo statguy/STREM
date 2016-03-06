@@ -4,7 +4,7 @@ output: html_document
 ---
 
 ```{r initialize}
-#library(devtools); install_github("statguy/Winter-Track-Counts")
+#library(devtools); install_github("statguy/STREM")
 library(parallel)
 library(doMC)
 registerDoMC(cores=detectCores())
@@ -619,7 +619,6 @@ plotLogPopulationSizeSample <- function(size, modelName, case, xlim, ylim) {
     xlab("True population size") + ylab("Estimated population size") +
     theme_ms() + theme(panel.border=element_rect(fill="transparent"),
                                         plot.title=element_text(size=10),
-                                        #plot.margin=unit(c(0, 0.1, 0, 0), units="line"), #top, right, bottom, and left margins
                                         legend.margin=unit(0, units="line"),
                                         panel.margin=unit(0, units="line"))
 
@@ -820,24 +819,21 @@ cip1 <- getCIProportions(scenarios=scenarios, modelNames=modelNames[c(1,3,4,5)],
 
 plotCIProportions <- function(credibilityIntervals) {
   credibilityIntervals$Model <- prettyModelName(credibilityIntervals$modelName)
-  credibilityIntervals$CI <- credibilityIntervals$Interval
-  p <- ggplot(credibilityIntervals, aes(scenario, Proportion, shape=Model, colour=CI)) +
+  credibilityIntervals$CrI <- credibilityIntervals$Interval
+  p <- ggplot(credibilityIntervals, aes(scenario, Proportion, shape=Model, colour=CrI)) +
     geom_hline(aes(yintercept=.5), color="darkgrey") +
     geom_hline(aes(yintercept=.95), color="darkgrey") +
     geom_point(aes(shape=Model, group=Model), position=position_dodge(width=.7)) +
-    scale_colour_manual("CI", values=c("black", "grey")) +
-    theme_ms() + theme(panel.border=element_rect(fill="transparent")) +
+    scale_colour_manual("CrI", values=c("black", "grey"), guide=guide_legend(override.aes=list(size=3.5, shape=15))) +
+    theme_ms() +
+    theme(panel.border=element_rect(fill="transparent")) +
     xlab("Scenario") + ylab("Proportion") + ylim(0, 1) +
     theme(panel.grid.major=element_blank(), panel.grid.minor=element_blank(),
           panel.margin=unit(0, units="line"),
-          #legend.margin=unit(-1, units="line"),
-          #legend.position="bottom",
           legend.direction="vertical",
-          #legend.direction="horizontal",
           legend.box="horizontal",
           legend.key.height=unit(0.7, "line"))
-          #legend.key.width=unit(.7, "line"),
-          #legend.key.height=unit(0, "line"))
+    #guides(scale_colour_manual=guide_colourbar())
 
   library(gridExtra)
   g_legend <- function(a.gplot) {

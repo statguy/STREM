@@ -70,34 +70,50 @@ inverseDistanceWeightningImpute <- function(data, varname, formula=as.formula(pa
   return(rbind(data.full, data.na))
 }
 
+theme_ms <- theme_raster <- function(base_size=12, base_family="", ...) {
+  library(grid)
+  theme_minimal(base_size=base_size, base_family=base_family) %+replace%
+    theme(
+      panel.background=element_rect(fill="transparent", colour=NA),
+      panel.grid.minor=element_blank(), 
+      panel.grid.major=element_blank(),
+      plot.background=element_rect(fill="transparent", colour=NA),
+      panel.border=element_blank(),
+      panel.margin=unit(0, "lines"),
+      strip.background=element_blank(),
+      plot.margin=unit(c(0.1,0,0,0), "lines"), # top, right, bottom, and left margins
+      ...
+    )
+}
+
 theme_raster <- function(base_size=12, base_family="", ...) {
   library(grid)
   theme_minimal(base_size=base_size, base_family=base_family) %+replace%
-  theme(
-    panel.background=element_rect(fill="transparent", colour=NA),
-    panel.grid.minor=element_blank(), 
-    panel.grid.major=element_blank(),
-    plot.background=element_rect(fill="transparent", colour=NA),
-    #panel.background=element_blank(),
-    panel.border=element_blank(),
-    #panel.grid.major=element_blank(),
-    #panel.grid.minor=element_blank(),
-    panel.margin=unit(0, "lines"),
-    axis.line=element_blank(),
-    axis.text.x=element_blank(),
-    axis.text.y=element_blank(),
-    axis.title.x=element_blank(),
-    axis.title.y=element_blank(),
-    axis.ticks=element_blank(),
-    strip.background=element_blank(),
-    #plot.margin=unit(c(0,0,-1,-1), "lines"),
-    #plot.margin=unit(c(0,0,-.5,-.5), "lines"),
-    plot.margin=unit(c(0,0,0,0), "lines"),
-    axis.ticks.length=unit(0,"lines"),axis.ticks.margin=unit(0,"lines"),
-    #plot.margin=rep(unit(0,"null"),4),panel.margin=unit(0,"null"),axis.ticks.length=unit(0,"null"),axis.ticks.margin=unit(0,"null"),
-    legend.position="none",
-    ...
-  )
+    theme(
+      panel.background=element_rect(fill="transparent", colour=NA),
+      panel.grid.minor=element_blank(), 
+      panel.grid.major=element_blank(),
+      plot.background=element_rect(fill="transparent", colour=NA),
+      #panel.background=element_blank(),
+      panel.border=element_blank(),
+      #panel.grid.major=element_blank(),
+      #panel.grid.minor=element_blank(),
+      panel.margin=unit(0, "lines"),
+      axis.line=element_blank(),
+      axis.text.x=element_blank(),
+      axis.text.y=element_blank(),
+      axis.title.x=element_blank(),
+      axis.title.y=element_blank(),
+      axis.ticks=element_blank(),
+      strip.background=element_blank(),
+      #plot.margin=unit(c(0,0,-1,-1), "lines"),
+      #plot.margin=unit(c(0,0,-.5,-.5), "lines"),
+      plot.margin=unit(c(0,0,0,0), "lines"),
+      axis.ticks.length=unit(0,"lines"),axis.ticks.margin=unit(0,"lines"),
+      #plot.margin=rep(unit(0,"null"),4),panel.margin=unit(0,"null"),axis.ticks.length=unit(0,"null"),axis.ticks.margin=unit(0,"null"),
+      legend.position="none",
+      ...
+    )
 }
 
 theme_presentation <- function(base_size=20, base_family="", ...) {
