@@ -823,7 +823,7 @@ plotCIProportions <- function(credibilityIntervals) {
     geom_hline(aes(yintercept=.5), color="darkgrey") +
     geom_hline(aes(yintercept=.95), color="darkgrey") +
     geom_point(aes(shape=Model, group=Model), position=position_dodge(width=.7)) +
-    scale_colour_manual("CrI", values=c("black", "grey"), guide=guide_legend(override.aes=list(size=3.5, shape=15))) +
+    scale_colour_manual("CrI / CI", values=c("black", "grey"), guide=guide_legend(override.aes=list(size=3.5, shape=15))) +
     theme_ms() +
     theme(panel.border=element_rect(fill="transparent")) +
     xlab("Scenario") + ylab("Proportion") + ylim(0, 1) +

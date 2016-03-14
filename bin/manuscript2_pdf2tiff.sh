@@ -28,8 +28,8 @@ pdf2eps manuscript-figure-3a4 "1 2 481 205"
 
 mv manuscript-figure-1.tif Fig1.tif
 mv manuscript-figure-2.tif Fig2.tif
-mv manuscript-figure-3.tif Fig3.tif
-mv manuscript-figure-3sample.tif Fig4.tif
+mv manuscript-figure-3.tif Fig4.tif
+mv manuscript-figure-3sample.tif Fig3.tif
 mv manuscript-figure-4a.tif Fig6.tif
 mv manuscript-figure-5.tif Fig5.tif
 
