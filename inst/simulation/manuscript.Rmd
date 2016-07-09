@@ -618,8 +618,7 @@ plotLogPopulationSizeSample <- function(size, modelName, case, xlim, ylim) {
     xlab("True population size") + ylab("Estimated population size") +
     theme_ms2() + theme(panel.border=element_rect(fill="transparent"),
                                         plot.title=element_text(size=10),
-                                        legend.margin=unit(0, units="line"),
-                                        panel.margin=unit(0, units="line"))
+                                        legend.margin=unit(0, units="line"))
 
   return(p)
 }

@@ -95,7 +95,7 @@ theme_ms2 <- theme_raster <- function(base_size=12, base_family="", ...) {
       panel.border=element_blank(),
       panel.margin=unit(0, "lines"),
       strip.background=element_blank(),
-      plot.margin=unit(c(0.1,0,0,0), "lines"), # top, right, bottom, and left margins
+      plot.margin=unit(c(.1,.1,0,0), "lines"), # top, right, bottom, and left margins
       ...
     )
 }

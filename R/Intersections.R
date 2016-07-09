@@ -313,14 +313,20 @@ FinlandWTCIntersections <- setRefClass(
       
       wtc <- read.xls(file.path(study$context$rawDataDirectory, "Kolmiot_1989_2011.xls"))
       names(wtc)[1:9] <- c("id","y","x","length","forest","field","year","date","duration")
-      names(wtc)[16] <- "canis.lupus"
-      names(wtc)[29] <- "lynx.lynx"
-      names(wtc)[33] <- "rangifer.tarandus.fennicus"
+      names(wtc)[names(wtc) == "CANLUP"] <- "canis.lupus"
+      names(wtc)[names(wtc) == "LYNLYN"] <- "lynx.lynx"
+      names(wtc)[names(wtc) == "RANTAR"] <- "rangifer.tarandus.fennicus"
+      names(wtc)[names(wtc) == "ODOVIR"] <- "odocoileus.virginianus"
+      names(wtc)[names(wtc) == "CAPCAP"] <- "capreolus.capreolus"
+      names(wtc)[names(wtc) == "ALCALC"] <- "alces.alces"
       
       responseIndex <- switch (study$response,
-              canis.lupus=16,
-              lynx.lynx=29,
-              rangifer.tarandus.fennicus=33)
+              canis.lupus=names(wtc) == "canis.lupus",
+              lynx.lynx=names(wtc) == "lynx.lynx",
+              rangifer.tarandus.fennicus=names(wtc) == "rangifer.tarandus.fennicus",
+              odocoileus.virginianus=names(wtc) == "odocoileus.virginianus",
+              capreolus.capreolus=names(wtc) == "capreolus.capreolus",
+              alces.alces=names(wtc) == "alces.alces")
       wtc <- wtc[,c(1:9,responseIndex)]
       colnames(wtc)[ncol(wtc)] <- "intersections"
       wtc$response <- study$response
@@ -338,6 +344,11 @@ FinlandWTCIntersections <- setRefClass(
       wtc <- subset(wtc, duration<4 & duration>0 & length>0)  
       # Transects 168 and 1496 are at the same location but separate, take average, ignore or something...
       wtc <- subset(wtc, id!=1496)
+      
+      #plot(study$studyArea$boundary)
+      #x <- subset(wtc, response > 0)
+      #points(x$x, x$y)
+      
       xy <- cbind(wtc$x, wtc$y)
       wtc$x <- NULL
       wtc$y <- NULL
